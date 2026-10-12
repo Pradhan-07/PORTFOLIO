@@ -2,6 +2,50 @@ import type { Project } from '../types';
 
 export const PROJECTS: Project[] = [
   {
+    id: 'indstate',
+    name: 'indstate',
+    category: 'web',
+    language: 'React',
+    featured: true,
+    description: 'Trusted Property Marketplace built with modern reactive frontend architecture and database persistence.',
+    details: 'A comprehensive modern real estate and property marketplace application developed with React 19, Vite, and TypeScript. Implements interactive spatial map navigation via Leaflet, Supabase database integration for authentic listing persistence, responsive filter mechanics, and animated interaction workflows.',
+    tech: ['React', 'TypeScript', 'Vite', 'Supabase', 'Leaflet Maps', 'Framer Motion'],
+    githubUrl: 'https://github.com/Pradhan-07/indstate',
+    stats: {
+      status: 'Featured Repository',
+      updated: 'Public repo',
+    },
+    features: [
+      'Interactive spatial map integration with Leaflet',
+      'Supabase database queries and listing management',
+      'Property filtering by price, location, and property type',
+      'Smooth micro-interactions and animated state transitions',
+      'Fully responsive mobile and desktop architecture',
+    ],
+    snippet: `// indstate — Property data flow & spatial location query
+import { useState, useEffect } from 'react';
+import { supabase } from './lib/supabaseClient';
+
+export function usePropertyListings(filter: PropertyFilter) {
+  const [listings, setListings] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProperties() {
+      setLoading(true);
+      const query = supabase.from('properties').select('*');
+      if (filter.type) query.eq('type', filter.type);
+      const { data, error } = await query;
+      if (!error && data) setListings(data);
+      setLoading(false);
+    }
+    fetchProperties();
+  }, [filter]);
+
+  return { listings, loading };
+}`,
+  },
+  {
     id: 'dsa-cpp',
     name: 'DSA_CPP',
     category: 'c++',

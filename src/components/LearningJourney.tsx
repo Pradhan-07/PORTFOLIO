@@ -1,5 +1,5 @@
 import React from 'react';
-import { LEARNING_JOURNEY } from '../data/profile';
+import { LEARNING_LOG } from '../data/learningLog';
 
 export const LearningJourney: React.FC = () => {
   return (
@@ -24,7 +24,7 @@ export const LearningJourney: React.FC = () => {
             marginBottom: '16px',
           }}
         >
-          // 05 · ENGINEERING LOG
+          // 05 · ENGINEERING LEARNING LOG
         </div>
 
         <h2
@@ -50,12 +50,12 @@ export const LearningJourney: React.FC = () => {
             lineHeight: 1.6,
           }}
         >
-          An ongoing log of study notes and active engineering endeavors as a second-year computer science engineering student.
+          An ongoing log of study notes, algorithmic practice, and active software projects as a second-year computer science engineering student.
         </p>
 
         {/* Notebook Entries */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {LEARNING_JOURNEY.map((item, idx) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {LEARNING_LOG.map((item, idx) => (
             <div
               key={item.id}
               className="journey-entry"
@@ -120,18 +120,49 @@ export const LearningJourney: React.FC = () => {
                   </span>
                 </div>
 
+                <div
+                  style={{
+                    fontFamily: '"IBM Plex Mono", monospace',
+                    fontSize: '11px',
+                    color: 'var(--dim)',
+                    marginBottom: '8px',
+                  }}
+                >
+                  {item.domain} · {item.updatedAt}
+                </div>
+
                 <p
                   style={{
-                    margin: 0,
+                    margin: '0 0 12px 0',
                     fontFamily: '"Archivo", sans-serif',
                     fontSize: '13.5px',
                     lineHeight: 1.6,
-                    color: 'color-mix(in srgb, var(--fg) 75%, transparent)',
+                    color: 'color-mix(in srgb, var(--fg) 80%, transparent)',
                     fontWeight: 350,
                   }}
                 >
-                  {item.notes}
+                  {item.description}
                 </p>
+
+                {/* Key topics chips */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {item.keyTopics.map((topic, tIdx) => (
+                    <span
+                      key={tIdx}
+                      style={{
+                        fontFamily: '"IBM Plex Mono", monospace',
+                        fontSize: '9.5px',
+                        color: 'var(--dim)',
+                        background: 'color-mix(in srgb, var(--bg) 50%, transparent)',
+                        padding: '1px 6px',
+                        borderRadius: '2px',
+                        border: '1px solid color-mix(in srgb, var(--fg) 5%, transparent)',
+                      }}
+                    >
+                      {topic}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               {/* Right Status Badge */}
@@ -140,8 +171,10 @@ export const LearningJourney: React.FC = () => {
                   style={{
                     fontFamily: '"IBM Plex Mono", monospace',
                     fontSize: '10px',
-                    color: 'var(--accent)',
-                    border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+                    color: item.status === 'Practicing' ? '#66cc6a' : 'var(--accent)',
+                    border: `1px solid color-mix(in srgb, ${
+                      item.status === 'Practicing' ? '#66cc6a' : 'var(--accent)'
+                    } 30%, transparent)`,
                     padding: '3px 8px',
                     borderRadius: '2px',
                     whiteSpace: 'nowrap',

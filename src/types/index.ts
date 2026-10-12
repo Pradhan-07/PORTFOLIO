@@ -31,6 +31,8 @@ export interface Project {
   githubUrl: string;
   demoUrl?: string;
   snippet?: string;
+  features?: string[];
+  featured?: boolean;
   stats?: {
     stars?: number;
     updated?: string;

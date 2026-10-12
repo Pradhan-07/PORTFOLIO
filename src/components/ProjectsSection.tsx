@@ -3,15 +3,33 @@ import { PROJECTS } from '../data/projects';
 import type { Project } from '../types';
 import { PROFILE } from '../data/profile';
 import { GitHubStreakTracker } from './GitHubStreakTracker';
+import { ProjectDetailModal } from './ProjectDetailModal';
 
-export const ProjectsSection: React.FC = () => {
+interface ProjectsSectionProps {
+  onOpenProjectModal?: (project: Project) => void;
+}
+
+export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectModal }) => {
   const [filter, setFilter] = useState<'all' | 'c++' | 'ai' | 'web'>('all');
   const [activeProject, setActiveProject] = useState<Project>(PROJECTS[0]);
+  const [localModalProject, setLocalModalProject] = useState<Project | null>(null);
 
   const filteredProjects = PROJECTS.filter((p) => {
     if (filter === 'all') return true;
     return p.category === filter;
   });
+
+  const cCount = PROJECTS.filter((p) => p.category === 'c++').length;
+  const aiCount = PROJECTS.filter((p) => p.category === 'ai').length;
+  const webCount = PROJECTS.filter((p) => p.category === 'web').length;
+
+  const handleOpenDetail = (p: Project) => {
+    if (onOpenProjectModal) {
+      onOpenProjectModal(p);
+    } else {
+      setLocalModalProject(p);
+    }
+  };
 
   return (
     <section
@@ -75,7 +93,7 @@ export const ProjectsSection: React.FC = () => {
               transition: 'color 180ms ease',
             }}
           >
-            view all 19 repos on github ↗
+            view all repositories on github ↗
           </a>
         </div>
 
@@ -92,9 +110,9 @@ export const ProjectsSection: React.FC = () => {
         >
           {[
             { id: 'all', label: `all (${PROJECTS.length})` },
-            { id: 'c++', label: 'c++ & dsa (2)' },
-            { id: 'ai', label: 'ai & vision (3)' },
-            { id: 'web', label: 'web development (4)' },
+            { id: 'c++', label: `c++ & dsa (${cCount})` },
+            { id: 'ai', label: `ai & vision (${aiCount})` },
+            { id: 'web', label: `web development (${webCount})` },
           ].map((item) => (
             <button
               key={item.id}
@@ -143,6 +161,7 @@ export const ProjectsSection: React.FC = () => {
                     padding: '16px 18px',
                     cursor: 'pointer',
                     transition: 'all 180ms ease',
+                    position: 'relative',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -160,20 +179,58 @@ export const ProjectsSection: React.FC = () => {
                       >
                         {project.name}
                       </span>
+                      {project.featured && (
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            color: '#66cc6a',
+                            border: '1px solid color-mix(in srgb, #66cc6a 40%, transparent)',
+                            background: 'color-mix(in srgb, #66cc6a 10%, transparent)',
+                            padding: '1px 5px',
+                            borderRadius: '2px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          FEATURED
+                        </span>
+                      )}
                     </div>
 
-                    <span
-                      style={{
-                        fontFamily: '"IBM Plex Mono", monospace',
-                        fontSize: '10px',
-                        color: 'var(--dim)',
-                        background: 'color-mix(in srgb, var(--bg) 70%, transparent)',
-                        padding: '2px 6px',
-                        borderRadius: '2px',
-                      }}
-                    >
-                      {project.language}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        style={{
+                          fontFamily: '"IBM Plex Mono", monospace',
+                          fontSize: '10px',
+                          color: 'var(--dim)',
+                          background: 'color-mix(in srgb, var(--bg) 70%, transparent)',
+                          padding: '2px 6px',
+                          borderRadius: '2px',
+                        }}
+                      >
+                        {project.language}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDetail(project);
+                        }}
+                        title="Open full project overview"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--dim)',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          fontSize: '11px',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--fg)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--dim)')}
+                      >
+                        ⤢
+                      </button>
+                    </div>
                   </div>
 
                   <p
@@ -244,7 +301,9 @@ export const ProjectsSection: React.FC = () => {
                 }}
               >
                 <span>~/Projects/{activeProject.name}</span>
-                <span style={{ color: 'var(--accent)' }}>[PUBLIC]</span>
+                <span style={{ color: activeProject.featured ? '#66cc6a' : 'var(--accent)' }}>
+                  {activeProject.featured ? '[FEATURED]' : '[PUBLIC]'}
+                </span>
               </div>
 
               {/* Title & Language */}
@@ -296,8 +355,8 @@ export const ProjectsSection: React.FC = () => {
                 </div>
               )}
 
-              {/* Actions: View on GitHub */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px' }}>
+              {/* Actions: View on GitHub + Open Detail Modal */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
                 <a
                   href={activeProject.githubUrl}
                   target="_blank"
@@ -305,15 +364,15 @@ export const ProjectsSection: React.FC = () => {
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    padding: '9px 16px',
+                    gap: '6px',
+                    padding: '8px 14px',
                     background: 'var(--fg)',
                     color: 'var(--bg)',
                     textDecoration: 'none',
                     borderRadius: '2px',
                     fontSize: '11px',
-                    fontWeight: 500,
-                    letterSpacing: '0.08em',
+                    fontWeight: 600,
+                    letterSpacing: '0.06em',
                     transition: 'filter 180ms ease',
                   }}
                 >
@@ -321,9 +380,26 @@ export const ProjectsSection: React.FC = () => {
                   <span>↗</span>
                 </a>
 
-                <span style={{ fontSize: '10.5px', color: 'var(--dim)' }}>
-                  github.com/{PROFILE.handle}/{activeProject.name}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => handleOpenDetail(activeProject)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    background: 'color-mix(in srgb, var(--bg) 60%, transparent)',
+                    color: 'var(--fg)',
+                    border: '1px solid color-mix(in srgb, var(--fg) 14%, transparent)',
+                    borderRadius: '2px',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <span>Inspect Overview</span>
+                  <span>⤢</span>
+                </button>
               </div>
             </div>
 
@@ -332,6 +408,14 @@ export const ProjectsSection: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Local Modal if no external handler passed */}
+      {localModalProject && (
+        <ProjectDetailModal
+          project={localModalProject}
+          onClose={() => setLocalModalProject(null)}
+        />
+      )}
     </section>
   );
 };
