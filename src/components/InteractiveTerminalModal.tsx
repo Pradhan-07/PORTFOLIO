@@ -105,7 +105,7 @@ export const InteractiveTerminalModal: React.FC<InteractiveTerminalModalProps> =
               <span style={{ color: 'var(--accent)' }}>learning</span>
               <span>View ongoing learning logs & current focus</span>
               <span style={{ color: 'var(--accent)' }}>dsa</span>
-              <span>Open the interactive DSA algorithm playground</span>
+              <span>View Data Structures & Algorithms focus in C++</span>
               <span style={{ color: 'var(--accent)' }}>contact</span>
               <span>Display email, GitHub, and LinkedIn details</span>
               <span style={{ color: 'var(--accent)' }}>github</span>
@@ -214,10 +214,10 @@ export const InteractiveTerminalModal: React.FC<InteractiveTerminalModalProps> =
       case 'dsa':
         resultNode = (
           <div style={{ color: 'var(--accent)' }}>
-            &gt; Launching DSA Algorithm Playground (Binary Search, Bubble Sort, Selection Sort, Linked List, Tree Traversals)...
+            &gt; Navigating to Data Structures & Algorithms (C++) focus section...
           </div>
         );
-        onNavigate('dsa-playground');
+        onNavigate('focus');
         break;
 
       case 'contact':

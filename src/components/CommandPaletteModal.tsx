@@ -66,14 +66,6 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       action: () => onNavigate('projects'),
     },
     {
-      id: 'nav-dsa',
-      category: 'Navigation',
-      title: 'DSA Algorithm Playground',
-      subtitle: 'Interactive step-by-step visualizations of searching & sorting',
-      shortcut: '#dsa',
-      action: () => onNavigate('dsa-playground'),
-    },
-    {
       id: 'nav-journey',
       category: 'Navigation',
       title: 'Engineering Learning Log',

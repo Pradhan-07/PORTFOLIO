@@ -7,7 +7,6 @@ import { HeroSection } from '../HeroSection';
 import { AboutSection } from '../AboutSection';
 import { FocusSection } from '../FocusSection';
 import { SkillsSection } from '../SkillsSection';
-import { DSAVisualizer } from '../DSAVisualizer';
 import { ProjectsSection } from '../ProjectsSection';
 import { LearningJourney } from '../LearningJourney';
 import { ContactSection } from '../ContactSection';
@@ -226,7 +225,7 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
     if (cmd === 'intro') onBackToIntro();
     else if (cmd === 'theme') onToggleTheme();
     else if (cmd === 'term' || cmd === 'terminal') setIsTerminalOpen(true);
-    else if (cmd === 'dsa') scrollToSection('dsa-playground');
+    else if (cmd === 'dsa') scrollToSection('focus');
     else scrollToSection(cmd);
   };
 
@@ -326,7 +325,7 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         </button>
 
         <nav style={{ display: 'flex', alignItems: 'center', gap: '6px' }} className="nav-links">
-          {['whoami', 'focus', 'dsa', 'stack', 'experiments', 'journey', 'contact'].map((item) => (
+          {['whoami', 'focus', 'stack', 'experiments', 'journey', 'contact'].map((item) => (
             <button
               key={item}
               type="button"
@@ -338,8 +337,6 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
                     ? 'skills'
                     : item === 'experiments'
                     ? 'projects'
-                    : item === 'dsa'
-                    ? 'dsa-playground'
                     : item
                 )
               }
@@ -697,13 +694,6 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => scrollToSection('dsa-playground')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', font: 'inherit' }}
-                >
-                  &gt; dsa playground ↵
-                </button>
-                <button
-                  type="button"
                   onClick={() => scrollToSection('journey')}
                   style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', font: 'inherit' }}
                 >
@@ -878,25 +868,6 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
                 <span>Interactive Terminal</span>
                 <span style={{ color: 'var(--dim)' }}>&gt;_</span>
               </button>
-              <button
-                type="button"
-                onClick={() => scrollToSection('dsa-playground')}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  background: 'color-mix(in srgb, var(--bg) 60%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                  padding: '5px 8px',
-                  borderRadius: '2px',
-                  color: 'var(--accent)',
-                  cursor: 'pointer',
-                  fontSize: '10px',
-                  fontFamily: 'inherit',
-                }}
-              >
-                <span>DSA Playground</span>
-                <span>⚡</span>
-              </button>
             </div>
           </div>
         </div>
@@ -943,7 +914,6 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         <AboutSection />
         <FocusSection />
         <SkillsSection />
-        <DSAVisualizer />
         <ProjectsSection onOpenProjectModal={(p) => setSelectedProjectModal(p)} />
         <LearningJourney />
         <ContactSection />
