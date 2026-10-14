@@ -153,14 +153,14 @@ export const CodeTickerPanel: React.FC = () => {
                   l.kind === 'com'
                     ? 'var(--dim)'
                     : l.kind === 'kw'
-                    ? 'var(--kw)'
-                    : l.kind === 'str'
-                    ? 'var(--str)'
-                    : l.kind === 'ty'
-                    ? 'var(--ty)'
-                    : l.kind === 'fn'
-                    ? 'var(--fn)'
-                    : 'var(--fg)',
+                      ? 'var(--kw)'
+                      : l.kind === 'str'
+                        ? 'var(--str)'
+                        : l.kind === 'ty'
+                          ? 'var(--ty)'
+                          : l.kind === 'fn'
+                            ? 'var(--fn)'
+                            : 'var(--fg)',
                 whiteSpace: 'pre',
               }}
             >

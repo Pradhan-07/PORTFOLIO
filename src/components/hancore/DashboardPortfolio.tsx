@@ -249,21 +249,21 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
     url?: string;
     projectId?: string;
   }> = [
-    { id: 'brand', label: 'KP // CORE', tilt: -2.5, desc: 'B.Tech CSE · VIT-AP', isBrand: true },
-    { id: 'dsa', label: 'DSA_CPP', tilt: 1.8, desc: 'C++ Algorithms & STL', lang: 'C++', projectId: 'dsa-cpp' },
-    { id: 'study', label: 'study_detection', tilt: -1.2, desc: 'Vision Attention Tracker', lang: 'Python', projectId: 'study-detection' },
-    { id: 'magic', label: 'magic_hand', tilt: 2.2, desc: 'Real-time Hand Gestures', lang: 'Python', projectId: 'magic-hand' },
-    {
-      id: 'indstate',
-      label: 'indstate',
-      tilt: -1.5,
-      desc: 'Trusted Property Marketplace',
-      lang: 'React',
-      url: 'https://github.com/Pradhan-07/indstate',
-      projectId: 'indstate',
-    },
-    { id: 'glow', label: 'flowerglow', tilt: 1.6, desc: 'Interactive Canvas UI', lang: 'Canvas', projectId: 'flowerglow' },
-  ];
+      { id: 'brand', label: 'KP // CORE', tilt: -2.5, desc: 'B.Tech CSE · VIT-AP', isBrand: true },
+      { id: 'dsa', label: 'DSA_CPP', tilt: 1.8, desc: 'C++ Algorithms & STL', lang: 'C++', projectId: 'dsa-cpp' },
+      { id: 'study', label: 'study_detection', tilt: -1.2, desc: 'Vision Attention Tracker', lang: 'Python', projectId: 'study-detection' },
+      { id: 'magic', label: 'magic_hand', tilt: 2.2, desc: 'Real-time Hand Gestures', lang: 'Python', projectId: 'magic-hand' },
+      {
+        id: 'indstate',
+        label: 'indstate',
+        tilt: -1.5,
+        desc: 'Trusted Property Marketplace',
+        lang: 'React',
+        url: 'https://github.com/Pradhan-07/indstate',
+        projectId: 'indstate',
+      },
+      { id: 'glow', label: 'flowerglow', tilt: 1.6, desc: 'Interactive Canvas UI', lang: 'Canvas', projectId: 'flowerglow' },
+    ];
 
   return (
     <div
@@ -334,10 +334,10 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
                   item === 'whoami'
                     ? 'hero'
                     : item === 'stack'
-                    ? 'skills'
-                    : item === 'experiments'
-                    ? 'projects'
-                    : item
+                      ? 'skills'
+                      : item === 'experiments'
+                        ? 'projects'
+                        : item
                 )
               }
               style={{
