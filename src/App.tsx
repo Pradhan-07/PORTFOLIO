@@ -6,8 +6,20 @@ import { LandingScreen } from './components/LandingScreen';
 import { DashboardPortfolio } from './components/hancore/DashboardPortfolio';
 import { RadialEclipseTransition } from './components/hancore/RadialEclipseTransition';
 
+const THEME_STORAGE_KEY = 'karan-portfolio-theme';
+
+const readStoredThemeIndex = (): number => {
+  try {
+    const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const parsed = raw === null ? NaN : Number.parseInt(raw, 10);
+    return Number.isInteger(parsed) && parsed >= 0 && parsed < THEMES.length ? parsed : 0;
+  } catch {
+    return 0;
+  }
+};
+
 export const App: React.FC = () => {
-  const [themeIndex, setThemeIndex] = useState(0);
+  const [themeIndex, setThemeIndex] = useState<number>(readStoredThemeIndex);
   const [screen, setScreen] = useState<'landing' | 'portfolio'>('landing');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -35,8 +47,23 @@ export const App: React.FC = () => {
     applyThemeVariables(currentTheme);
   }, [currentTheme, applyThemeVariables]);
 
+  // Persist the chosen theme so it is restored on the next visit.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, String(themeIndex));
+    } catch {
+      // Storage unavailable (private mode etc.) — theme still applies for the session.
+    }
+  }, [themeIndex]);
+
   const handleToggleTheme = () => {
     setThemeIndex((prev) => (prev + 1) % THEMES.length);
+  };
+
+  const handleSelectTheme = (index: number) => {
+    if (index >= 0 && index < THEMES.length) {
+      setThemeIndex(index);
+    }
   };
 
   // Trigger Part 2: Radial Eclipse Transition
@@ -84,6 +111,7 @@ export const App: React.FC = () => {
           theme={currentTheme}
           onBackToIntro={handleBackToLanding}
           onToggleTheme={handleToggleTheme}
+          onSelectTheme={handleSelectTheme}
         />
       )}
 

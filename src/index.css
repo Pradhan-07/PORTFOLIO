@@ -147,6 +147,62 @@ a {
   border-color: color-mix(in srgb, var(--accent) 35%, transparent) !important;
 }
 
+/* Screen-reader only (aria-live announcements, hidden labels) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Phase 2: editor stage / file buffer --- */
+
+/* Line gutter: an overlay column clipped to the content height, rows
+   snapped exactly to the --cell-h character token. */
+.file-gutter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 52px;
+  overflow: hidden;
+  border-right: 1px solid color-mix(in srgb, var(--fg) 8%, transparent);
+  padding-top: 6px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.file-gutter-line {
+  height: var(--cell-h);
+  line-height: var(--cell-h);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9.5px;
+  color: var(--dim);
+  text-align: right;
+  padding-right: 10px;
+  opacity: 0.6;
+}
+
+/* Buffer body: content sits right of the gutter, on a faint horizontal
+   guide grid with the same --cell-h rhythm. */
+.file-buffer-body {
+  padding-left: 52px;
+  background-image: linear-gradient(to bottom,
+      color-mix(in srgb, var(--fg) 2.5%, transparent) 1px,
+      transparent 1px);
+  background-size: 100% var(--cell-h);
+  background-position: 0 6px;
+}
+
+.file-buffer-scroll:focus-visible {
+  outline-offset: -2px;
+}
+
 /* Responsive Overrides */
 @media (min-width: 768px) {
   .desktop-note {
@@ -176,6 +232,53 @@ a {
 
   .right-cluster-column {
     display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+
+  /* Editor workspace stacks: file tree becomes a horizontal tabline on top */
+  .editor-workspace {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .editor-file-nav {
+    height: auto !important;
+  }
+
+  .editor-file-panel {
+    border-right: none !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+
+  .editor-file-list {
+    flex-direction: row !important;
+    overflow-x: auto;
+    overflow-y: hidden !important;
+  }
+
+  .editor-file-button {
+    width: auto !important;
+    flex: 0 0 auto;
+    border-left: none !important;
+    border-bottom: 2px solid transparent !important;
+  }
+
+  .editor-file-button[aria-current="true"] {
+    border-bottom: 2px solid var(--accent) !important;
+  }
+
+  .editor-explorer-hint {
+    display: none;
+  }
+
+  .file-gutter {
+    width: 36px;
+  }
+
+  .file-buffer-body {
+    padding-left: 36px;
   }
 }
 
