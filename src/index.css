@@ -19,11 +19,48 @@
   --num: #cfcabe;
   --cell-w: 7.5px;
   --cell-h: 14px;
+
+  /* --- Phase 4 (G5): layout token system — theme-independent, one owner.
+     These tokens govern the whole stage (frame, buffer, bar, desk) so the
+     site has a single visual physics. Never set them from themes/App. --- */
+  --wide: 1008px;          /* max content measure inside the buffer */
+  --bar-h: 46px;           /* bottom-bar height (stage grid row + bar) */
+  --desk-h: 0px;           /* desk band — height bands land with G6/G10 */
+  --frame-x: 64px;         /* frame inset — stepped down by the G10 bands */
+  --feather: 14px;         /* soft-edge falloff = 1 cell */
+  --radius: 2px;           /* all editor chrome (9px only for mobile sheets) */
+  --ring: 0 0 0 1px var(--line); /* the only elevation in chrome */
+  --tree-w: 210px;         /* file-tree sidebar width — stepped by G10 bands */
+  --gutter-w: 52px;        /* buffer line-gutter width (body padding matches) */
+  --gutter-top: 6px;       /* gutter/guide-grid shared top offset */
+  --z-creature: 5;         /* Bit's overlay layer (buffer < creature < chrome) */
+  /* Spacing scale, pinned (CSS-TOKEN-MAP Risk R1): names follow the
+     PHASE4-SPECS mapping-table attestations — --sp-2 = 14px (inside cards),
+     --sp-3 = 28px (between blocks), --sp-5 = 70px (section vertical).
+     21px and 56px are on-scale raw values with no token name. */
+  --sp-1: 7px;
+  --sp-2: 14px;
+  --sp-3: 28px;
+  --sp-4: 42px;
+  --sp-5: 70px;
+  --sp-6: 84px;
 }
 
 html {
   scroll-behavior: smooth;
   color-scheme: dark;
+}
+
+/* Phase 4 (scroll containment, SCROLL-SPEC §4.4): the document never
+   chains scroll or triggers browser overscroll behaviour inside the app. */
+html,
+body {
+  overscroll-behavior: none;
+}
+
+/* Every inner scroll region contains its own chaining. */
+.scroll-contain {
+  overscroll-behavior: contain;
 }
 
 html,
@@ -56,7 +93,7 @@ body,
 
 ::-webkit-scrollbar-thumb {
   background: var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -101,6 +138,13 @@ a {
   opacity: 1;
   transform: scale(1);
   transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1), transform 400ms cubic-bezier(0.23, 1, 0.32, 1);
+  /* Phase 4 (G5): frame inset from the band token; vertical on the scale. */
+  padding: var(--sp-3) var(--frame-x);
+}
+
+/* The frame's wide wordmark tracking, set once here (G5) — not per element. */
+.landing-brand {
+  letter-spacing: 0.3em;
 }
 
 .landing-stage.is-leaving {
@@ -109,42 +153,63 @@ a {
   pointer-events: none;
 }
 
-.enter-btn:hover {
-  filter: brightness(1.15);
-  transform: translateY(-1px);
-}
-
 .enter-btn:active {
   transform: translateY(0);
 }
 
-.theme-key-btn:hover,
-.theme-key-nav:hover {
-  color: var(--fg) !important;
-  border-color: color-mix(in srgb, var(--fg) 25%, transparent) !important;
+/* Phase 4 (G10): hover states exist only where hover exists. On touch
+   devices these rules caused sticky highlighted states after taps, and
+   the file tree's hover colour used to be JS mouse handlers (removed in
+   the scroll pass) — it lives here now, for non-active rows only. */
+@media (hover: hover) {
+  .enter-btn:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+  }
+
+  .theme-key-btn:hover,
+  .theme-key-nav:hover {
+    color: var(--fg) !important;
+    border-color: color-mix(in srgb, var(--fg) 25%, transparent) !important;
+  }
+
+  .primary-btn:hover {
+    filter: brightness(1.12);
+    transform: translateY(-1px);
+  }
+
+  .secondary-btn:hover {
+    background-color: color-mix(in srgb, var(--fg) 8%, transparent) !important;
+    border-color: color-mix(in srgb, var(--fg) 35%, transparent) !important;
+  }
+
+  .focus-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent) !important;
+    transform: translateY(-2px);
+  }
+
+  .project-item:hover {
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent) !important;
+  }
+
+  .journey-entry:hover {
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent) !important;
+  }
+
+  .editor-file-button:not([aria-current="true"]):hover {
+    color: var(--fg);
+  }
 }
 
-.primary-btn:hover {
-  filter: brightness(1.12);
-  transform: translateY(-1px);
-}
-
-.secondary-btn:hover {
-  background-color: color-mix(in srgb, var(--fg) 8%, transparent) !important;
-  border-color: color-mix(in srgb, var(--fg) 35%, transparent) !important;
-}
-
-.focus-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent) !important;
-  transform: translateY(-2px);
-}
-
-.project-item:hover {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent) !important;
-}
-
-.journey-entry:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent) !important;
+/* Touch targets: interactive chrome never drops below 44px tall where
+   there is no hover (G10). Nothing on touch is revealed by hover alone,
+   so nothing needs a reveal fallback here. */
+@media (hover: none) {
+  .editor-file-button,
+  .den-btn,
+  .hdr-btn {
+    min-height: 44px;
+  }
 }
 
 /* Screen-reader only (aria-live announcements, hidden labels) */
@@ -160,6 +225,39 @@ a {
   border: 0;
 }
 
+/* --- Phase 4 (G5): shared buffer-section layout ---
+   One definition replaces the identical inline container styles that
+   every section component used to carry (920px / 0 24px). */
+.section-container {
+  max-width: min(var(--wide), 100%);
+  margin: 0 auto;
+  padding: 0 var(--frame-x);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Vertical rhythm for the top-level <section> of each editor file. */
+.file-section {
+  padding: var(--sp-5) 0;
+}
+
+/* Editor workspace: sidebar width is a token so the G10 bands can step
+   it (168 / 182 / 196 / 210px) — media queries cannot reach inline styles. */
+.editor-workspace {
+  grid-template-columns: var(--tree-w) minmax(0, 1fr);
+}
+
+/* Cockpit graph (About buffer header): 14 cells tall, 10 in the ≤640 band. */
+.cockpit-graph-canvas {
+  height: 196px;
+}
+
+@media (max-width: 640px) {
+  .cockpit-graph-canvas {
+    height: 140px;
+  }
+}
+
 /* --- Phase 2: editor stage / file buffer --- */
 
 /* Line gutter: an overlay column clipped to the content height, rows
@@ -169,10 +267,10 @@ a {
   top: 0;
   bottom: 0;
   left: 0;
-  width: 52px;
+  width: var(--gutter-w);
   overflow: hidden;
   border-right: 1px solid color-mix(in srgb, var(--fg) 8%, transparent);
-  padding-top: 6px;
+  padding-top: var(--gutter-top);
   pointer-events: none;
   z-index: 1;
 }
@@ -191,12 +289,12 @@ a {
 /* Buffer body: content sits right of the gutter, on a faint horizontal
    guide grid with the same --cell-h rhythm. */
 .file-buffer-body {
-  padding-left: 52px;
+  padding-left: var(--gutter-w);
   background-image: linear-gradient(to bottom,
       color-mix(in srgb, var(--fg) 2.5%, transparent) 1px,
       transparent 1px);
   background-size: 100% var(--cell-h);
-  background-position: 0 6px;
+  background-position: 0 var(--gutter-top);
 }
 
 .file-buffer-scroll:focus-visible {
@@ -214,93 +312,29 @@ a {
   }
 }
 
-@media (max-width: 960px) {
-  .cockpit-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  .left-tiles-column {
-    flex-direction: row !important;
-    overflow-x: auto;
-    padding-bottom: 8px;
-  }
-
-  .left-tiles-column>div {
-    transform: none !important;
-    min-width: 140px;
-  }
-
-  .right-cluster-column {
-    display: none !important;
-  }
-}
-
+/* Phase 4 (G10): the old ≤960 cockpit block is gone — the cockpit was
+   absorbed into the About buffer in G5, so .cockpit-grid /
+   .left-tiles-column / .right-cluster-column no longer exist in the
+   DOM. The old ≤760 horizontal-tabline stack is likewise replaced by
+   the ≤640 tabline disclosure in the G10 matrix below; only the gutter
+   step survives from that block. */
 @media (max-width: 760px) {
 
-  /* Editor workspace stacks: file tree becomes a horizontal tabline on top */
-  .editor-workspace {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .editor-file-nav {
-    height: auto !important;
-  }
-
-  .editor-file-panel {
-    border-right: none !important;
-    border-bottom: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
-  }
-
-  .editor-file-list {
-    flex-direction: row !important;
-    overflow-x: auto;
-    overflow-y: hidden !important;
-  }
-
-  .editor-file-button {
-    width: auto !important;
-    flex: 0 0 auto;
-    border-left: none !important;
-    border-bottom: 2px solid transparent !important;
-  }
-
-  .editor-file-button[aria-current="true"] {
-    border-bottom: 2px solid var(--accent) !important;
-  }
-
-  .editor-explorer-hint {
-    display: none;
-  }
-
-  .file-gutter {
-    width: 36px;
-  }
-
-  .file-buffer-body {
-    padding-left: 36px;
+  /* Gutter narrows with the stage — the token keeps the gutter column
+     and the body padding-left from ever drifting apart. */
+  :root {
+    --gutter-w: 36px;
   }
 }
 
 @media (max-width: 640px) {
-  .frame-top {
-    padding: 0 !important;
-  }
 
-  .portfolio-nav {
-    padding: 12px 16px !important;
-  }
-
+  /* Phase 4 (G10) cleanup: the .frame-top / .portfolio-nav /
+     .editor-tabline rules targeted retired components and the
+     .landing-stage padding override fought the token-driven base rule —
+     all deleted. What survives below is still load-bearing. */
   .nav-links {
     display: none !important;
-  }
-
-  .editor-tabline {
-    padding: 6px 16px !important;
-  }
-
-  .landing-stage {
-    padding: 20px 16px !important;
   }
 
   .code-ticker-panel {
@@ -322,10 +356,123 @@ a {
   }
 }
 
-/* --- Phase 3: bottom bar zones (G3) ---
-   The 46px bar must never overflow: the contribution strip drops first,
-   then legacy chrome labels, then duplicated echoes, so at 390px the bar
-   carries identity + command line + theme/streak readouts only. */
+/* --- Phase 4 (G5): bottom-bar element classes ---
+   Width/padding live here (not inline) so the G10 bands can restyle them. */
+.bar-mode-chip {
+  padding: 2px 8px;
+}
+
+.bar-command-input {
+  width: 150px;
+}
+
+.bar-command-input.is-typing {
+  width: 220px;
+}
+
+/* --- Phase 4 (G6): desk height bands ---
+   Height is a budget; the buffer always wins. --desk-h is 0 whenever the
+   width is ≤640px or the viewport is shorter than 700px, then steps with
+   height. If a future stage minimum ever conflicts, the desk yields
+   first — these rules are that invariant. */
+@media (min-width: 641px) and (min-height: 700px) {
+  :root {
+    --desk-h: 84px;
+  }
+}
+
+@media (min-width: 641px) and (min-height: 850px) {
+  :root {
+    --desk-h: 126px;
+  }
+}
+
+@media (min-width: 641px) and (min-height: 1000px) {
+  :root {
+    --desk-h: 184px;
+  }
+}
+
+/* --- Phase 4 (G7): the den button in the bottom bar --- */
+.den-btn {
+  background: var(--line);
+  border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  color: var(--chrome);
+  cursor: pointer;
+  font-size: 10.5px;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+/* =====================================================================
+   Phase 4 (G10): the breakpoint matrix — 8 width bands.
+   1008px content / 46px bar / frame insets step down together:
+     ≥1101 · 1000–1100 · 901–999 · 801–900 · 701–800 · 641–700 ·
+     381–640 · ≤380
+   The Phase-3 bottom-bar zone rules are folded into this matrix with
+   three documented decisions where the two systems disagreed:
+
+   Note A (contribution strip, 381–640): G10 makes the strip a
+   scrollable zone instead of Phase 3's display:none for the whole
+   ≤1100 range. The strip stays hidden 641–1100 (it would crowd the
+   readouts) and scrolls horizontally inside 381–640.
+   Note B (strip width): the strip keeps its fixed weeks={38} render;
+   narrower bands clip the overflow rather than re-rendering fewer
+   weeks — a documented seam, the data itself never changes.
+   Note C (.bar-legacy, 801–900): Phase 3 hid the legacy echoes ≤900;
+   G10's "full bar" band wording loses — the hide stays, because every
+   functional zone (identity, command line, strip, readouts) is still
+   present in that band; only duplicated echo labels drop.
+   ===================================================================== */
+
+/* Frame inset steps (default 64px lives in :root). */
+@media (max-width: 1100px) {
+  :root {
+    --frame-x: 36px;
+  }
+}
+
+@media (max-width: 800px) {
+  :root {
+    --frame-x: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --frame-x: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  :root {
+    --frame-x: 12px;
+    --gutter-w: 30px;
+  }
+}
+
+/* File-tree width steps (default 210px in :root). */
+@media (max-width: 999px) {
+  :root {
+    --tree-w: 196px;
+  }
+}
+
+@media (max-width: 800px) {
+  :root {
+    --tree-w: 182px;
+  }
+}
+
+@media (max-width: 700px) {
+  :root {
+    --tree-w: 168px;
+  }
+}
+
+/* Bottom-bar zones (folded Phase-3 rules; see Notes A–C above). */
 @media (max-width: 1100px) {
   .bar-contrib-strip {
     display: none !important;
@@ -339,10 +486,17 @@ a {
 }
 
 @media (max-width: 640px) {
-  .editor-status-bar {
-    padding: 0 8px !important;
+  /* Note A: the strip returns as a horizontally scrollable zone. */
+  .bar-contrib-strip {
+    display: flex !important;
+    flex: 0 1 auto !important;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
+  /* Brand words + the centre file PATH hide; identity survives via the
+     KP mark and the NORMAL chip. The file READOUT stays in this band. */
   .bar-brand-text {
     display: none !important;
   }
@@ -351,18 +505,101 @@ a {
     display: none !important;
   }
 
+  /* Tabline disclosure: the workspace goes single-column and the file
+     tree becomes a toggle + overlay sheet (the one place the 9px
+     radius is permitted). The sheet's open state is component state;
+     .is-closed only hides inside this band — on wide stages the panel
+     is the permanent sidebar regardless of the class. */
+  .editor-workspace {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .editor-file-nav {
+    position: relative;
+    height: auto !important;
+  }
+
+  .editor-tabline-toggle {
+    display: flex !important;
+  }
+
+  .editor-file-panel {
+    position: absolute;
+    top: 100%;
+    left: 8px;
+    right: 8px;
+    z-index: 60;
+    height: auto !important;
+    max-height: min(70svh, 480px);
+    border: 1px solid color-mix(in srgb, var(--fg) 14%, transparent) !important;
+    border-radius: 9px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), var(--ring);
+  }
+
+  .editor-file-panel.is-closed {
+    display: none !important;
+  }
+
+  .editor-file-list {
+    flex-direction: column !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .editor-file-button {
+    width: 100% !important;
+    min-height: 44px;
+  }
+
+  .editor-explorer-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+
+  /* The bar sheds its secondary readouts; the header sheds its
+     wordmark (the KP mark remains). The command input collapses to a
+     chip and expands on focus / while typing. */
+  .bar-readout-theme {
+    display: none !important;
+  }
+
   .bar-readout-file {
     display: none !important;
   }
 
+  .bar-readout-streak {
+    display: none !important;
+  }
+
+  .stage-brand-text {
+    display: none !important;
+  }
+
   .bar-command-input {
-    width: 96px !important;
+    width: 36px !important;
+  }
+
+  .bar-command-input:focus,
+  .bar-command-input.is-typing {
+    width: 150px !important;
   }
 }
 
-@media (max-width: 420px) {
-  .bar-readout-theme {
-    display: none !important;
+/* Height bands: short viewports compact the chrome, content wins. */
+@media (max-height: 560px) {
+  .stage-header {
+    padding-top: var(--sp-1) !important;
+    padding-bottom: var(--sp-1) !important;
+  }
+}
+
+@media (max-height: 640px) {
+  .landing-stage {
+    padding-top: var(--sp-2);
+    padding-bottom: var(--sp-2);
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { THEMES } from './data/themes';
 import type { Theme } from './types';
 import { CanvasWall } from './components/CanvasWall';
@@ -6,6 +6,7 @@ import { LandingScreen } from './components/LandingScreen';
 import { DashboardPortfolio } from './components/hancore/DashboardPortfolio';
 import { RadialEclipseTransition } from './components/hancore/RadialEclipseTransition';
 import { usePrefersReducedMotion } from './hooks/usePrefersReducedMotion';
+import { useWallData } from './hooks/useWallData';
 
 const THEME_STORAGE_KEY = 'karan-portfolio-theme';
 
@@ -23,6 +24,17 @@ export const App: React.FC = () => {
   const reducedMotion = usePrefersReducedMotion();
   const [themeIndex, setThemeIndex] = useState<number>(readStoredThemeIndex);
   const [screen, setScreen] = useState<'landing' | 'portfolio'>('landing');
+  // G12 code wall: real repo files from /data/wall.json (null while
+  // loading or if the file is unavailable — CanvasWall then falls back
+  // to the built-in snippets). The wall navigation offset lives here
+  // because the wall canvas is App's child, behind both screens; the
+  // landing drives it and derives its status-line readout from it.
+  const wall = useWallData();
+  const wallLines = useMemo(
+    () => (wall.data ? wall.data.files.flatMap((f) => f.tokens) : null),
+    [wall.data]
+  );
+  const [wallOffset, setWallOffset] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const currentTheme: Theme = THEMES[themeIndex];
@@ -49,6 +61,23 @@ export const App: React.FC = () => {
     applyThemeVariables(currentTheme);
   }, [currentTheme, applyThemeVariables]);
 
+  // The document never scrolls in this two-act app (SCROLL-SPEC §4.4):
+  // App owns the lock for BOTH screens, for the app's whole lifetime —
+  // previously only the editor locked it, so a short viewport could
+  // scroll the landing's overflow into view.
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, []);
+
   // Persist the chosen theme so it is restored on the next visit.
   useEffect(() => {
     try {
@@ -71,6 +100,7 @@ export const App: React.FC = () => {
   // Trigger Part 2: Radial Eclipse Transition
   // Reduced motion (G9): no cinematic sequence — go straight to the portfolio.
   const handleStartEnterTransition = () => {
+    if (isTransitioning) return; // a second Enter mid-gate must not restart it
     if (reducedMotion) {
       handleTransitionComplete();
       return;
@@ -85,6 +115,12 @@ export const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
+  // Escape during the gate (Comparison Round 1, S1): cancel the
+  // transition and stay on the landing — the editor never mounts.
+  const handleCancelTransition = () => {
+    setIsTransitioning(false);
+  };
+
   const handleBackToLanding = () => {
     setScreen('landing');
     setIsTransitioning(false);
@@ -97,13 +133,18 @@ export const App: React.FC = () => {
       style={{
         position: 'relative',
         minHeight: '100vh',
-        background: '#080908',
+        background: 'var(--bg)',
         color: 'var(--fg)',
         overflowX: 'hidden',
       }}
     >
       {/* Background Matrix Canvas Wall */}
-      <CanvasWall theme={currentTheme} interactive={screen === 'landing' && !isTransitioning} />
+      <CanvasWall
+        theme={currentTheme}
+        interactive={screen === 'landing' && !isTransitioning}
+        wallLines={wallLines}
+        wallRowOffset={wallOffset}
+      />
 
       {/* Screens */}
       {screen === 'landing' ? (
@@ -112,6 +153,9 @@ export const App: React.FC = () => {
           onEnter={handleStartEnterTransition}
           onToggleTheme={handleToggleTheme}
           isLeaving={isTransitioning}
+          wall={wall}
+          wallOffset={wallOffset}
+          onWallOffsetChange={setWallOffset}
         />
       ) : (
         <DashboardPortfolio
@@ -126,6 +170,7 @@ export const App: React.FC = () => {
       {isTransitioning && (
         <RadialEclipseTransition
           onComplete={handleTransitionComplete}
+          onCancel={handleCancelTransition}
           themeAccent={currentTheme.accent}
         />
       )}
