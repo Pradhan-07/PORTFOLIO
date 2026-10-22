@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import type { Theme, Project } from '../../types';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import type { Theme, Project, EditorFileId } from '../../types';
 import { PROFILE } from '../../data/profile';
 import { PROJECTS } from '../../data/projects';
+import { EDITOR_FILES } from '../../data/editorFiles';
 import { BrandLogo } from '../BrandLogo';
 import { HeroSection } from '../HeroSection';
 import { AboutSection } from '../AboutSection';
@@ -13,8 +14,10 @@ import { ContactSection } from '../ContactSection';
 import { Footer } from '../Footer';
 import { EditorStatusBar } from '../EditorStatusBar';
 import { EditorFileNav } from './EditorFileNav';
+import { FileBuffer } from './FileBuffer';
 import { CertificationsSection } from '../CertificationsSection';
 import { LeetCodeSection } from '../LeetCodeSection';
+import { ThemesSection } from '../ThemesSection';
 import { ProjectDetailModal } from '../ProjectDetailModal';
 import { InteractiveTerminalModal } from '../InteractiveTerminalModal';
 import { CommandPaletteModal } from '../CommandPaletteModal';
@@ -23,14 +26,17 @@ interface DashboardPortfolioProps {
   theme: Theme;
   onBackToIntro: () => void;
   onToggleTheme: () => void;
+  onSelectTheme: (index: number) => void;
 }
 
 export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
   theme,
   onBackToIntro,
   onToggleTheme,
+  onSelectTheme,
 }) => {
   const [activeSection, setActiveSection] = useState('hero');
+  const [activeFile, setActiveFile] = useState<EditorFileId>('about');
   const [graphMode, setGraphMode] = useState<'dsa' | 'ai' | 'web'>('dsa');
   const [pointerPos, setPointerPos] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
   const [selectedProjectModal, setSelectedProjectModal] = useState<Project | null>(null);
@@ -38,24 +44,131 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const bufferRef = useRef<HTMLDivElement | null>(null);
+  const pendingAnchorRef = useRef<string | null>(null);
+  const navFocusPendingRef = useRef(false);
 
-  // Global Keyboard Shortcuts (Cmd+K / Ctrl+K and Ctrl+`)
+  const activeFileSpec = EDITOR_FILES.find((f) => f.id === activeFile) ?? EDITOR_FILES[0];
+
+  // --- File model -----------------------------------------------------------
+  // Opening a file swaps only the buffer content; the stage chrome stays put.
+  const openFile = useCallback((fileId: EditorFileId, anchorSection?: string) => {
+    const spec = EDITOR_FILES.find((f) => f.id === fileId) ?? EDITOR_FILES[0];
+    pendingAnchorRef.current = anchorSection && anchorSection !== spec.section ? anchorSection : null;
+    setActiveFile(spec.id);
+    setActiveSection(anchorSection ?? spec.section);
+  }, []);
+
+  // Legacy section ids (hero, focus, skills, …) resolve to their file.
+  const openSection = useCallback(
+    (sectionId: string) => {
+      const spec = EDITOR_FILES.find((f) => f.section === sectionId);
+      if (spec) {
+        openFile(spec.id, sectionId);
+      } else {
+        // hero and focus both live inside about.tsx
+        openFile('about', sectionId);
+      }
+    },
+    [openFile]
+  );
+
+  const stepFile = useCallback(
+    (direction: 1 | -1) => {
+      const idx = EDITOR_FILES.findIndex((f) => f.id === activeFile);
+      const next = EDITOR_FILES[(idx + direction + EDITOR_FILES.length) % EDITOR_FILES.length];
+      openFile(next.id);
+    },
+    [activeFile, openFile]
+  );
+
+  // Lock the document while the editor stage is mounted — only the buffer scrolls.
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, []);
+
+  // After a file switch: scroll the buffer to the top (or to a pending
+  // anchor such as #focus), and move focus to the new tree item when the
+  // switch came from keyboard navigation inside the tree.
+  useEffect(() => {
+    if (navFocusPendingRef.current) {
+      navFocusPendingRef.current = false;
+      document.querySelector<HTMLButtonElement>(`[data-file-button="${activeFile}"]`)?.focus();
+    }
+    const buffer = bufferRef.current;
+    if (!buffer) return;
+    const anchor = pendingAnchorRef.current;
+    pendingAnchorRef.current = null;
+    const raf = requestAnimationFrame(() => {
+      if (anchor) {
+        const el = document.getElementById(anchor);
+        if (el) {
+          const top = el.getBoundingClientRect().top - buffer.getBoundingClientRect().top + buffer.scrollTop;
+          buffer.scrollTo({ top: Math.max(0, top - 4), behavior: 'smooth' });
+          return;
+        }
+      }
+      buffer.scrollTo({ top: 0 });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeFile]);
+
+  // Global keyboard: Cmd/Ctrl+K palette, Ctrl+` terminal, and the
+  // file-stepping keys (arrows / j / k) with modal + typing focus guards.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd+K or Ctrl+K for Command Palette
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsCommandPaletteOpen((prev) => !prev);
+        return;
       }
       // Ctrl+` for Terminal
       if (e.ctrlKey && e.key === '`') {
         e.preventDefault();
         setIsTerminalOpen((prev) => !prev);
+        return;
       }
+
+      // File stepping stands down while any overlay is open…
+      if (isCommandPaletteOpen || isTerminalOpen || selectedProjectModal) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      const inFileTree = Boolean(target.closest('[data-editor-file-nav]'));
+      if (!inFileTree) {
+        // …while typing in any field…
+        const tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return;
+        // …and while focus sits on an interactive control inside the buffer
+        // (its own arrow/key behaviour wins). The buffer region itself and
+        // plain content remain valid stepping contexts.
+        if (target.closest('button, a, input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+      }
+
+      let direction: 1 | -1 | 0 = 0;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'j' || e.key === 'J') direction = 1;
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'k' || e.key === 'K') direction = -1;
+      if (!direction) return;
+
+      e.preventDefault();
+      if (inFileTree) navFocusPendingRef.current = true;
+      stepFile(direction);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [stepFile, isCommandPaletteOpen, isTerminalOpen, selectedProjectModal]);
 
   // Evolving interactive mathematical contour graph
   useEffect(() => {
@@ -216,12 +329,15 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
     };
   }, [graphMode, pointerPos]);
 
-  const scrollToSection = (sectionId: string) => {
-    const el = document.getElementById(sectionId);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-      setActiveSection(sectionId);
-    }
+  // All existing navigation call sites (header, cockpit, terminal, palette,
+  // status-bar commands) keep calling scrollToSection — it now resolves the
+  // section to its editor file and swaps the buffer instead of scrolling
+  // the document.
+  const scrollToSection = openSection;
+
+  const handleBackToTop = () => {
+    openFile('about');
+    bufferRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCommand = (cmd: string) => {
@@ -270,21 +386,22 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
 
   return (
     <div
-      className="dashboard-portfolio-wrapper"
+      className="dashboard-portfolio-wrapper editor-stage"
       style={{
         position: 'relative',
         zIndex: 10,
-        minHeight: '100vh',
+        height: '100svh',
+        minHeight: '560px',
+        overflow: 'hidden',
         background: 'color-mix(in srgb, var(--bg) 96%, transparent)',
-        display: 'flex',
-        flexDirection: 'column',
+        display: 'grid',
+        gridTemplateRows: 'auto minmax(0, 1fr) 46px',
       }}
     >
-      {/* Top Header */}
+      {/* Top Header — frame row of the stage */}
       <header
         style={{
-          position: 'sticky',
-          top: 0,
+          position: 'relative',
           zIndex: 50,
           display: 'flex',
           alignItems: 'center',
@@ -431,8 +548,23 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         </div>
       </header>
 
-      {/* Editor-style file tree / tabline — sections presented as source files */}
-      <EditorFileNav activeSection={activeSection} onNavigate={scrollToSection} />
+      {/* Editor workspace: file tree + the one buffer. Only the buffer scrolls. */}
+      <div
+        className="editor-workspace"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '232px minmax(0, 1fr)',
+          minHeight: 0,
+          minWidth: 0,
+        }}
+      >
+        <EditorFileNav activeFile={activeFile} onNavigate={(f) => openFile(f)} onStepFile={stepFile} />
+
+        <FileBuffer file={activeFileSpec} bufferRef={bufferRef}>
+          {/* about.tsx — cockpit + hero + about + focus. Inactive files stay
+              mounted but hidden, so interactive state (skills pane, project
+              filter, streak tracker) survives file switches. */}
+          <div hidden={activeFile !== 'about'} className="editor-file-pane">
 
       {/* ========================================================================= */}
       {/* 3-AREA DASHBOARD COCKPIT (Frames 13 - 19) */}
@@ -915,26 +1047,49 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
       {/* ========================================================================= */}
       {/* COMPLETE PORTFOLIO CONTENT SECTIONS (Part 4) */}
       {/* ========================================================================= */}
-      <main style={{ flex: 1, paddingBottom: '40px' }}>
-        <HeroSection onExploreClick={() => scrollToSection('projects')} />
-        <AboutSection />
-        <CertificationsSection />
-        <FocusSection />
-        <SkillsSection />
-        <ProjectsSection onOpenProjectModal={(p) => setSelectedProjectModal(p)} />
-        <LearningJourney />
-        <LeetCodeSection />
-        <ContactSection />
-      </main>
+      <HeroSection onExploreClick={() => scrollToSection('projects')} />
+          <AboutSection />
+          <FocusSection />
+          </div>
 
-      {/* Footer */}
-      <Footer onBackToTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })} onBackToIntro={onBackToIntro} />
+          <div hidden={activeFile !== 'certifications'} className="editor-file-pane">
+            <CertificationsSection />
+          </div>
+
+          <div hidden={activeFile !== 'projects'} className="editor-file-pane">
+            <ProjectsSection onOpenProjectModal={(p) => setSelectedProjectModal(p)} />
+          </div>
+
+          <div hidden={activeFile !== 'stack'} className="editor-file-pane">
+            <SkillsSection />
+          </div>
+
+          <div hidden={activeFile !== 'journey'} className="editor-file-pane">
+            <LearningJourney />
+          </div>
+
+          <div hidden={activeFile !== 'leetcode'} className="editor-file-pane">
+            <LeetCodeSection />
+          </div>
+
+          <div hidden={activeFile !== 'themes'} className="editor-file-pane">
+            <ThemesSection activeTheme={theme} onSelectTheme={onSelectTheme} />
+          </div>
+
+          <div hidden={activeFile !== 'contact'} className="editor-file-pane">
+            <ContactSection />
+            <Footer onBackToTop={handleBackToTop} onBackToIntro={onBackToIntro} />
+          </div>
+        </FileBuffer>
+      </div>
+
 
       {/* Vim Bottom Status Bar */}
       <EditorStatusBar
         theme={theme}
         onCommand={handleCommand}
         activeSection={activeSection}
+        activeFileName={activeFileSpec.file}
       />
 
       {/* Interactive Project Detail Modal */}
