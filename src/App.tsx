@@ -5,6 +5,7 @@ import { CanvasWall } from './components/CanvasWall';
 import { LandingScreen } from './components/LandingScreen';
 import { DashboardPortfolio } from './components/hancore/DashboardPortfolio';
 import { RadialEclipseTransition } from './components/hancore/RadialEclipseTransition';
+import { usePrefersReducedMotion } from './hooks/usePrefersReducedMotion';
 
 const THEME_STORAGE_KEY = 'karan-portfolio-theme';
 
@@ -19,6 +20,7 @@ const readStoredThemeIndex = (): number => {
 };
 
 export const App: React.FC = () => {
+  const reducedMotion = usePrefersReducedMotion();
   const [themeIndex, setThemeIndex] = useState<number>(readStoredThemeIndex);
   const [screen, setScreen] = useState<'landing' | 'portfolio'>('landing');
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -67,7 +69,12 @@ export const App: React.FC = () => {
   };
 
   // Trigger Part 2: Radial Eclipse Transition
+  // Reduced motion (G9): no cinematic sequence — go straight to the portfolio.
   const handleStartEnterTransition = () => {
+    if (reducedMotion) {
+      handleTransitionComplete();
+      return;
+    }
     setIsTransitioning(true);
   };
 
