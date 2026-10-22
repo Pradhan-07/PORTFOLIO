@@ -81,6 +81,30 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       shortcut: '#contact',
       action: () => onNavigate('contact'),
     },
+    {
+      id: 'nav-certifications',
+      category: 'Navigation',
+      title: 'Certifications',
+      subtitle: 'Hedera Certified Foundation & Developer Associate — Hashgraph Association',
+      shortcut: '#certifications',
+      action: () => onNavigate('certifications'),
+    },
+    {
+      id: 'nav-leetcode',
+      category: 'Navigation',
+      title: 'LeetCode Practice',
+      subtitle: 'DSA problem solving in C++ — pradhan_07',
+      shortcut: '#leetcode',
+      action: () => onNavigate('leetcode'),
+    },
+    {
+      id: 'nav-themes',
+      category: 'Navigation',
+      title: 'Editor Themes',
+      subtitle: 'Browse the eight colour palettes and re-skin the editor',
+      shortcut: '#themes',
+      action: () => onNavigate('themes'),
+    },
 
     // Featured Projects
     {
@@ -148,7 +172,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       id: 'act-linkedin',
       category: 'Actions',
       title: 'Open LinkedIn Profile',
-      subtitle: 'https://www.linkedin.com/in/karan-kumar-pradhan-510062396/',
+      subtitle: 'https://www.linkedin.com/in/karan-pradhan-510062396/',
       shortcut: '↗',
       action: () => window.open(PROFILE.linkedinUrl, '_blank', 'noreferrer,noopener'),
     },

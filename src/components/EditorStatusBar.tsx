@@ -5,12 +5,15 @@ interface EditorStatusBarProps {
   theme: Theme;
   onCommand: (cmd: string) => void;
   activeSection: string;
+  /** Current editor file name (e.g. about.tsx) — shown instead of the legacy section path when provided. */
+  activeFileName?: string;
 }
 
 export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
   theme,
   onCommand,
   activeSection,
+  activeFileName,
 }) => {
   const [inputVal, setInputVal] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -25,14 +28,14 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
     if (!cmd) return;
 
     if (cmd === ':help') {
-      setCommandFeedback('Commands: :theme, :whoami, :about, :focus, :stack, :experiments, :journey, :contact, :intro, :q');
+      setCommandFeedback('Commands: :theme, :themes, :whoami, :about, :certifications, :focus, :stack, :experiments, :journey, :leetcode, :contact, :intro, :q');
     } else if (cmd === ':intro' || cmd === ':cinematic' || cmd === ':replay' || cmd === ':q') {
       onCommand('intro');
       setCommandFeedback(':launched cinematic sequence');
     } else if (cmd === ':theme') {
       onCommand('theme');
       setCommandFeedback(':theme switched');
-    } else if ([':whoami', ':about', ':focus', ':stack', ':skills', ':experiments', ':projects', ':journey', ':contact'].includes(cmd)) {
+    } else if ([':whoami', ':about', ':certifications', ':focus', ':stack', ':skills', ':experiments', ':projects', ':journey', ':leetcode', ':themes', ':contact'].includes(cmd)) {
       const section = cmd.replace(':', '').replace('skills', 'skills').replace('experiments', 'projects');
       onCommand(section);
       setCommandFeedback(`:jumped to ${section}`);
@@ -48,10 +51,9 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
       className="editor-status-bar"
       aria-label="Editor Status"
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
+        position: 'relative',
+        width: '100%',
+        flexShrink: 0,
         zIndex: 60,
         background: 'var(--bg)',
         borderTop: '1px solid color-mix(in srgb, var(--fg) 12%, transparent)',
@@ -61,9 +63,10 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 12px',
-        height: '28px',
+        height: '46px',
         color: 'var(--chrome)',
         userSelect: 'none',
+        boxSizing: 'border-box',
       }}
     >
       {/* Left Vim Elements */}
@@ -82,7 +85,7 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
         </span>
 
         <span style={{ color: 'var(--fg)', whiteSpace: 'nowrap' }}>
-          ~/portfolio/{activeSection}.cpp
+          ~/portfolio/{activeFileName ?? `${activeSection}.cpp`}
         </span>
 
         <span style={{ color: 'var(--dim)', display: 'none' }} className="bar-git-branch">
