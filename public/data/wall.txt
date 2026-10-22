@@ -1,0 +1,1773 @@
+# wall.txt — the intro code wall of karan.dev, as plain text
+# Generated 2026-10-22T07:25:21+00:00 from Pradhan-07's own repos via the GitHub API.
+# Every file below is real code; header per file gives its GitHub blob URL.
+
+// ===== DSA_CPP — linked_lis/linkedlistclass.cpp (cpp) =====
+// https://github.com/Pradhan-07/DSA_CPP/blob/d62a9659e60fdfe94b16d9202a879f03323c6106/linked_lis/linkedlistclass.cpp
+#include<iostream>
+using namespace std;
+
+class Node{ // User Defined Data Type
+public:
+    int val;
+    Node* next;
+    Node(int val){
+        this->val = val;
+    }
+};
+
+class MyLinkedList{ // User Defined Data Type
+private:
+    Node* head;
+    Node* tail;
+    int length;
+public:
+    MyLinkedList(){
+        head = tail = NULL;
+        length = 0;
+    }
+
+    void display(){
+        Node* temp = head;
+        while(temp != NULL){
+            cout<<temp->val<<" ";
+            temp = temp->next;
+        }
+        cout<<endl;
+    }
+
+    void insertAtTail(int val){
+        Node* n = new Node(val);
+        if(length == 0) head = tail = n;
+        else{
+            tail->next = n;
+            tail = n;
+        }
+        length++;
+    }
+
+    void insertAtHead(int val){
+        Node* n = new Node(val);
+        if(length == 0) head = tail = n;
+        else{
+            n->next = head;
+            head = n;
+        }
+        length++;
+    }
+
+    void insert(int idx, int val){
+        if(idx<0 or idx>length){
+            cout<<"Invalid Index!"<<endl;
+            return;
+        }
+        if(idx==0){ // insert at head
+            insertAtHead(val);
+            return;
+        }
+        if(idx==length){ // insert at tail
+            insertAtTail(val);
+            return;
+        }
+        // Actual Code
+        Node* n = new Node(val);
+        Node* temp = head;
+        for(int i=1;i<=idx-1;i++){
+            temp = temp->next;
+        }
+        n->next = temp->next;
+        temp->next = n;
+        length++;
+    }
+
+    void removeAtHead(){
+        if(length == 0){
+            cout<<"List is Empty!"<<endl;
+            return;
+        }
+        Node* toBeDeleted = head;
+        head = head->next;
+        delete toBeDeleted;
+        length--;
+    }
+
+    void remove(int idx){
+        if(idx<0 or idx>=length){
+            cout<<"Invalid Index"<<endl;
+            return;
+        }
+        if(idx==0){
+            removeAtHead();
+            return;
+        }
+        Node* temp = head;
+        for(int i=1;i<=idx-1;i++){
+            temp = temp->next;
+        }
+        Node* toBeDeleted = temp->next;
+        temp->next = temp->next->next;
+        if(idx == length-1) tail = temp; // IMPORTANT
+        delete toBeDeleted;
+        length--;
+    }
+
+    int get(int idx){
+        if(idx<0 or idx>=length){
+            cout<<"Invalid Index!"<<endl;
+            return -1;
+        }
+        Node* temp = head;
+        for(int i=1;i<=idx;i++){
+            temp = temp->next;
+        }
+        return temp->val;
+    }
+
+    int size(){
+        return length;
+    }
+};
+
+int main(){
+    MyLinkedList list;
+    list.insertAtTail(10);
+    list.insertAtTail(20);
+    list.insertAtTail(30);
+    list.display();
+    list.removeAtHead();
+    list.display();
+    list.insertAtHead(40);
+    list.display();
+    // list.length = 0; ERROR
+    // list.head = NULL; ERROR
+    cout<<list.size()<<endl;
+}
+
+// ===== DSA_CPP — Pattern_printing/Diamond.cpp (cpp) =====
+// https://github.com/Pradhan-07/DSA_CPP/blob/d62a9659e60fdfe94b16d9202a879f03323c6106/Pattern_printing/Diamond.cpp
+#include<iostream>
+using namespace std;
+int main(){
+    int n;
+    cout<<"Enter n: ";
+    cin>>n;
+    // Method 2
+    int nsp = n-1, nst = 1;
+    for(int i=1;i<=2*n-1;i++){
+        for(int j=1;j<=nsp;j++){ // spaces
+            cout<<"  ";
+        }
+        for(int j=1;j<=nst;j++){ // stars
+            if(j==1 || j==nst) cout<<"* ";
+            else cout<<"  ";
+        }
+        if(i<n){
+            nsp--;
+            nst += 2;
+        }
+        else{
+            nsp++;
+            nst -= 2;
+        }
+        cout<<endl;
+    }
+
+
+    // Method 1
+    // // Upper Pyramid
+    // int nsp = n-1, nst = 1;
+    // for(int i=1;i<=n;i++){
+    //     for(int j=1;j<=nsp;j++){ // spaces
+    //         cout<<"  ";
+    //     }
+    //     for(int j=1;j<=nst;j++){ // stars
+    //         cout<<"* ";
+    //     }
+    //     nsp--;
+    //     nst += 2;
+    //     cout<<endl;
+    // }
+    // // Lower Inverted Pyramid
+    // nsp = 1;
+    // nst = 2*n-3;
+    // for(int i=1;i<=n-1;i++){
+    //     for(int j=1;j<=nsp;j++){ // spaces
+    //         cout<<"  ";
+    //     }
+    //     for(int j=1;j<=nst;j++){ // stars
+    //         cout<<"* ";
+    //     }
+    //     nsp++;
+    //     nst -= 2;
+    //     cout<<endl;
+    // }
+}
+
+// ===== DSA_CPP — Arrays/mergetwosorted..cpp (cpp) =====
+// https://github.com/Pradhan-07/DSA_CPP/blob/d62a9659e60fdfe94b16d9202a879f03323c6106/Arrays/mergetwosorted..cpp
+#include<iostream>
+using namespace std;
+int main(){
+    int a[] = {10,20,40,70,90,100};
+    int b[] = {30,50,60,80};
+    int m = sizeof(a)/4, n = sizeof(b)/4;
+    int c[m+n];
+    int i = 0, j = 0, k = 0;
+    while(i<m && j<n){
+        if(a[i] < b[j])
+            c[k++] = a[i++];
+        else // b[j] < a[i]
+            c[k++] = b[j++];
+    }
+    while(j<n)
+        c[k++] = b[j++];
+    while(i<m)
+        c[k++] = a[i++];
+    for(int i=0;i<m+n;i++){
+        cout<<c[i]<<" ";
+    }
+}
+
+
+// #include<iostream>
+// using namespace std;
+// int main(){
+//     int a[] = {10,20,40,70,90,100};
+//     int b[] = {30,50,60,80};
+//     int m = sizeof(a)/4, n = sizeof(b)/4;
+//     int c[m+n];
+//     int i = m-1, j = n-1, k = m+n-1;
+//     while(i<m && j<n){
+//         if(a[i] < b[j])
+//             c[k--] = a[i--];
+//         else // b[j] < a[i]
+//             c[k--] = b[j--];
+//     }
+//     while(j<n)
+//         c[k--] = b[j--];
+//     while(i<m)
+//         c[k--] = a[i--];
+//     for(int i=0;i<m+n;i--){
+//         cout<<c[i]<<" ";
+//     }
+// }
+
+// ===== DSA_CPP — OOPS/makeyourownvector.cpp (cpp) =====
+// https://github.com/Pradhan-07/DSA_CPP/blob/d62a9659e60fdfe94b16d9202a879f03323c6106/OOPS/makeyourownvector.cpp
+#include <iostream>
+using namespace std;
+
+class myvector{
+    private:
+    int length;
+    int* arr;
+    int cap;
+    public:
+    myvector(int capacity, int default_value){
+       length =  cap = capacity;
+        arr = new int[capacity];
+        for(int i =0;i<capacity;i++){
+            arr[i] = default_value;
+        }
+    }
+    void pop_back(){
+        if(length == 0){
+            cout<<"Vector is Empty!"<<endl;
+            return;
+        }
+        length--;
+    }
+    void push_back(int val){
+                if(length == cap){ // array is FULL
+            cap = 2*cap;
+            int* temp = new int[cap];
+            for(int i=0;i<length;i++){
+                temp[i] = arr[i];
+            }
+            delete[] arr;
+            arr = temp;
+        }
+        arr[length] = val;
+        length++;
+    }
+    void dispaly(){
+        for(int i =0;i<length;i++){
+            cout<<arr[i]<<" ";
+        }
+        cout<<endl;
+    }
+};
+int main(){
+    myvector v(5,-1);
+    v.dispaly();
+    v.pop_back();
+    v.dispaly();
+    
+
+}
+
+// ===== DSA_CPP — Arrays2D/snakepattern.cpp (cpp) =====
+// https://github.com/Pradhan-07/DSA_CPP/blob/d62a9659e60fdfe94b16d9202a879f03323c6106/Arrays2D/snakepattern.cpp
+// #include <iostream>
+// using namespace std;
+// int main(){
+//     int arr[][5] = {{5,8,1,2,6},{4,8,9,5,7},{1,2,3,4,66}};
+//         for(int i=0;i<3;i++){
+//             if(i%2==0){
+//             for(int j=0;j<5;j++){
+//             cout<<arr[i][j]<<" ";
+            
+//         }
+//     }
+//     else{
+//         for (int j =4;j>=0;j--){
+//             cout<<arr[i][j]<<" ";
+//         }
+//     }
+//         cout<<endl;
+//     }
+// }
+
+
+#include <iostream>
+using namespace std;
+
+int main() {
+
+    int arr[][4] = {
+        {1, 2, 3, 4},
+        {5, 6, 7, 8},
+        {9, 10, 11, 12},
+        {13, 14, 15, 16}
+    };
+
+    for (int j = 0; j < 4; j++) {
+
+        if (j % 2 == 0) {
+            // Bottom to top
+            for (int i = 3; i >= 0; i--) {
+                cout << arr[i][j] << " ";
+            }
+        }
+        else {
+            // Top to bottom
+            for (int i = 0; i < 4; i++) {
+                cout << arr[i][j] << " ";
+            }
+        }
+    }
+
+    return 0;
+}
+
+// ===== DSA_CPP — Advance_sorting/merge_sort.cpp (cpp) =====
+// https://github.com/Pradhan-07/DSA_CPP/blob/d62a9659e60fdfe94b16d9202a879f03323c6106/Advance_sorting/merge_sort.cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+void print(vector<int>& arr){
+    for(int ele : arr)
+     cout<<ele<<" ";
+    cout<<endl;
+
+}
+
+void merge(vector<int>& a , vector<int>& b , vector<int>& c){
+    int i =0,j=0,k=0;
+    while(i<a.size() && j<b.size()){
+        if(a[i]>b[j]) c[k++]=b[j++];
+        else c[k++]=a[i++];
+    }
+    while(i<a.size()) c[k++]=a[i++];
+    while(j<b.size()) c[k++]=a[j++];
+
+}
+
+void mergesort(vector<int>& arr){
+    int n = arr.size();
+    if(n<=1) return;
+    vector<int> a(n/2);
+    vector<int> b(n-n/2);
+    int idx =0;
+    for(int i =0; i<n/2;i++){
+        a[i] = arr[idx++];
+    }
+    for(int i =0; i<n-n/2;i++){
+        b[i] = arr[idx++];
+    }
+    mergesort(a);
+    mergesort(b);
+    merge(a,b,arr);
+
+
+}
+
+int main(){
+ vector<int> arr ={2,3,6,8,5,1,-4,-99};
+ int p = arr.size();
+ for(int s = 0;s<p;s++){
+   sort(arr.begin(),arr.end());
+   cout<<arr[s]<<" "<<endl;
+ }
+
+ print (arr);
+ mergesort(arr);
+ print(arr);
+
+}
+
+
+
+
+// ===== DSA_CPP — recurssion/GCD.cpp (cpp) =====
+// https://github.com/Pradhan-07/DSA_CPP/blob/d62a9659e60fdfe94b16d9202a879f03323c6106/recurssion/GCD.cpp
+#include <iostream>
+using namespace std;
+
+int hcf(int a ,int b){
+    // for(int i=min(a,b);i>=1;i--){
+    //     if(a%i==0 and b%i==0) return i;
+    // }
+    // return 1;
+    if(a==0) return b;
+    return hcf(b%a,a);
+}
+
+int main(){
+    int a,b;
+   cin>>a>>b;
+    cout<<hcf(a,b);
+}
+
+// ===== indstate — src/lib/supabaseClient.js (javascript) =====
+// https://github.com/Pradhan-07/indstate/blob/2e47f454633d61cc461573b6ec70d6199d9b6879/src/lib/supabaseClient.js
+// EXCERPT: first 100 of 282 lines (file is 10649 bytes)
+import { createClient } from '@supabase/supabase-js';
+
+const getEnvVar = (key) => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+    return import.meta.env[key];
+  }
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key];
+  }
+  return '';
+};
+
+// Supabase Project: Pradhan-07's Project (oambnghhbghpwtezhxny)
+// Public client configuration for both local development and Vercel production
+const DEFAULT_SUPABASE_URL = 'https://oambnghhbghpwtezhxny.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hbWJuZ2hoYmdocHd0ZXpoeG55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExODk2NzUsImV4cCI6MjEwNjc2NTY3NX0.b5OVl1I9OA1lb0QRahp4fobdnbETChtwWaLaiEM_rZI';
+
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || DEFAULT_SUPABASE_URL;
+const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || DEFAULT_SUPABASE_ANON_KEY;
+
+export const isDev = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) || 
+                     (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production');
+
+export const AUTH_MESSAGES = {
+  INVALID_CREDENTIALS: 'Invalid email or password.',
+  CONFIG_MISSING: isDev
+    ? 'Authentication configuration is missing. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local and restart the development server.'
+    : 'Authentication configuration is missing.',
+  GOOGLE_NOT_ENABLED: 'Google sign-in is not configured yet. Please try again later or use email and password.',
+  GOOGLE_REDIRECT_INVALID: 'Google sign-in could not be completed. Please check the Google OAuth configuration.',
+  GOOGLE_NETWORK_ERROR: 'Unable to connect to the sign-in service. Please check your internet connection.',
+  NETWORK_FAILURE: 'Unable to connect to the authentication service. Please check your internet connection.',
+  SERVICE_UNAVAILABLE: 'The authentication service is temporarily unavailable.',
+  RATE_LIMITED: 'Too many attempts. Please wait and try again.',
+  TOKEN_EXPIRED: 'Verification code expired. Please request a new OTP.',
+  TOKEN_INVALID: 'Invalid verification code. Please check and try again.',
+  USER_EXISTS: 'An account already exists with this email. Please sign in instead.',
+  INVALID_EMAIL: 'Invalid email address. Please enter a valid email.',
+  WEAK_PASSWORD: 'Password does not meet requirements (minimum 8 characters with uppercase, lowercase, and number).',
+  STATE_REQUIRED: 'State is required. Indian State / UT selection is compulsory.',
+  UNKNOWN: 'Something went wrong. Please try again.'
+};
+
+export const CONFIG_ERROR_MESSAGE = AUTH_MESSAGES.CONFIG_MISSING;
+
+/**
+ * Classifies Google OAuth specific errors
+ * Returns null if user cancelled (so no scary error banner is displayed)
+ */
+export function classifyGoogleOAuthError(err) {
+  if (!err) return null;
+  safeLogAuthError('signInWithGoogle', err);
+
+  const raw = typeof err === 'string' ? err : err.message || '';
+  const message = raw.toLowerCase();
+  const errorCode = (err?.error_code || err?.code || '').toLowerCase();
+  const status = Number(err?.status || err?.statusCode || 0);
+
+  // User cancelled - silent return, no scary banner
+  if (
+    message.includes('access_denied') || 
+    message.includes('cancelled') || 
+    message.includes('canceled') ||
+    message.includes('user closed') ||
+    message.includes('popup closed')
+  ) {
+    return null;
+  }
+
+  // Network failure
+  if (
+    message.includes('failed to fetch') ||
+    message.includes('network') ||
+    message.includes('networkerror') ||
+    message.includes('connection refused') ||
+    message.includes('load failed') ||
+    (err?.name === 'TypeError' && message.includes('fetch'))
+  ) {
+    return AUTH_MESSAGES.GOOGLE_NETWORK_ERROR;
+  }
+
+  // Provider not enabled / configured (Supabase 400 validation_failed: Unsupported provider: provider is not enabled)
+  if (
+    message.includes('unsupported provider') ||
+    message.includes('provider is not enabled') ||
+    message.includes('not configured') ||
+    message.includes('not enabled') ||
+    errorCode === 'validation_failed' ||
+    message.includes('validation_failed') ||
+    message.includes('config_missing') ||
+    message.includes('configuration is missing') ||
+    message.includes('placeholder') ||
+    (status === 400 && message.includes('provider'))
+  ) {
+    return AUTH_MESSAGES.GOOGLE_NOT_ENABLED;
+  }
+
+  // Redirect URI mismatch or OAuth config issue
+  if (
+    message.includes('redirect') ||
+
+// ===== indstate — src/services/propertyService.js (javascript) =====
+// https://github.com/Pradhan-07/indstate/blob/2e47f454633d61cc461573b6ec70d6199d9b6879/src/services/propertyService.js
+// EXCERPT: first 100 of 433 lines (file is 15783 bytes)
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient.js';
+import { INITIAL_PROPERTIES } from '../data/initialProperties.js';
+
+/**
+ * Maps Supabase PostgreSQL properties table row (snake_case)
+ * to INDSTATE unified frontend property object (supporting both camelCase & snake_case)
+ */
+export function mapDatabaseProperty(row) {
+  if (!row) return null;
+
+  const priceNum = Number(row.price) || 0;
+  const areaNum = Number(row.area) || 0;
+  const calculatedSqft = areaNum > 0 ? Math.round(priceNum / areaNum) : 0;
+
+  return {
+    id: String(row.id),
+    owner_id: row.owner_id,
+    ownerId: row.owner_id,
+    title: row.title || 'Untitled Property',
+    description: row.description || '',
+    purpose: row.listing_type || 'Buy',
+    listing_type: row.listing_type || 'Buy',
+    propertyType: row.property_type || 'Apartment',
+    property_type: row.property_type || 'Apartment',
+    price: priceNum,
+    pricePerSqFt: Number(row.price_per_sqft) || calculatedSqft,
+    price_per_sqft: Number(row.price_per_sqft) || calculatedSqft,
+    maintenanceCharges: Number(row.maintenance_charges) || 0,
+    maintenance_charges: Number(row.maintenance_charges) || 0,
+    state: row.state || '',
+    city: row.city || '',
+    locality: row.locality || '',
+    district: row.district || '',
+    pinCode: row.pin_code || '',
+    pin_code: row.pin_code || '',
+    address: row.address || '',
+    bhk: Number(row.bedrooms) || 0,
+    bedrooms: Number(row.bedrooms) || 0,
+    bathrooms: Number(row.bathrooms) || 0,
+    balconies: Number(row.balconies) || 0,
+    carpetArea: areaNum,
+    area: areaNum,
+    superBuiltUpArea: Number(row.super_built_up_area) || Math.round(areaNum * 1.3),
+    super_built_up_area: Number(row.super_built_up_area) || Math.round(areaNum * 1.3),
+    facing: row.facing || 'East (Vastu Compliant)',
+    furnishing: row.furnishing || 'Semi-Furnished',
+    possessionStatus: row.possession_status || 'Ready to Move',
+    possession_status: row.possession_status || 'Ready to Move',
+    possessionDate: row.possession_date || 'Immediate',
+    possession_date: row.possession_date || 'Immediate',
+    floor: row.floor || '',
+    parking: row.parking || '',
+    reraNumber: row.rera_number || '',
+    rera_number: row.rera_number || '',
+    isReraVerified: Boolean(row.is_rera_verified || (row.rera_number && row.rera_number.length > 4)),
+    is_rera_verified: Boolean(row.is_rera_verified || (row.rera_number && row.rera_number.length > 4)),
+    coordinates: (row.latitude && row.longitude) ? [Number(row.latitude), Number(row.longitude)] : [19.0760, 72.8777],
+    latitude: row.latitude,
+    longitude: row.longitude,
+    images: Array.isArray(row.images) && row.images.length > 0 
+      ? row.images 
+      : ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'],
+    amenities: Array.isArray(row.amenities) ? row.amenities : [],
+    floorPlans: Array.isArray(row.floor_plans) ? row.floor_plans : [],
+    floor_plans: Array.isArray(row.floor_plans) ? row.floor_plans : [],
+    nearby: Array.isArray(row.nearby) ? row.nearby : [],
+    agent: row.agent && typeof row.agent === 'object' && Object.keys(row.agent).length > 0
+      ? row.agent
+      : {
+          name: row.contact_name || 'INDSTATE Verified Owner',
+          phone: row.contact_phone || '+91 98765 43210',
+          whatsapp: row.contact_phone ? row.contact_phone.replace(/\D/g, '') : '919876543210',
+          agency: row.contact_role === 'Owner' ? 'Direct Owner (0% Brokerage)' : 'Certified Channel Partner',
+          rating: 4.8,
+          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(row.contact_name || 'Owner')}&backgroundColor=0F1B3D&textColor=FFFFFF`
+        },
+    status: row.status || 'approved',
+    featured: Boolean(row.featured),
+    createdAt: row.created_at || new Date().toISOString(),
+    created_at: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || new Date().toISOString(),
+    updated_at: row.updated_at || new Date().toISOString()
+  };
+}
+
+/**
+ * Fetch all properties from Supabase PostgreSQL, ordered newest first
+ */
+export async function fetchPropertiesFromSupabase(filters = {}) {
+  if (!isSupabaseConfigured()) {
+    return filterInitialProperties(INITIAL_PROPERTIES, filters);
+  }
+
+  try {
+    let query = supabase
+      .from('properties')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Database-level state filter
+
+// ===== indstate — src/components/common/Navbar.jsx (javascript) =====
+// https://github.com/Pradhan-07/indstate/blob/2e47f454633d61cc461573b6ec70d6199d9b6879/src/components/common/Navbar.jsx
+// EXCERPT: first 100 of 415 lines (file is 17157 bytes)
+import React, { useState, useEffect } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { 
+  Building2, Heart, Scale, PlusCircle, Menu, X, 
+  ShieldCheck, Calculator, UserCheck, ChevronDown 
+} from 'lucide-react';
+import { useProperty } from '../../context/PropertyContext';
+import { useAuth } from '../../context/AuthContext';
+import IndstateLogo from './IndstateLogo';
+
+export default function Navbar() {
+  const { favorites, compareList } = useProperty();
+  const { user, isLoading, setIsAuthModalOpen, setAuthMode, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [propertiesDropdown, setPropertiesDropdown] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <header className={`header-main ${isScrolled ? 'is-scrolled' : ''}`}>
+      <div className="container">
+        <div className="nav-container">
+          {/* Official Brand Logo */}
+          <Link to="/" className="logo-wrap" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <IndstateLogo height={isScrolled ? 42 : 48} />
+          </Link>
+
+          {/* Desktop Navigation Links */}
+          <nav>
+            <ul className="nav-menu">
+              <li>
+                <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                  Home
+                </NavLink>
+              </li>
+
+              {/* Properties Dropdown */}
+              <li 
+                style={{ position: 'relative' }}
+                onMouseEnter={() => setPropertiesDropdown(true)}
+                onMouseLeave={() => setPropertiesDropdown(false)}
+              >
+                <NavLink 
+                  to="/properties" 
+                  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                >
+                  Properties <ChevronDown size={14} />
+                </NavLink>
+
+                {propertiesDropdown && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      background: '#FFFFFF',
+                      minWidth: '220px',
+                      borderRadius: '8px',
+                      boxShadow: 'var(--shadow-lg)',
+                      border: '1px solid var(--border-color)',
+                      padding: '8px 0',
+                      zIndex: 100,
+                      animation: 'fadeIn 0.2s ease-out'
+                    }}
+                  >
+                    <Link to="/properties?purpose=Buy" style={{ display: 'block', padding: '9px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+                      🏢 Buy Residential (Flats & Villas)
+                    </Link>
+                    <Link to="/properties?purpose=Rent" style={{ display: 'block', padding: '9px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+                      🔑 Rent Homes & Apartments
+                    </Link>
+                    <Link to="/properties?purpose=PG-Co-living" style={{ display: 'block', padding: '9px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+                      🛏️ PG & Techie Co-Living
+                    </Link>
+                    <Link to="/properties?purpose=Commercial" style={{ display: 'block', padding: '9px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+                      🏙️ Commercial Offices & Retail
+                    </Link>
+                    <Link to="/properties?purpose=Plots" style={{ display: 'block', padding: '9px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+                      📐 Residential & Industrial Plots
+                    </Link>
+                    <div style={{ height: '1px', background: 'var(--border-light)', margin: '4px 0' }} />
+                    <Link to="/properties?reraOnly=true" style={{ display: 'block', padding: '9px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--rera-green)' }}>
+                      🛡️ 100% RERA Verified Only
+                    </Link>
+                  </div>
+                )}
+              </li>
+
+              <li>
+                <NavLink to="/agents" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                  Verified Agents
+                </NavLink>
+              </li>
+
+// ===== PORTFOLIO — src/components/CanvasWall.tsx (tsx) =====
+// https://github.com/Pradhan-07/PORTFOLIO/blob/42da8fbf53dc926a1501a9ce208f45f88febe733/src/components/CanvasWall.tsx
+import React, { useEffect, useRef } from 'react';
+import type { Theme } from '../types';
+import { CODE_WALL_SNIPPETS } from '../data/codeSnippets';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+
+interface CanvasWallProps {
+  theme: Theme;
+  interactive?: boolean;
+}
+
+export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = true }) => {
+  const reducedMotion = usePrefersReducedMotion();
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: -100, y: -100, active: false });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) return;
+
+    let animId: number;
+    let drawFrame: () => void = () => undefined;
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const CELL_W = 7.5;
+    const CELL_H = 14;
+    const FONT_SIZE = 11;
+    const FONT_FAMILY = '"IBM Plex Mono", ui-monospace, monospace';
+
+    const cols = Math.ceil(width / CELL_W) + 2;
+    const rows = Math.ceil(height / CELL_H) + 2;
+
+    // Generate repeated code matrix grid
+    const codeLines = CODE_WALL_SNIPPETS;
+    const grid: {
+      char: string;
+      kind: 'keyword' | 'string' | 'number' | 'function' | 'type' | 'comment' | 'text' | 'member';
+      baseAlpha: number;
+    }[][] = [];
+
+    let lineIdx = 0;
+    for (let r = 0; r < rows; r++) {
+      const lineData = codeLines[lineIdx % codeLines.length];
+      lineIdx++;
+
+      const rowChars: {
+        char: string;
+        kind: 'keyword' | 'string' | 'number' | 'function' | 'type' | 'comment' | 'text' | 'member';
+        baseAlpha: number;
+      }[] = [];
+
+      let charCount = 0;
+      let tokIdx = 0;
+
+      while (charCount < cols) {
+        if (tokIdx >= lineData.tokens.length) {
+          // Fill rest of row with subtle space or comment indentation
+          rowChars.push({ char: ' ', kind: 'text', baseAlpha: 0.1 });
+          charCount++;
+        } else {
+          const token = lineData.tokens[tokIdx];
+          tokIdx++;
+          for (let i = 0; i < token.text.length && charCount < cols; i++) {
+            const ch = token.text[i];
+            const isComment = token.kind === 'comment';
+            rowChars.push({
+              char: ch,
+              kind: token.kind,
+              baseAlpha: isComment ? 0.22 : 0.42,
+            });
+            charCount++;
+          }
+        }
+      }
+      grid.push(rowChars);
+    }
+
+    // Interactive flux state
+    let frame = 0;
+    const cursor = { row: 3, col: 12, blink: true };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!interactive) return;
+      mouseRef.current = { x: e.clientX, y: e.clientY, active: true };
+    };
+
+    const handleMouseLeave = () => {
+      mouseRef.current.active = false;
+    };
+
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+      // In reduced-motion mode there is no loop; keep the static frame fresh.
+      if (reducedMotion) drawFrame();
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('resize', handleResize);
+
+    const render = () => {
+      frame++;
+      ctx.fillStyle = theme.bg;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.font = `400 ${FONT_SIZE}px ${FONT_FAMILY}`;
+      ctx.textBaseline = 'top';
+
+      const mouseX = mouseRef.current.x;
+      const mouseY = mouseRef.current.y;
+      const mouseActive = mouseRef.current.active;
+
+      // Draw subtle grid characters
+      for (let r = 0; r < rows; r++) {
+        const row = grid[r];
+        if (!row) continue;
+        const y = r * CELL_H;
+
+        for (let c = 0; c < cols; c++) {
+          const item = row[c];
+          if (!item || item.char === ' ') continue;
+
+          const x = c * CELL_W;
+
+          // Distance from mouse for interactive glow
+          let alpha = item.baseAlpha;
+          if (mouseActive) {
+            const dx = x - mouseX;
+            const dy = y - mouseY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 140) {
+              const boost = (1 - dist / 140) * 0.55;
+              alpha = Math.min(1.0, alpha + boost);
+            }
+          }
+
+          // Subtle rhythmic breathing in background
+          if ((r + c + frame) % 180 === 0) {
+            alpha = Math.min(0.9, alpha + 0.3);
+          }
+
+          // Color selection based on token kind
+          let color = theme.kinds[item.kind] || theme.fg;
+
+          ctx.fillStyle = color;
+          ctx.globalAlpha = alpha;
+          ctx.fillText(item.char, x, y + 1);
+        }
+      }
+
+      // Blinking terminal cursor at row 3, col 28
+      if (frame % 60 < 35) {
+        ctx.fillStyle = theme.accent;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(cursor.col * CELL_W, cursor.row * CELL_H + 2, CELL_W, CELL_H - 2);
+      }
+
+      ctx.globalAlpha = 1.0;
+    };
+
+    drawFrame = render;
+
+    if (reducedMotion) {
+      // Calm state (G9): draw a single static frame — no breathing, no
+      // blinking cursor loop, no mouse-glow animation. Content is identical.
+      render();
+    } else {
+      const loop = () => {
+        render();
+        animId = requestAnimationFrame(loop);
+      };
+      loop();
+    }
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [theme, interactive, reducedMotion]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="wall-canvas"
+      aria-hidden="true"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 0,
+        pointerEvents: 'none',
+        display: 'block',
+      }}
+    />
+  );
+};
+
+// ===== PORTFOLIO — src/App.tsx (tsx) =====
+// https://github.com/Pradhan-07/PORTFOLIO/blob/42da8fbf53dc926a1501a9ce208f45f88febe733/src/App.tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { THEMES } from './data/themes';
+import type { Theme } from './types';
+import { CanvasWall } from './components/CanvasWall';
+import { LandingScreen } from './components/LandingScreen';
+import { DashboardPortfolio } from './components/hancore/DashboardPortfolio';
+import { RadialEclipseTransition } from './components/hancore/RadialEclipseTransition';
+import { usePrefersReducedMotion } from './hooks/usePrefersReducedMotion';
+
+const THEME_STORAGE_KEY = 'karan-portfolio-theme';
+
+const readStoredThemeIndex = (): number => {
+  try {
+    const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const parsed = raw === null ? NaN : Number.parseInt(raw, 10);
+    return Number.isInteger(parsed) && parsed >= 0 && parsed < THEMES.length ? parsed : 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const App: React.FC = () => {
+  const reducedMotion = usePrefersReducedMotion();
+  const [themeIndex, setThemeIndex] = useState<number>(readStoredThemeIndex);
+  const [screen, setScreen] = useState<'landing' | 'portfolio'>('landing');
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const currentTheme: Theme = THEMES[themeIndex];
+
+  // Apply theme variables to root document
+  const applyThemeVariables = useCallback((theme: Theme) => {
+    const root = document.documentElement;
+    root.style.setProperty('--bg', theme.bg);
+    root.style.setProperty('--fg', theme.fg);
+    root.style.setProperty('--ink', theme.fg);
+    root.style.setProperty('--dim', theme.dim);
+    root.style.setProperty('--chrome', theme.chrome);
+    root.style.setProperty('--accent', theme.accent);
+    root.style.setProperty('--line', theme.line);
+    root.style.setProperty('--kw', theme.kinds.keyword);
+    root.style.setProperty('--str', theme.kinds.string);
+    root.style.setProperty('--fn', theme.kinds.function);
+    root.style.setProperty('--ty', theme.kinds.type);
+    root.style.setProperty('--num', theme.kinds.number);
+    root.style.colorScheme = theme.light ? 'light' : 'dark';
+  }, []);
+
+  useEffect(() => {
+    applyThemeVariables(currentTheme);
+  }, [currentTheme, applyThemeVariables]);
+
+  // Persist the chosen theme so it is restored on the next visit.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, String(themeIndex));
+    } catch {
+      // Storage unavailable (private mode etc.) — theme still applies for the session.
+    }
+  }, [themeIndex]);
+
+  const handleToggleTheme = () => {
+    setThemeIndex((prev) => (prev + 1) % THEMES.length);
+  };
+
+  const handleSelectTheme = (index: number) => {
+    if (index >= 0 && index < THEMES.length) {
+      setThemeIndex(index);
+    }
+  };
+
+  // Trigger Part 2: Radial Eclipse Transition
+  // Reduced motion (G9): no cinematic sequence — go straight to the portfolio.
+  const handleStartEnterTransition = () => {
+    if (reducedMotion) {
+      handleTransitionComplete();
+      return;
+    }
+    setIsTransitioning(true);
+  };
+
+  // Called when Radial Eclipse Transition completes (Frames 08 - 12)
+  const handleTransitionComplete = () => {
+    setScreen('portfolio');
+    setIsTransitioning(false);
+    window.scrollTo(0, 0);
+  };
+
+  const handleBackToLanding = () => {
+    setScreen('landing');
+    setIsTransitioning(false);
+    window.scrollTo(0, 0);
+  };
+
+  return (
+    <div
+      className="app-wrapper"
+      style={{
+        position: 'relative',
+        minHeight: '100vh',
+        background: '#080908',
+        color: 'var(--fg)',
+        overflowX: 'hidden',
+      }}
+    >
+      {/* Background Matrix Canvas Wall */}
+      <CanvasWall theme={currentTheme} interactive={screen === 'landing' && !isTransitioning} />
+
+      {/* Screens */}
+      {screen === 'landing' ? (
+        <LandingScreen
+          theme={currentTheme}
+          onEnter={handleStartEnterTransition}
+          onToggleTheme={handleToggleTheme}
+          isLeaving={isTransitioning}
+        />
+      ) : (
+        <DashboardPortfolio
+          theme={currentTheme}
+          onBackToIntro={handleBackToLanding}
+          onToggleTheme={handleToggleTheme}
+          onSelectTheme={handleSelectTheme}
+        />
+      )}
+
+      {/* Part 2: Signature Radial Eclipse Expanding Burst Transition */}
+      {isTransitioning && (
+        <RadialEclipseTransition
+          onComplete={handleTransitionComplete}
+          themeAccent={currentTheme.accent}
+        />
+      )}
+    </div>
+  );
+};
+
+export default App;
+
+// ===== PORTFOLIO — src/components/hancore/CodeTickerPanel.tsx (tsx) =====
+// https://github.com/Pradhan-07/PORTFOLIO/blob/42da8fbf53dc926a1501a9ce208f45f88febe733/src/components/hancore/CodeTickerPanel.tsx
+import React, { useState, useEffect } from 'react';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+
+interface Snippet {
+  path: string;
+  mode: string;
+  lines: { num: string; text: string; kind?: 'kw' | 'str' | 'fn' | 'ty' | 'com' | 'text' }[];
+}
+
+const SNIPPETS: Snippet[] = [
+  {
+    path: '~/Projects/karan-dev/src/portfolio.cpp',
+    mode: 'INSERT',
+    lines: [
+      { num: '01', text: '// building with curiosity.', kind: 'com' },
+      { num: '02', text: '#include <iostream>', kind: 'kw' },
+      { num: '03', text: '#include <concepts>', kind: 'kw' },
+      { num: '04', text: 'int main() {', kind: 'fn' },
+      { num: '05', text: '    // solve. learn. build.', kind: 'com' },
+      { num: '06', text: '    std::cout << "Karan Kumar Pradhan\\n";', kind: 'str' },
+      { num: '07', text: '    return 0;', kind: 'kw' },
+      { num: '08', text: '}', kind: 'text' },
+    ],
+  },
+  {
+    path: '~/Projects/dsa/graph_dijkstra.cpp',
+    mode: 'NORMAL',
+    lines: [
+      { num: '01', text: '// Algorithmic Thinking in C++', kind: 'com' },
+      { num: '02', text: 'template <typename Node>', kind: 'kw' },
+      { num: '03', text: 'auto find_shortest_path(Node src) {', kind: 'fn' },
+      { num: '04', text: '    std::priority_queue<std::pair<int, Node>> pq;', kind: 'ty' },
+      { num: '05', text: '    dist[src] = 0;', kind: 'text' },
+      { num: '06', text: '    // complexity: O((V + E) log V)', kind: 'com' },
+      { num: '07', text: '    return dist;', kind: 'kw' },
+      { num: '08', text: '}', kind: 'text' },
+    ],
+  },
+  {
+    path: '~/Projects/ai_ml/study_focus.py',
+    mode: 'INSERT',
+    lines: [
+      { num: '01', text: '# Intelligent Study Detection', kind: 'com' },
+      { num: '02', text: 'import cv2, mediapipe as mp', kind: 'kw' },
+      { num: '03', text: 'class AttentionTracker:', kind: 'ty' },
+      { num: '04', text: '    def detect_landmarks(self, frame):', kind: 'fn' },
+      { num: '05', text: '        # Gaze & hand gesture evaluation', kind: 'com' },
+      { num: '06', text: '        return {"status": "ACTIVE_STUDY"}', kind: 'str' },
+      { num: '07', text: 'tracker = AttentionTracker()', kind: 'text' },
+      { num: '08', text: '# verified in github.com/Pradhan-07', kind: 'com' },
+    ],
+  },
+];
+
+export const CodeTickerPanel: React.FC = () => {
+  const reducedMotion = usePrefersReducedMotion();
+  const [snippetIdx, setSnippetIdx] = useState(0);
+  const [revealedCount, setRevealedCount] = useState(2);
+
+  const currentSnippet = SNIPPETS[snippetIdx];
+
+  // Reduced motion (G9): no auto-cycling and no progressive reveal — the
+  // current snippet is shown in full, statically.
+  const visibleCount = reducedMotion ? currentSnippet.lines.length : revealedCount;
+
+  // Progressive typing / reveal ticker effect
+  useEffect(() => {
+    if (reducedMotion) return;
+    const lineTimer = setInterval(() => {
+      setRevealedCount((prev) => {
+        if (prev < currentSnippet.lines.length) {
+          return prev + 1;
+        } else {
+          return prev;
+        }
+      });
+    }, 450);
+
+    return () => clearInterval(lineTimer);
+  }, [currentSnippet.lines.length, reducedMotion]);
+
+  // Switch snippet every 7 seconds
+  useEffect(() => {
+    if (reducedMotion) return;
+    const switchTimer = setInterval(() => {
+      setSnippetIdx((prev) => (prev + 1) % SNIPPETS.length);
+      setRevealedCount(2);
+    }, 7200);
+
+    return () => clearInterval(switchTimer);
+  }, [reducedMotion]);
+
+  return (
+    <div
+      className="code-ticker-panel"
+      style={{
+        width: '100%',
+        maxWidth: '560px',
+        margin: '0 auto 20px auto',
+        background: 'color-mix(in srgb, var(--bg) 95%, #101010)',
+        border: '1px solid color-mix(in srgb, var(--fg) 12%, transparent)',
+        borderRadius: '3px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        overflow: 'hidden',
+        fontFamily: '"IBM Plex Mono", monospace',
+        fontSize: '12px',
+        transition: 'border-color 200ms ease',
+      }}
+    >
+      {/* Top Header Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '6px 12px',
+          background: 'var(--line)',
+          borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
+          fontSize: '10.5px',
+          color: 'var(--chrome)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>●</span>
+          <span style={{ color: 'var(--fg)', letterSpacing: '0.02em' }}>{currentSnippet.path}</span>
+        </div>
+
+        <span
+          style={{
+            fontSize: '9.5px',
+            padding: '1px 5px',
+            background: currentSnippet.mode === 'INSERT' ? 'var(--accent)' : 'color-mix(in srgb, var(--bg) 80%, transparent)',
+            color: currentSnippet.mode === 'INSERT' ? 'var(--bg)' : 'var(--chrome)',
+            fontWeight: 600,
+            borderRadius: '2px',
+            letterSpacing: '0.06em',
+          }}
+        >
+          {currentSnippet.mode}
+        </span>
+      </div>
+
+      {/* Code Lines Body */}
+      <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {currentSnippet.lines.slice(0, visibleCount).map((l, idx) => (
+          <div
+            key={idx}
+            style={{
+              display: 'flex',
+              gap: '14px',
+              lineHeight: 1.5,
+              animation: 'fadeIn 200ms ease',
+            }}
+          >
+            <span style={{ color: 'var(--dim)', width: '20px', userSelect: 'none', textAlign: 'right' }}>
+              {l.num}
+            </span>
+            <span
+              style={{
+                color:
+                  l.kind === 'com'
+                    ? 'var(--dim)'
+                    : l.kind === 'kw'
+                      ? 'var(--kw)'
+                      : l.kind === 'str'
+                        ? 'var(--str)'
+                        : l.kind === 'ty'
+                          ? 'var(--ty)'
+                          : l.kind === 'fn'
+                            ? 'var(--fn)'
+                            : 'var(--fg)',
+                whiteSpace: 'pre',
+              }}
+            >
+              {l.text}
+            </span>
+          </div>
+        ))}
+
+        {/* Cursor line */}
+        <div style={{ display: 'flex', gap: '14px', lineHeight: 1.5 }}>
+          <span style={{ width: '20px' }} />
+          <span
+            className="cursor-blink"
+            style={{
+              display: 'inline-block',
+              width: '7px',
+              height: '13px',
+              background: 'var(--accent)',
+              verticalAlign: 'middle',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Bottom Thin Status Readout */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '4px 12px',
+          background: 'color-mix(in srgb, var(--bg) 90%, transparent)',
+          borderTop: '1px solid color-mix(in srgb, var(--fg) 6%, transparent)',
+          fontSize: '9.5px',
+          color: 'var(--dim)',
+        }}
+      >
+        <span>utf-8</span>
+        <span>c++20 / python</span>
+        <span>{visibleCount}:{currentSnippet.lines[visibleCount - 1]?.text.length || 1}</span>
+      </div>
+    </div>
+  );
+};
+
+// ===== PORTFOLIO — src/components/hancore/RadialEclipseTransition.tsx (tsx) =====
+// https://github.com/Pradhan-07/PORTFOLIO/blob/42da8fbf53dc926a1501a9ce208f45f88febe733/src/components/hancore/RadialEclipseTransition.tsx
+import React, { useEffect, useRef } from 'react';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+
+interface RadialEclipseTransitionProps {
+  onComplete: () => void;
+  themeAccent?: string;
+}
+
+export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = ({
+  onComplete,
+  themeAccent = '#ebe6db',
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
+
+  useEffect(() => {
+    // Reduced motion (G9): skip the 1.85s canvas sequence entirely and
+    // hand over to the portfolio almost immediately.
+    if (reducedMotion) {
+      const t = window.setTimeout(() => onComplete(), 60);
+      return () => window.clearTimeout(t);
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const cx = width / 2;
+    const cy = height / 2;
+
+    const DURATION = 1850; // Total transition time in ms (~1.85s)
+    const startTime = performance.now();
+
+    // Procedural radial streaks (280 rays of varying length, angle, and thickness)
+    const RAY_COUNT = 320;
+    const rays = Array.from({ length: RAY_COUNT }, (_, i) => {
+      const angle = (i / RAY_COUNT) * Math.PI * 2;
+      const lengthMult = 0.5 + Math.random() * 0.9;
+      const alphaMult = 0.3 + Math.random() * 0.7;
+      const widthMult = 0.6 + Math.random() * 1.2;
+      return { angle, lengthMult, alphaMult, widthMult };
+    });
+
+    // Orbiting particles in core
+    const PARTICLE_COUNT = 60;
+    const particles = Array.from({ length: PARTICLE_COUNT }, () => ({
+      angle: Math.random() * Math.PI * 2,
+      dist: 20 + Math.random() * 50,
+      speed: (Math.random() - 0.5) * 0.05,
+      size: 1 + Math.random() * 2,
+    }));
+
+    let animId: number;
+
+    const render = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1.0, elapsed / DURATION);
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Phase calculation
+      // 0.0 -> 0.25: Core convergence
+      // 0.25 -> 0.60: Ring formation & particle swirl
+      // 0.60 -> 0.90: Eclipse burst expansion
+      // 0.90 -> 1.00: Fullscreen takeover & resolve
+
+      if (progress < 0.25) {
+        // Phase 1: Small particle cluster convergence
+        const p1 = progress / 0.25;
+        ctx.fillStyle = `color-mix(in srgb, ${themeAccent} ${p1 * 70}%, transparent)`;
+        particles.forEach((pt) => {
+          const currentDist = pt.dist * (1 - p1 * 0.5);
+          const x = cx + Math.cos(pt.angle) * currentDist;
+          const y = cy + Math.sin(pt.angle) * currentDist;
+          ctx.beginPath();
+          ctx.arc(x, y, pt.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Small center core
+        ctx.strokeStyle = `color-mix(in srgb, ${themeAccent} ${p1 * 80}%, transparent)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 14 * p1, 0, Math.PI * 2);
+        ctx.stroke();
+
+      } else if (progress < 0.60) {
+        // Phase 2: Ring formation & micro-rays
+        const p2 = (progress - 0.25) / 0.35;
+        const ringRadius = 24 + p2 * 70;
+
+        // Draw radial streaks emerging from ring perimeter
+        rays.forEach((ray) => {
+          const rInner = ringRadius;
+          const rOuter = ringRadius + ray.lengthMult * 60 * p2;
+
+          ctx.strokeStyle = `color-mix(in srgb, ${themeAccent} ${(ray.alphaMult * p2 * 85).toFixed(1)}%, transparent)`;
+          ctx.lineWidth = ray.widthMult;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(ray.angle) * rInner, cy + Math.sin(ray.angle) * rInner);
+          ctx.lineTo(cx + Math.cos(ray.angle) * rOuter, cy + Math.sin(ray.angle) * rOuter);
+          ctx.stroke();
+        });
+
+        // Luminous perimeter
+        ctx.strokeStyle = themeAccent;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Dark circular center
+        ctx.fillStyle = '#050505';
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringRadius - 1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Technical coordinates text
+        ctx.font = '9px "IBM Plex Mono", monospace';
+        ctx.fillStyle = `color-mix(in srgb, ${themeAccent} 50%, transparent)`;
+        ctx.textAlign = 'center';
+        ctx.fillText(`PORTAL // 0x${Math.round(p2 * 255).toString(16).toUpperCase()}`, cx, cy + 3);
+
+      } else {
+        // Phase 3 & 4: Full-screen radial expansion & eclipse takeover
+        const p3 = (progress - 0.60) / 0.40;
+        const maxDiagonal = Math.hypot(width, height) * 1.1;
+        const ringRadius = 94 + p3 * maxDiagonal;
+
+        // Massive radial burst
+        rays.forEach((ray) => {
+          const rInner = ringRadius;
+          const rOuter = ringRadius + ray.lengthMult * 180 * (1 - p3 * 0.4);
+
+          ctx.strokeStyle = `color-mix(in srgb, ${themeAccent} ${(ray.alphaMult * (1 - p3 * 0.6) * 90).toFixed(1)}%, transparent)`;
+          ctx.lineWidth = ray.widthMult * 1.5;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(ray.angle) * rInner, cy + Math.sin(ray.angle) * rInner);
+          ctx.lineTo(cx + Math.cos(ray.angle) * rOuter, cy + Math.sin(ray.angle) * rOuter);
+          ctx.stroke();
+        });
+
+        // Expanding dark circular center that consumes the screen
+        ctx.fillStyle = '#050505';
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Luminous ring leading the charge
+        if (p3 < 0.95) {
+          ctx.strokeStyle = themeAccent;
+          ctx.lineWidth = 2 * (1 - p3);
+          ctx.beginPath();
+          ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      if (progress < 1.0) {
+        animId = requestAnimationFrame(render);
+      } else {
+        onComplete();
+      }
+    };
+
+    animId = requestAnimationFrame(render);
+
+    return () => {
+      cancelAnimationFrame(animId);
+    };
+  }, [onComplete, themeAccent, reducedMotion]);
+
+  if (reducedMotion) return null;
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="radial-eclipse-canvas"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999,
+        pointerEvents: 'none',
+        display: 'block',
+      }}
+    />
+  );
+};
+
+// ===== PORTFOLIO — src/data/codeSnippets.ts (typescript) =====
+// https://github.com/Pradhan-07/PORTFOLIO/blob/42da8fbf53dc926a1501a9ce208f45f88febe733/src/data/codeSnippets.ts
+// EXCERPT: first 100 of 203 lines (file is 9731 bytes)
+export interface CodeLine {
+  text: string;
+  lang: string;
+  tokens: { text: string; kind: 'keyword' | 'string' | 'number' | 'function' | 'type' | 'comment' | 'text' | 'member' }[];
+}
+
+export const CODE_WALL_SNIPPETS: CodeLine[] = [
+  {
+    text: '// karan.dev — Algorithms in C++, Intelligence, and Modern Web Systems',
+    lang: 'cpp',
+    tokens: [{ text: '// karan.dev — Algorithms in C++, Intelligence, and Modern Web Systems', kind: 'comment' }],
+  },
+  {
+    text: '#include <iostream>',
+    lang: 'cpp',
+    tokens: [{ text: '#include', kind: 'keyword' }, { text: ' ', kind: 'text' }, { text: '<iostream>', kind: 'string' }],
+  },
+  {
+    text: '#include <vector>',
+    lang: 'cpp',
+    tokens: [{ text: '#include', kind: 'keyword' }, { text: ' ', kind: 'text' }, { text: '<vector>', kind: 'string' }],
+  },
+  {
+    text: '#include <queue>',
+    lang: 'cpp',
+    tokens: [{ text: '#include', kind: 'keyword' }, { text: ' ', kind: 'text' }, { text: '<queue>', kind: 'string' }],
+  },
+  {
+    text: 'template <typename T>',
+    lang: 'cpp',
+    tokens: [{ text: 'template', kind: 'keyword' }, { text: ' <', kind: 'text' }, { text: 'typename', kind: 'keyword' }, { text: ' T>', kind: 'type' }],
+  },
+  {
+    text: 'class BinarySearchTree {',
+    lang: 'cpp',
+    tokens: [{ text: 'class', kind: 'keyword' }, { text: ' ', kind: 'text' }, { text: 'BinarySearchTree', kind: 'type' }, { text: ' {', kind: 'text' }],
+  },
+  {
+    text: '    struct Node {',
+    lang: 'cpp',
+    tokens: [{ text: '    struct', kind: 'keyword' }, { text: ' ', kind: 'text' }, { text: 'Node', kind: 'type' }, { text: ' {', kind: 'text' }],
+  },
+  {
+    text: '        T data;',
+    lang: 'cpp',
+    tokens: [{ text: '        ', kind: 'text' }, { text: 'T', kind: 'type' }, { text: ' data;', kind: 'text' }],
+  },
+  {
+    text: '        Node *left, *right;',
+    lang: 'cpp',
+    tokens: [{ text: '        ', kind: 'text' }, { text: 'Node', kind: 'type' }, { text: ' *left, *right;', kind: 'text' }],
+  },
+  {
+    text: '        Node(T val) : data(val), left(nullptr), right(nullptr) {}',
+    lang: 'cpp',
+    tokens: [{ text: '        ', kind: 'text' }, { text: 'Node', kind: 'function' }, { text: '(', kind: 'text' }, { text: 'T', kind: 'type' }, { text: ' val) : data(val), left(', kind: 'text' }, { text: 'nullptr', kind: 'keyword' }, { text: '), right(', kind: 'text' }, { text: 'nullptr', kind: 'keyword' }, { text: ') {}', kind: 'text' }],
+  },
+  {
+    text: '    };',
+    lang: 'cpp',
+    tokens: [{ text: '    };', kind: 'text' }],
+  },
+  {
+    text: '    Node* root = nullptr;',
+    lang: 'cpp',
+    tokens: [{ text: '    ', kind: 'text' }, { text: 'Node', kind: 'type' }, { text: '* root = ', kind: 'text' }, { text: 'nullptr', kind: 'keyword' }, { text: ';', kind: 'text' }],
+  },
+  {
+    text: 'public:',
+    lang: 'cpp',
+    tokens: [{ text: 'public:', kind: 'keyword' }],
+  },
+  {
+    text: '    void insert(const T& value) {',
+    lang: 'cpp',
+    tokens: [{ text: '    ', kind: 'text' }, { text: 'void', kind: 'type' }, { text: ' ', kind: 'text' }, { text: 'insert', kind: 'function' }, { text: '(', kind: 'text' }, { text: 'const', kind: 'keyword' }, { text: ' ', kind: 'text' }, { text: 'T', kind: 'type' }, { text: '& value) {', kind: 'text' }],
+  },
+  {
+    text: '        root = insertRecursive(root, value);',
+    lang: 'cpp',
+    tokens: [{ text: '        root = ', kind: 'text' }, { text: 'insertRecursive', kind: 'function' }, { text: '(root, value);', kind: 'text' }],
+  },
+  {
+    text: '    }',
+    lang: 'cpp',
+    tokens: [{ text: '    }', kind: 'text' }],
+  },
+  {
+    text: '    bool search(const T& key) const {',
+    lang: 'cpp',
+    tokens: [{ text: '    ', kind: 'text' }, { text: 'bool', kind: 'type' }, { text: ' ', kind: 'text' }, { text: 'search', kind: 'function' }, { text: '(', kind: 'text' }, { text: 'const', kind: 'keyword' }, { text: ' ', kind: 'text' }, { text: 'T', kind: 'type' }, { text: '& key) ', kind: 'text' }, { text: 'const', kind: 'keyword' }, { text: ' {', kind: 'text' }],
+  },
+  {
+    text: '        return searchRecursive(root, key) != nullptr;',
+    lang: 'cpp',
+    tokens: [{ text: '        ', kind: 'text' }, { text: 'return', kind: 'keyword' }, { text: ' ', kind: 'text' }, { text: 'searchRecursive', kind: 'function' }, { text: '(root, key) != ', kind: 'text' }, { text: 'nullptr', kind: 'keyword' }, { text: ';', kind: 'text' }],
+  },
+  {
+    text: '    }',
+    lang: 'cpp',
+
+// ===== study_detection — app.py (python) =====
+// https://github.com/Pradhan-07/study_detection/blob/a79829824e27f413179747a491880f33ff63ac96/app.py
+import cv2
+import cvzone
+from cvzone.FaceMeshModule import FaceMeshDetector
+from ultralytics import YOLO
+import pygame
+
+# Initialize Pygame Mixer
+pygame.mixer.init()
+alarm_sleep = pygame.mixer.Sound("alarm.mp3")       # Sleep alarm
+alarm_facehide = pygame.mixer.Sound("faudio.mp3")   # Face hidden/covered alarm
+alarm_phone = pygame.mixer.Sound("paudio.mp3")      # Phone alarm
+
+# Track active audio state ('sleep', 'facehide', 'phone', or None)
+current_playing = None
+
+# Initialize Camera, Face Mesh, and YOLO Model
+cap = cv2.VideoCapture(0)
+face_detector = FaceMeshDetector(maxFaces=1)
+phone_detector = YOLO("yolov8n.pt")  # COCO pre-trained lightweight model
+
+# COCO Dataset Class Names
+classNames = phone_detector.names  # Class '67' is 'cell phone' in standard COCO
+
+# Landmark Indices for Sleep Detection
+LEFT_EYE_TOP = 159
+LEFT_EYE_BOTTOM = 145
+FACE_LEFT = 130
+FACE_RIGHT = 243
+
+# Frame Counters & Thresholds
+closed_frames = 0
+SLEEP_THRESHOLD_FRAMES = 15
+
+covered_frames = 0
+COVER_THRESHOLD_FRAMES = 20  # ~0.6 seconds of missing face triggers warning
+
+while True:
+    success, img = cap.read()
+    if not success:
+        break
+
+    # Check if ANY sound is currently playing to completion
+    is_audio_busy = pygame.mixer.get_busy()
+
+    # If audio finished playing, reset tracking state to None
+    if not is_audio_busy:
+        current_playing = None
+
+    # ------------------- 1. SLEEP & FACE COVER DETECTION -------------------
+    img, faces = face_detector.findFaceMesh(img, draw=False)
+    is_sleepy = False
+    is_face_covered = False
+
+    if faces:
+        # Face visible -> Reset covered frames counter
+        covered_frames = 0
+        face = faces[0]
+
+        eye_dist, _ = face_detector.findDistance(face[LEFT_EYE_TOP], face[LEFT_EYE_BOTTOM])
+        face_dist, _ = face_detector.findDistance(face[FACE_LEFT], face[FACE_RIGHT])
+
+        # Eye Aspect Ratio calculation
+        ratio = (eye_dist / face_dist) * 100
+
+        if ratio < 11.0:
+            closed_frames += 1
+        else:
+            closed_frames = 0
+
+        if closed_frames >= SLEEP_THRESHOLD_FRAMES:
+            is_sleepy = True
+
+        cvzone.putTextRect(img, f"Eye Ratio: {int(ratio)}", (30, 40), scale=1, thickness=1)
+
+    else:
+        # Face missing/covered -> Increment covered frames counter
+        closed_frames = 0
+        covered_frames += 1
+        
+        if covered_frames >= COVER_THRESHOLD_FRAMES:
+            is_face_covered = True
+
+    # ------------------- 2. PHONE DETECTION -------------------
+    results = phone_detector.predict(img, stream=True, verbose=False)
+    phone_detected = False
+
+    for r in results:
+        boxes = r.boxes
+        for box in boxes:
+            cls_id = int(box.cls[0])
+            conf = float(box.conf[0])
+
+            if classNames[cls_id] == "cell phone" and conf > 0.5:
+                phone_detected = True
+                
+                # Bounding box visual
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 2)
+                cvzone.putTextRect(img, f"Phone detected! {int(conf*100)}%", (x1, max(y1 - 10, 30)), scale=1, thickness=1, colorR=(255, 0, 255))
+
+    # ------------------- 3. ALARM LOGIC & DISPLAY -------------------
+    
+    # Priority 1: Face covered warning
+    if is_face_covered:
+        cvzone.putTextRect(img, "DONT COVER YOUR FACE!", (50, 100), scale=2, thickness=3, colorR=(0, 0, 255))
+        if not is_audio_busy:
+            alarm_facehide.play(0)  # Play full track once
+            current_playing = 'facehide'
+
+    # Priority 2: Sleep warning
+    elif is_sleepy:
+        cvzone.putTextRect(img, "WAKE UP & STUDY!", (50, 100), scale=2, thickness=3, colorR=(0, 0, 255))
+        if not is_audio_busy:
+            alarm_sleep.play(0)  # Play full track once
+            current_playing = 'sleep'
+
+    # Priority 3: Phone warning
+    elif phone_detected:
+        cvzone.putTextRect(img, "PUT THE PHONE AWAY!", (50, 100), scale=2, thickness=3, colorR=(0, 165, 255))
+        if not is_audio_busy:
+            alarm_phone.play(0)  # Play full track once
+            current_playing = 'phone'
+
+    # Display active warning overlay if audio is still finishing up
+    elif is_audio_busy:
+        if current_playing == 'facehide':
+            cvzone.putTextRect(img, "DONT COVER YOUR FACE!", (50, 100), scale=2, thickness=3, colorR=(0, 0, 255))
+        elif current_playing == 'sleep':
+            cvzone.putTextRect(img, "WAKE UP & STUDY!", (50, 100), scale=2, thickness=3, colorR=(0, 0, 255))
+        elif current_playing == 'phone':
+            cvzone.putTextRect(img, "PUT THE PHONE AWAY!", (50, 100), scale=2, thickness=3, colorR=(0, 165, 255))
+
+    cv2.imshow("Smart Study Monitor", img)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
