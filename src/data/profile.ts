@@ -1,4 +1,4 @@
-import type { FocusArea, LearningItem } from '../types';
+import type { Certification, FocusArea, LearningItem } from '../types';
 
 export const PROFILE = {
   name: 'Karan Kumar Pradhan',
@@ -6,8 +6,10 @@ export const PROFILE = {
   handle: 'Pradhan-07',
   githubUrl: 'https://github.com/Pradhan-07',
   email: 'pradhankaran058@gmail.com',
-  linkedinUrl: 'https://www.linkedin.com/in/karan-kumar-pradhan-510062396/',
+  linkedinUrl: 'https://www.linkedin.com/in/karan-pradhan-510062396',
   linkedinDisplay: 'Karan Kumar Pradhan',
+  leetcodeUrl: 'https://leetcode.com/u/pradhan_07/',
+  leetcodeDisplay: 'pradhan_07',
   university: 'VIT-AP University',
   education: 'B.Tech in Computer Science Engineering',
   subtitle: 'B.Tech CSE Student @ VIT-AP University',
@@ -67,6 +69,23 @@ export const FOCUS_AREAS: FocusArea[] = [
       'Designing digital engineering interfaces that prioritize speed, craft, and visual responsiveness. Experimenting with canvas-based graphics, minimalist aesthetics, and component architectures.',
     topics: ['Interactive Canvas Systems', 'Modern JavaScript / TypeScript', 'Component Architecture', 'Performance Optimization'],
     status: 'Project Building',
+  },
+];
+
+export const CERTIFICATIONS: Certification[] = [
+  {
+    id: 'hcf',
+    name: 'Hedera Certified Foundation',
+    credential: 'HCF',
+    issuer: 'Hashgraph Association',
+    issued: 'Jun 2026',
+  },
+  {
+    id: 'hcda',
+    name: 'Hedera Certified Developer Associate',
+    credential: 'HCDA',
+    issuer: 'Hashgraph Association',
+    issued: 'Jun 2026',
   },
 ];
 

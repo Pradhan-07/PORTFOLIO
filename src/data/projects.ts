@@ -46,6 +46,42 @@ export function usePropertyListings(filter: PropertyFilter) {
 }`,
   },
   {
+    id: 'agriflow',
+    name: 'AGRIFLOW',
+    category: 'iot',
+    language: 'C++ (Arduino)',
+    featured: true,
+    description: 'ESP32-based IoT smart irrigation and soil monitoring system with remote motor control, built with a six-member Engineering Clinics team at VIT-AP.',
+    details: 'An embedded IoT system built around an ESP32 running a local web-server dashboard for live field telemetry and pump control. A capacitive soil-moisture sensor and a DHT11 sensor feed real readings to the dashboard, and the pump switches automatically in AUTO mode — motor ON when soil moisture drops below 20% and OFF once it rises above 80% — with manual remote motor control available from the same dashboard. Designed and built by a 6-member Engineering Clinics team at VIT-AP University.',
+    tech: ['ESP32', 'C++ / Arduino', 'DHT11', 'Capacitive Soil Moisture Sensor', 'Embedded Web Server', 'IoT'],
+    stats: {
+      status: 'Engineering Clinics Team Project',
+      updated: 'VIT-AP · 2026',
+    },
+    features: [
+      'ESP32-hosted web-server dashboard for live soil and climate readings',
+      'Capacitive soil-moisture sensing with calibrated dry/wet ADC thresholds',
+      'DHT11 temperature and humidity monitoring',
+      'AUTO irrigation mode: pump ON below 20% moisture, OFF above 80%',
+      'Remote manual motor (pump) control from the dashboard',
+      'Built by a 6-member Engineering Clinics team at VIT-AP',
+    ],
+    snippet: `// AGRIFLOW — ESP32 auto-irrigation control loop
+const int MOISTURE_PIN = 34;  // capacitive soil sensor (ADC)
+const int PUMP_PIN     = 25;  // pump driver output
+
+float readMoisturePercent() {
+  int raw = analogRead(MOISTURE_PIN);
+  // Calibrated ADC range: ~3050 (dry) -> ~1050 (wet)
+  return constrain(map(raw, 3050, 1050, 0, 100), 0, 100);
+}
+
+void autoIrrigate(float moisture) {
+  if (moisture < 20.0f) digitalWrite(PUMP_PIN, HIGH);  // dry soil -> pump ON
+  if (moisture > 80.0f) digitalWrite(PUMP_PIN, LOW);   // wet soil -> pump OFF
+}`,
+  },
+  {
     id: 'dsa-cpp',
     name: 'DSA_CPP',
     category: 'c++',
