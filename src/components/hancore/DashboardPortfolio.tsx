@@ -462,8 +462,9 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           <div hidden={activeFile !== 'about'} className="editor-file-pane" style={{ position: 'relative' }}>
           {/* Phase 7: the watching glyph — an original parametric ASCII
               eye for the About buffer's right margin. It self-gates on
-              viewport width and measured empty margin, and renders
-              nothing at all when either check fails. */}
+              viewport width and the empty margin measured beside the
+              whoami paragraph (the data-watching-anchor below), and
+              stays display:none when there genuinely is no room. */}
           <WatchingGlyph />
 
       {/* ========================================================================= */}
@@ -501,6 +502,7 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
               {PROFILE.subtitle}
             </div>
             <p
+              data-watching-anchor="whoami"
               style={{
                 margin: '0 0 14px 0',
                 fontSize: '12.5px',

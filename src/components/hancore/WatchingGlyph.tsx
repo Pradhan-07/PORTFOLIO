@@ -14,15 +14,26 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
  * tracking, offsets quantised to whole cells and clamped), so the one
  * thing it claims — that it watches the cursor — is simply true.
  *
- * Placement is earned, not assumed. The glyph renders only when ALL
+ * Placement is earned, not assumed — but the measuring instrument is
+ * always in the DOM. The wrapper renders unconditionally (held at
+ * display:none until a placement is proven) because the measurement
+ * effect reaches the pane through the wrapper's ref: the first
+ * version returned null until the measurement succeeded, which meant
+ * the ref was never set, the measurement never ran, and the glyph
+ * could never appear at any viewport. The glyph shows only when ALL
  * of these hold:
  *   - the viewport is at least 1150px wide;
  *   - the About pane is actually on screen (it stays mounted but
  *     hidden for other files — a zero-size pane fails the measure);
- *   - a runtime measurement finds real empty margin: the whoami
- *     paragraph's right edge (the widest text in the opener, capped at
- *     76ch in DashboardPortfolio) must leave at least EYE_W + 16px of
- *     pane width to its right. If in doubt, it hides.
+ *   - a runtime measurement finds real empty margin to the right of
+ *     the whoami text column: at least EYE_W + 16px of pane width.
+ * The column is measured against a dedicated anchor —
+ * [data-watching-anchor] on the whoami paragraph in
+ * DashboardPortfolio (the opener's widest text, capped at 76ch). If
+ * that anchor is ever missing, a fallback derives the column from
+ * the .whoami-block box plus the same 76ch cap (IBM Plex Mono's fixed
+ * 0.6em advance) instead of giving up; the glyph hides only when no
+ * measurement can prove the room is there.
  * Vertically it aligns to the whoami paragraph's top, so its band is
  * the opener's own rows — the full-width cockpit graph above and the
  * sections below are never underneath it.
@@ -40,6 +51,12 @@ const CELL_W_PX = 6;
 const EYE_W = COLS * CELL_W_PX; // 174px
 const MIN_VIEWPORT_W = 1150;
 const MIN_FREE_PX = EYE_W + 16;
+/** Fallback column estimate, used only when the anchor is missing:
+ *  the whoami paragraph's 76ch cap, and IBM Plex Mono's fixed advance
+ *  (0.6em — corroborated by the --cell-w token: 7.5px at the block's
+ *  12.5px font size). */
+const TEXT_COL_CH = 76;
+const CH_ADVANCE_EM = 0.6;
 const MAX_OX = 3; // pupil travel, in cells
 const MAX_OY = 1;
 
@@ -146,9 +163,14 @@ export const WatchingGlyph: React.FC = () => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Margin gate: measure the whoami paragraph against the pane. Runs
-  // on mount, on pane resize (which also fires when the pane unhides),
-  // and on window resize. Any doubt → hidden.
+  // Margin gate: measure the whoami text column against the pane.
+  // Runs on mount, on pane resize (which also fires when the pane
+  // unhides), on window resize, and once webfonts settle (the
+  // paragraph's ch cap resolves in the loaded font's metrics).
+  // Primary source is the [data-watching-anchor] paragraph in
+  // DashboardPortfolio; the .whoami-block box plus the 76ch cap is
+  // the fallback. The glyph hides only when no measurable text
+  // reference exists at all, or the measured room is genuinely short.
   useLayoutEffect(() => {
     // When the viewport gate closes, `show` below already hides the
     // glyph (it ANDs wideEnough in); the stale placement is simply
@@ -158,20 +180,49 @@ export const WatchingGlyph: React.FC = () => {
     const pane = wrap?.parentElement;
     if (!wrap || !pane) return;
 
+    const hide = () =>
+      setPlacement((p) => (p.visible ? { top: p.top, visible: false } : p));
+
     const measure = () => {
-      const para = pane.querySelector<HTMLElement>('.whoami-block p');
-      if (!para) {
-        setPlacement((p) => (p.visible ? { top: p.top, visible: false } : p));
-        return;
-      }
       const paneRect = pane.getBoundingClientRect();
-      const paraRect = para.getBoundingClientRect();
-      if (paneRect.width === 0 || paraRect.width === 0) {
-        setPlacement((p) => (p.visible ? { top: p.top, visible: false } : p));
+      if (paneRect.width === 0) {
+        hide();
         return;
       }
-      const free = paneRect.right - paraRect.right;
-      const top = paraRect.top - paneRect.top;
+
+      let textRight: number | null = null;
+      let top: number | null = null;
+
+      const anchor = pane.querySelector<HTMLElement>('[data-watching-anchor]');
+      if (anchor) {
+        const anchorRect = anchor.getBoundingClientRect();
+        if (anchorRect.width > 0) {
+          textRight = anchorRect.right;
+          top = anchorRect.top - paneRect.top;
+        }
+      }
+
+      if (textRight === null || top === null) {
+        // Fallback: the whoami block's box is real DOM geometry, and
+        // the text column inside it is capped at TEXT_COL_CH ch; IBM
+        // Plex Mono's fixed advance turns that cap into pixels. If
+        // the block is narrower than the cap, the text fills the
+        // block and its right edge is the column's edge.
+        const block = pane.querySelector<HTMLElement>('.whoami-block');
+        const blockRect = block?.getBoundingClientRect();
+        if (block && blockRect && blockRect.width > 0) {
+          const fontSize = parseFloat(getComputedStyle(block).fontSize) || 12.5;
+          const columnW = TEXT_COL_CH * CH_ADVANCE_EM * fontSize;
+          textRight = Math.min(blockRect.left + columnW, blockRect.right);
+          top = blockRect.top - paneRect.top;
+        }
+      }
+
+      if (textRight === null || top === null) {
+        hide();
+        return;
+      }
+      const free = paneRect.right - textRight;
       setPlacement((prev) => {
         const next = { top, visible: free >= MIN_FREE_PX };
         return prev.top === next.top && prev.visible === next.visible ? prev : next;
@@ -181,7 +232,17 @@ export const WatchingGlyph: React.FC = () => {
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
     ro?.observe(pane);
     window.addEventListener('resize', measure);
+    // A measurement taken before the webfont arrives uses fallback
+    // font metrics (a wider ch can shrink the computed margin), so
+    // re-measure once fonts settle.
+    let fontsLive = true;
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      void document.fonts.ready.then(() => {
+        if (fontsLive) measure();
+      });
+    }
     return () => {
+      fontsLive = false;
       ro?.disconnect();
       window.removeEventListener('resize', measure);
     };
@@ -249,14 +310,19 @@ export const WatchingGlyph: React.FC = () => {
     };
   }, [show, reducedMotion]);
 
-  if (!show) return null;
-
+  // The wrapper ALWAYS renders: the measurement effect above reaches
+  // the pane through wrapRef, so returning null while unplaced would
+  // starve the very measurement that could place the glyph (the
+  // original Phase 7 bug — the eye could never appear). Until a
+  // placement is proven, the wrapper is display:none: zero visual,
+  // layout, or scroll presence, exactly as if it had returned null.
   return (
     <div
       ref={wrapRef}
       className="watching-glyph"
       aria-hidden="true"
       style={{
+        display: show ? 'block' : 'none',
         position: 'absolute',
         right: '6px',
         top: `${placement.top}px`,
