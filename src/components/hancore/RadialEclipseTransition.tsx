@@ -3,30 +3,87 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 
 interface RadialEclipseTransitionProps {
   onComplete: () => void;
+  /** Cancel the gate (Escape): return to the landing, editor never mounts. */
+  onCancel: () => void;
   themeAccent?: string;
 }
 
+const DURATION = 1850; // Total transition time in ms (~1.85s)
+/** Hard ceiling: completion is guaranteed by this timer even if rAF stalls. */
+const FALLBACK_MS = DURATION + 450;
+
 export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = ({
   onComplete,
+  onCancel,
   themeAccent = '#ebe6db',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const reducedMotion = usePrefersReducedMotion();
 
+  // Callbacks live in refs so the animation effect below runs exactly
+  // once per mount. Depending on the callbacks directly let a parent
+  // re-render restart the effect mid-flight (fresh startTime, fresh
+  // canvas) — a remount loop in which onComplete could starve forever.
+  const completeRef = useRef(onComplete);
+  const cancelRef = useRef(onCancel);
+  const accentRef = useRef(themeAccent);
   useEffect(() => {
-    // Reduced motion (G9): skip the 1.85s canvas sequence entirely and
-    // hand over to the portfolio almost immediately.
+    completeRef.current = onComplete;
+    cancelRef.current = onCancel;
+    accentRef.current = themeAccent;
+  }, [onComplete, onCancel, themeAccent]);
+
+  useEffect(() => {
+    // Single-shot guard: whichever path finishes first (rAF reaching
+    // progress 1, or the fallback timer) wins; the other becomes a no-op.
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      completeRef.current();
+    };
+    const cancel = () => {
+      if (settled) return;
+      settled = true;
+      cancelRef.current();
+    };
+
+    // Escape cancels the gate at any point (Comparison Round 1, S1).
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cancel();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+
+    // Reduced motion (G9): skip the canvas sequence entirely and hand
+    // over to the portfolio almost immediately.
     if (reducedMotion) {
-      const t = window.setTimeout(() => onComplete(), 60);
-      return () => window.clearTimeout(t);
+      const t = window.setTimeout(finish, 60);
+      return () => {
+        window.clearTimeout(t);
+        window.removeEventListener('keydown', handleKey);
+      };
     }
 
+    // Timer-based completion fallback, independent of animation frames:
+    // if rAF is throttled, starved, or the tab loses focus mid-gate, the
+    // editor still mounts. The animation is decoration; the handover is
+    // guaranteed by the clock, not by the frame loop.
+    const fallback = window.setTimeout(finish, FALLBACK_MS);
+
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) {
+      // No canvas — the fallback timer alone carries the handover.
+      return () => {
+        window.clearTimeout(fallback);
+        window.removeEventListener('keydown', handleKey);
+      };
+    }
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
+    const themeAccent = accentRef.current;
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
@@ -38,7 +95,6 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
     const cx = width / 2;
     const cy = height / 2;
 
-    const DURATION = 1850; // Total transition time in ms (~1.85s)
     const startTime = performance.now();
 
     // Procedural radial streaks (280 rays of varying length, angle, and thickness)
@@ -60,9 +116,10 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
       size: 1 + Math.random() * 2,
     }));
 
-    let animId: number;
+    let animId = 0;
 
     const render = (now: number) => {
+      if (settled) return;
       const elapsed = now - startTime;
       const progress = Math.min(1.0, elapsed / DURATION);
 
@@ -169,7 +226,7 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
       if (progress < 1.0) {
         animId = requestAnimationFrame(render);
       } else {
-        onComplete();
+        finish();
       }
     };
 
@@ -177,8 +234,12 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
 
     return () => {
       cancelAnimationFrame(animId);
+      window.clearTimeout(fallback);
+      window.removeEventListener('keydown', handleKey);
     };
-  }, [onComplete, themeAccent, reducedMotion]);
+    // Mount-once by design: callbacks and accent are read through refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reducedMotion]);
 
   if (reducedMotion) return null;
 

@@ -15,6 +15,9 @@ import { Footer } from '../Footer';
 import { EditorStatusBar } from '../EditorStatusBar';
 import { EditorFileNav } from './EditorFileNav';
 import { FileBuffer } from './FileBuffer';
+import { CockpitGraph } from './CockpitGraph';
+import { DeskStrip } from './DeskStrip';
+import { BitCreature, type BitState } from './BitCreature';
 import { CertificationsSection } from '../CertificationsSection';
 import { LeetCodeSection } from '../LeetCodeSection';
 import { ThemesSection } from '../ThemesSection';
@@ -22,6 +25,7 @@ import { ProjectDetailModal } from '../ProjectDetailModal';
 import { InteractiveTerminalModal } from '../InteractiveTerminalModal';
 import { CommandPaletteModal } from '../CommandPaletteModal';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+import { normalisedWheelDelta } from '../../hooks/useWheelStepper';
 
 interface DashboardPortfolioProps {
   theme: Theme;
@@ -38,15 +42,35 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState('hero');
   const [activeFile, setActiveFile] = useState<EditorFileId>('about');
-  const [graphMode, setGraphMode] = useState<'dsa' | 'ai' | 'web'>('dsa');
-  const [pointerPos, setPointerPos] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
   const [selectedProjectModal, setSelectedProjectModal] = useState<Project | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  // G7: Bit, the stray node — the shell owns his awake flag (the bar's
+  // den button toggles it) and mirrors his state for the NODE: readout.
+  const [bitAwake, setBitAwake] = useState(false);
+  const [bitState, setBitState] = useState<BitState>('sleeping');
+  // G6: the desk height is owned by the --desk-h CSS token (height bands
+  // in index.css); resolve it to px for DeskStrip's height prop so the
+  // strip, the stage grid row and Bit's ground line all agree.
+  const [deskHeightPx, setDeskHeightPx] = useState(0);
+  useEffect(() => {
+    const read = () => {
+      const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--desk-h'));
+      setDeskHeightPx(Number.isFinite(v) && v > 0 ? v : 0);
+    };
+    read();
+    window.addEventListener('resize', read);
+    return () => window.removeEventListener('resize', read);
+  }, []);
   const reducedMotion = usePrefersReducedMotion();
 
-  const graphCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const bufferRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  // Per-file buffer scroll memory (SCROLL-SPEC §4.6): each file is a
+  // buffer — leaving and returning restores its scroll position. Explicit
+  // anchor navigation overrides the remembered position.
+  const scrollMemoryRef = useRef<Partial<Record<EditorFileId, number>>>({});
+  const activeFileRef = useRef<EditorFileId>('about');
   const pendingAnchorRef = useRef<string | null>(null);
   const navFocusPendingRef = useRef(false);
 
@@ -56,6 +80,11 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
   // Opening a file swaps only the buffer content; the stage chrome stays put.
   const openFile = useCallback((fileId: EditorFileId, anchorSection?: string) => {
     const spec = EDITOR_FILES.find((f) => f.id === fileId) ?? EDITOR_FILES[0];
+    // Remember where the outgoing file was scrolled to (buffer semantics).
+    if (bufferRef.current) {
+      scrollMemoryRef.current[activeFileRef.current] = bufferRef.current.scrollTop;
+    }
+    activeFileRef.current = spec.id;
     pendingAnchorRef.current = anchorSection && anchorSection !== spec.section ? anchorSection : null;
     setActiveFile(spec.id);
     setActiveSection(anchorSection ?? spec.section);
@@ -84,23 +113,10 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
     [activeFile, openFile]
   );
 
-  // Lock the document while the editor stage is mounted — only the buffer scrolls.
-  useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
-    return () => {
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
-    };
-  }, []);
-
-  // After a file switch: scroll the buffer to the top (or to a pending
-  // anchor such as #focus), and move focus to the new tree item when the
-  // switch came from keyboard navigation inside the tree.
+  // After a file switch: jump to a pending anchor (such as #focus) when
+  // one was requested, otherwise restore the file's remembered scroll
+  // position; move focus to the new tree item when the switch came from
+  // keyboard navigation inside the tree.
   useEffect(() => {
     if (navFocusPendingRef.current) {
       navFocusPendingRef.current = false;
@@ -116,13 +132,47 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         if (el) {
           const top = el.getBoundingClientRect().top - buffer.getBoundingClientRect().top + buffer.scrollTop;
           buffer.scrollTo({ top: Math.max(0, top - 4), behavior: reducedMotion ? 'auto' : 'smooth' });
+          // The anchor landing becomes this file's remembered position.
+          scrollMemoryRef.current[activeFile] = Math.max(0, top - 4);
           return;
         }
       }
-      buffer.scrollTo({ top: 0 });
+      // No anchor: restore the file's remembered position (first visit = 0).
+      // Restoration is never animated, reduced motion or not (§4.6).
+      buffer.scrollTo({ top: scrollMemoryRef.current[activeFile] ?? 0, behavior: 'auto' });
     });
     return () => cancelAnimationFrame(raf);
   }, [activeFile, reducedMotion]);
+
+  // Stage wheel routing (SCROLL-SPEC §4.3): wheel over non-scrollable
+  // stage chrome (header, winbar, gutter, status bar) scrolls the buffer
+  // instead of dying — the pointer's resting place never disables the
+  // primary input. Zones that own their wheel behaviour bail out first.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const handleStageWheel = (e: WheelEvent) => {
+      // Any overlay open: overlays own their wheel behaviour entirely.
+      if (isCommandPaletteOpen || isTerminalOpen || selectedProjectModal) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      // The tree's own stepper owns its surface…
+      if (target.closest('[data-editor-file-nav]')) return;
+      // …the buffer scrolls natively…
+      if (target.closest('.file-buffer-scroll')) return;
+      // …and dialogs / form fields keep native behaviour.
+      if (target.closest('[role="dialog"], input, textarea, select, [contenteditable="true"]')) return;
+
+      const buffer = bufferRef.current;
+      if (!buffer) return;
+      e.preventDefault();
+      buffer.scrollTop += normalisedWheelDelta(e);
+    };
+
+    stage.addEventListener('wheel', handleStageWheel, { passive: false });
+    return () => stage.removeEventListener('wheel', handleStageWheel);
+  }, [isCommandPaletteOpen, isTerminalOpen, selectedProjectModal]);
 
   // Global keyboard: Cmd/Ctrl+K palette, Ctrl+` terminal, and the
   // file-stepping keys (arrows / j / k) with modal + typing focus guards.
@@ -172,175 +222,6 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [stepFile, isCommandPaletteOpen, isTerminalOpen, selectedProjectModal]);
 
-  // Evolving interactive mathematical contour graph
-  useEffect(() => {
-    const canvas = graphCanvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animId: number;
-    const width = (canvas.width = canvas.parentElement?.clientWidth || 520);
-    const height = (canvas.height = 140);
-
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
-
-    let frame = 0;
-
-    const render = () => {
-      frame++;
-      ctx.clearRect(0, 0, width, height);
-
-      // Grid background markings
-      ctx.strokeStyle = 'color-mix(in srgb, var(--fg) 6%, transparent)';
-      ctx.lineWidth = 0.5;
-      for (let x = 0; x < width; x += 30) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < height; y += 25) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-
-      const midY = height / 2;
-
-      // MODE 1: DSA / C++ — Asymptotic algorithmic curves & partitions
-      if (graphMode === 'dsa') {
-        const curves = [
-          { color: 'var(--accent)', alpha: 0.9, amp: 26, freq: 0.018, speed: 0.032 },
-          { color: 'var(--chrome)', alpha: 0.5, amp: 18, freq: 0.024, speed: 0.02 },
-          { color: 'var(--dim)', alpha: 0.35, amp: 12, freq: 0.038, speed: 0.04 },
-        ];
-
-        curves.forEach((c) => {
-          ctx.strokeStyle = c.color;
-          ctx.globalAlpha = c.alpha;
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-
-          for (let x = 0; x < width; x += 4) {
-            let perturbation = 0;
-            if (pointerPos.active) {
-              const dist = Math.abs(x - pointerPos.x);
-              if (dist < 80) {
-                perturbation = Math.sin((80 - dist) * 0.08) * 16;
-              }
-            }
-            const y = midY + Math.sin(x * c.freq + frame * c.speed) * c.amp + perturbation;
-            if (x === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-        });
-
-        // Pointer pivot highlight
-        if (pointerPos.active) {
-          ctx.strokeStyle = '#66cc6a';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(pointerPos.x, pointerPos.y, 14, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-
-        const scanX = (frame * 1.5) % width;
-        ctx.strokeStyle = 'color-mix(in srgb, var(--accent) 40%, transparent)';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(scanX, 0);
-        ctx.lineTo(scanX, height);
-        ctx.stroke();
-
-        ctx.font = '8.5px "IBM Plex Mono", monospace';
-        ctx.fillStyle = 'var(--dim)';
-        ctx.globalAlpha = 1;
-        ctx.fillText(`f(x) = O(N log N) · STL RED-BLACK TREE PARTITIONS · PIVOT x:${Math.round(scanX)}`, 10, height - 8);
-      }
-      // MODE 2: AI / ML — Gradient descent, activation heuristics
-      else if (graphMode === 'ai') {
-        ctx.strokeStyle = 'var(--accent)';
-        ctx.globalAlpha = 0.85;
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-
-        for (let x = 0; x < width; x += 3) {
-          // Sigmoid & gradient descent convergence curve
-          const normX = (x / width) * 10 - 5;
-          const sigmoid = 1 / (1 + Math.exp(-normX));
-          const lossDescent = Math.exp(-x / 140) * Math.sin(x * 0.05 + frame * 0.04) * 28;
-          const y = midY + (sigmoid - 0.5) * 45 + lossDescent;
-
-          if (x === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
-        // Pulsing Neural Nodes
-        const nodePositions = [width * 0.2, width * 0.45, width * 0.7, width * 0.9];
-        nodePositions.forEach((nx, nIdx) => {
-          const ny = midY + Math.sin(frame * 0.05 + nIdx) * 18;
-          ctx.fillStyle = '#66cc6a';
-          ctx.beginPath();
-          ctx.arc(nx, ny, 3.5, 0, Math.PI * 2);
-          ctx.fill();
-        });
-
-        ctx.font = '8.5px "IBM Plex Mono", monospace';
-        ctx.fillStyle = 'var(--dim)';
-        ctx.globalAlpha = 1;
-        ctx.fillText(`∇L(θ) = -η·dL/dθ · LOSS CONVERGENCE: 0.034 · TENSOR INFERENCE`, 10, height - 8);
-      }
-      // MODE 3: Web Dev — 60fps Event Loop & Hydration Stream
-      else {
-        // Frame rate square wave & telemetry packets
-        ctx.strokeStyle = 'var(--chrome)';
-        ctx.globalAlpha = 0.75;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-
-        for (let x = 0; x < width; x += 4) {
-          const tick = Math.sin(x * 0.08 + frame * 0.08) > 0 ? 18 : -18;
-          const ripple = pointerPos.active && Math.abs(x - pointerPos.x) < 60 ? Math.sin((frame + x) * 0.2) * 12 : 0;
-          const y = midY + tick + ripple;
-          if (x === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
-        ctx.font = '8.5px "IBM Plex Mono", monospace';
-        ctx.fillStyle = 'var(--dim)';
-        ctx.globalAlpha = 1;
-        ctx.fillText(`EVENT LOOP: 60FPS · REACT 19 HYDRATION · SUPABASE STREAMING TICK`, 10, height - 8);
-      }
-
-    };
-
-    if (reducedMotion) {
-      // Calm state (G9): one static frame of the current graph mode.
-      // Pointer moves still redraw a single frame per move (the effect
-      // re-runs), but nothing animates autonomously.
-      render();
-    } else {
-      const loop = () => {
-        render();
-        animId = requestAnimationFrame(loop);
-      };
-      loop();
-    }
-
-    return () => {
-      cancelAnimationFrame(animId);
-    };
-  }, [graphMode, pointerPos, reducedMotion]);
-
   // All existing navigation call sites (header, cockpit, terminal, palette,
   // status-bar commands) keep calling scrollToSection — it now resolves the
   // section to its editor file and swaps the buffer instead of scrolling
@@ -349,11 +230,20 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
 
   const handleBackToTop = () => {
     openFile('about');
+    scrollMemoryRef.current.about = 0;
     bufferRef.current?.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
   };
 
+  // Leaving for the intro puts Bit back to sleep (G7) — returning to
+  // the portfolio does not resurrect him.
+  const handleBackToIntro = useCallback(() => {
+    setBitAwake(false);
+    setBitState('sleeping');
+    onBackToIntro();
+  }, [onBackToIntro]);
+
   const handleCommand = (cmd: string) => {
-    if (cmd === 'intro') onBackToIntro();
+    if (cmd === 'intro') handleBackToIntro();
     else if (cmd === 'theme') onToggleTheme();
     else if (cmd === 'term' || cmd === 'terminal') setIsTerminalOpen(true);
     else if (cmd === 'dsa') scrollToSection('focus');
@@ -369,56 +259,33 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
     }
   };
 
-  // 6 Left Project Tiles with tilt rotations
-  const leftTiles: Array<{
-    id: string;
-    label: string;
-    tilt: number;
-    desc: string;
-    lang?: string;
-    isBrand?: boolean;
-    url?: string;
-    projectId?: string;
-  }> = [
-      { id: 'brand', label: 'KP // CORE', tilt: -2.5, desc: 'B.Tech CSE · VIT-AP', isBrand: true },
-      { id: 'dsa', label: 'DSA_CPP', tilt: 1.8, desc: 'C++ Algorithms & STL', lang: 'C++', projectId: 'dsa-cpp' },
-      { id: 'study', label: 'study_detection', tilt: -1.2, desc: 'Vision Attention Tracker', lang: 'Python', projectId: 'study-detection' },
-      { id: 'magic', label: 'magic_hand', tilt: 2.2, desc: 'Real-time Hand Gestures', lang: 'Python', projectId: 'magic-hand' },
-      {
-        id: 'indstate',
-        label: 'indstate',
-        tilt: -1.5,
-        desc: 'Trusted Property Marketplace',
-        lang: 'React',
-        url: 'https://github.com/Pradhan-07/indstate',
-        projectId: 'indstate',
-      },
-      { id: 'glow', label: 'flowerglow', tilt: 1.6, desc: 'Interactive Canvas UI', lang: 'Canvas', projectId: 'flowerglow' },
-    ];
-
   return (
     <div
+      ref={stageRef}
       className="dashboard-portfolio-wrapper editor-stage"
       style={{
         position: 'relative',
         zIndex: 10,
         height: '100svh',
-        minHeight: '560px',
+        // Below 560px viewport height the stage compresses instead of
+        // clipping the bottom bar off-screen (SCROLL-SPEC §4.8).
+        minHeight: 'min(560px, 100svh)',
         overflow: 'hidden',
         background: 'color-mix(in srgb, var(--bg) 96%, transparent)',
         display: 'grid',
-        gridTemplateRows: 'auto minmax(0, 1fr) 46px',
+        gridTemplateRows: 'auto minmax(0, 1fr) var(--bar-h) minmax(0, var(--desk-h))',
       }}
     >
       {/* Top Header — frame row of the stage */}
       <header
+        className="stage-header"
         style={{
           position: 'relative',
           zIndex: 50,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '14px 32px',
+          padding: 'var(--sp-2) var(--frame-x)',
           background: 'color-mix(in srgb, var(--bg) 90%, transparent)',
           backdropFilter: 'blur(12px)',
           borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
@@ -428,11 +295,12 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
       >
         <button
           type="button"
-          onClick={onBackToIntro}
+          className="hdr-btn"
+          onClick={handleBackToIntro}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: 'var(--sp-2)',
             background: 'none',
             border: 'none',
             color: 'var(--fg)',
@@ -442,13 +310,13 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           }}
         >
           <BrandLogo size={18} />
-          <span style={{ fontWeight: 500 }}>{PROFILE.domain}</span>
+          <span className="stage-brand-text" style={{ fontWeight: 500 }}>{PROFILE.domain}</span>
           <span
             style={{
               fontSize: '9.5px',
               padding: '1px 5px',
               background: 'var(--line)',
-              borderRadius: '2px',
+              borderRadius: 'var(--radius)',
               color: 'var(--dim)',
             }}
           >
@@ -478,7 +346,7 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
                 color: 'var(--dim)',
                 cursor: 'pointer',
                 padding: '4px 8px',
-                borderRadius: '2px',
+                borderRadius: 'var(--radius)',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 transition: 'color 180ms ease',
@@ -495,12 +363,13 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           {/* Quick Palette Trigger */}
           <button
             type="button"
+            className="hdr-btn"
             onClick={() => setIsCommandPaletteOpen(true)}
             title="Open Command Palette (Cmd+K / Ctrl+K)"
             style={{
               background: 'var(--line)',
               border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-              borderRadius: '2px',
+              borderRadius: 'var(--radius)',
               padding: '4px 7px',
               color: 'var(--chrome)',
               cursor: 'pointer',
@@ -516,12 +385,13 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           {/* Quick Terminal Trigger */}
           <button
             type="button"
+            className="hdr-btn"
             onClick={() => setIsTerminalOpen(true)}
             title="Open Interactive Terminal"
             style={{
               background: 'var(--line)',
               border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-              borderRadius: '2px',
+              borderRadius: 'var(--radius)',
               padding: '4px 7px',
               color: 'var(--chrome)',
               cursor: 'pointer',
@@ -534,11 +404,12 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           {/* Theme switcher */}
           <button
             type="button"
+            className="hdr-btn"
             onClick={onToggleTheme}
             style={{
               background: 'var(--line)',
               border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-              borderRadius: '2px',
+              borderRadius: 'var(--radius)',
               padding: '4px 8px',
               color: 'var(--chrome)',
               cursor: 'pointer',
@@ -565,7 +436,6 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         className="editor-workspace"
         style={{
           display: 'grid',
-          gridTemplateColumns: '232px minmax(0, 1fr)',
           minHeight: 0,
           minWidth: 0,
         }}
@@ -579,479 +449,77 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           <div hidden={activeFile !== 'about'} className="editor-file-pane">
 
       {/* ========================================================================= */}
-      {/* 3-AREA DASHBOARD COCKPIT (Frames 13 - 19) */}
+      {/* ABOUT OPENER — the cockpit, absorbed (G5). The animated graph is    */}
+      {/* now this buffer's header visual and the whoami panel its opening    */}
+      {/* lines. Status readouts live in the bottom bar; the project tiles   */}
+      {/* became the pinned rows at the top of projects.tsx; the wireframe   */}
+      {/* hands/keyboard motif lives on in the desk strip (G6).              */}
       {/* ========================================================================= */}
-      <section
-        className="cockpit-dashboard-section"
-        style={{
-          maxWidth: '1200px',
-          margin: '24px auto 48px auto',
-          padding: '0 24px',
-          width: '100%',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '170px 1fr 190px',
-            gap: '24px',
-            alignItems: 'start',
-          }}
-          className="cockpit-grid"
-        >
-          {/* AREA 1: LEFT VERTICAL COLUMN OF TILTED PROJECT TILES (Frame 14) */}
+      <section className="about-opener file-section">
+        <div className="section-container">
+          <CockpitGraph onNavigate={scrollToSection} />
+
+          {/* whoami — the About buffer's opening lines */}
           <div
-            className="left-tiles-column"
+            className="whoami-block"
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-              position: 'relative',
-            }}
-          >
-            {/* Vertical connector line / filament */}
-            <div
-              style={{
-                position: 'absolute',
-                top: '10px',
-                bottom: '10px',
-                left: '50%',
-                width: '1px',
-                background: 'color-mix(in srgb, var(--fg) 12%, transparent)',
-                zIndex: 0,
-              }}
-            />
-
-            {leftTiles.map((tile) => {
-              const cardContent = tile.isBrand ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <BrandLogo size={18} />
-                  <div>
-                    <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--fg)' }}>{tile.label}</div>
-                    <div style={{ fontSize: '8.5px', color: 'var(--dim)' }}>{tile.desc}</div>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--fg)' }}>{tile.label}</span>
-                    <span style={{ fontSize: '8px', color: 'var(--accent)', background: 'var(--bg)', padding: '1px 4px', borderRadius: '2px' }}>{tile.lang}</span>
-                  </div>
-                  <div style={{ fontSize: '8.5px', color: 'var(--dim)', lineHeight: 1.3 }}>{tile.desc}</div>
-                </div>
-              );
-
-              const cardStyle: React.CSSProperties = {
-                position: 'relative',
-                zIndex: 1,
-                background: 'var(--line)',
-                border: '1px solid color-mix(in srgb, var(--fg) 14%, transparent)',
-                borderRadius: '3px',
-                padding: '10px 12px',
-                transform: `rotate(${tile.tilt}deg)`,
-                transition: 'transform 200ms ease, border-color 200ms ease',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
-                fontFamily: '"IBM Plex Mono", monospace',
-                textDecoration: 'none',
-                color: 'inherit',
-                display: 'block',
-              };
-
-              // If has project details, click opens the detail modal for rich inspection
-              const handleClick = (e: React.MouseEvent) => {
-                if (tile.projectId) {
-                  e.preventDefault();
-                  handleOpenProjectById(tile.projectId);
-                } else if (tile.isBrand) {
-                  scrollToSection('hero');
-                } else {
-                  scrollToSection('projects');
-                }
-              };
-
-              return (
-                <div
-                  key={tile.id}
-                  onClick={handleClick}
-                  style={cardStyle}
-                  title={`Inspect ${tile.label}`}
-                >
-                  {cardContent}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* AREA 2: CENTRAL TERMINAL PANEL WITH INTERACTIVE GRAPH & WHOAMI */}
-          <div
-            className="center-terminal-panel"
-            style={{
+              marginTop: 'var(--sp-3)',
               background: 'color-mix(in srgb, var(--bg) 95%, #101010)',
               border: '1px solid color-mix(in srgb, var(--fg) 14%, transparent)',
-              borderRadius: '3px',
-              padding: '20px 24px',
+              borderRadius: 'var(--radius)',
+              padding: 'var(--sp-3)',
               fontFamily: '"IBM Plex Mono", monospace',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              boxShadow: 'var(--ring)',
+              fontSize: '12px',
+              lineHeight: 1.6,
             }}
           >
-            {/* Terminal Header & Mode Switcher */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
-                paddingBottom: '10px',
-                marginBottom: '16px',
-                fontSize: '11px',
-                color: 'var(--chrome)',
-                flexWrap: 'wrap',
-                gap: '8px',
-              }}
-            >
-              <span>fish ~ · KARAN-DEV</span>
-
-              {/* Interactive Graph Mode Switcher */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {(['dsa', 'ai', 'web'] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setGraphMode(m)}
-                    style={{
-                      background: graphMode === m ? 'var(--accent)' : 'transparent',
-                      color: graphMode === m ? 'var(--bg)' : 'var(--dim)',
-                      border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                      borderRadius: '2px',
-                      padding: '2px 6px',
-                      fontSize: '9.5px',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    {m === 'dsa' ? 'DSA / C++' : m === 'ai' ? 'AI / ML' : 'WEB DEV'}
-                  </button>
-                ))}
-              </div>
+            <div style={{ color: 'var(--dim)', marginBottom: '4px' }}>
+              karan@dev ~ <span style={{ color: 'var(--accent)' }}>&gt; whoami</span>
             </div>
-
-            {/* Interactive Graph Canvas with pointer tracking */}
-            <div
-              style={{ position: 'relative', marginBottom: '20px', width: '100%' }}
-              onMouseMove={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setPointerPos({ x: e.clientX - rect.left, y: e.clientY - rect.top, active: true });
-              }}
-              onMouseLeave={() => setPointerPos((prev) => ({ ...prev, active: false }))}
-              onTouchMove={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const touch = e.touches[0];
-                if (touch) {
-                  setPointerPos({ x: touch.clientX - rect.left, y: touch.clientY - rect.top, active: true });
-                }
-              }}
-              onTouchEnd={() => setPointerPos((prev) => ({ ...prev, active: false }))}
-            >
-              <canvas
-                ref={graphCanvasRef}
-                style={{
-                  width: '100%',
-                  height: '140px',
-                  display: 'block',
-                  background: 'color-mix(in srgb, var(--bg) 90%, #060806)',
-                  borderRadius: '2px',
-                  border: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
-                  cursor: 'crosshair',
-                }}
-              />
+            <div style={{ color: 'var(--fg)', fontWeight: 600, fontSize: '14px' }}>
+              {PROFILE.name}
             </div>
-
-            {/* Telemetry Summary Badges */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                gap: '10px',
-                marginBottom: '20px',
-                fontSize: '10px',
-              }}
-            >
-              <div
-                onClick={() => scrollToSection('focus')}
-                style={{ background: 'var(--line)', padding: '8px 10px', borderRadius: '2px', cursor: 'pointer' }}
-              >
-                <div style={{ color: 'var(--dim)', fontSize: '8.5px' }}>CURRENT FOCUS</div>
-                <div style={{ color: 'var(--fg)', fontWeight: 600, marginTop: '2px' }}>DSA / C++ ↗</div>
-              </div>
-              <div
-                onClick={() => scrollToSection('focus')}
-                style={{ background: 'var(--line)', padding: '8px 10px', borderRadius: '2px', cursor: 'pointer' }}
-              >
-                <div style={{ color: 'var(--dim)', fontSize: '8.5px' }}>EXPLORING</div>
-                <div style={{ color: 'var(--accent)', fontWeight: 600, marginTop: '2px' }}>AI / ML ↗</div>
-              </div>
-              <div
-                onClick={() => scrollToSection('projects')}
-                style={{ background: 'var(--line)', padding: '8px 10px', borderRadius: '2px', cursor: 'pointer' }}
-              >
-                <div style={{ color: 'var(--dim)', fontSize: '8.5px' }}>BUILDING</div>
-                <div style={{ color: 'var(--chrome)', fontWeight: 600, marginTop: '2px' }}>WEB DEVELOPMENT ↗</div>
-              </div>
+            <div style={{ color: 'var(--chrome)', fontSize: '11px', marginBottom: '8px' }}>
+              {PROFILE.subtitle}
             </div>
-
-            {/* whoami Command & Profile Reveal */}
-            <div
+            <p
               style={{
-                borderTop: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
-                paddingTop: '16px',
-                fontSize: '12px',
+                margin: '0 0 14px 0',
+                fontFamily: '"Archivo", sans-serif',
+                fontSize: '13px',
+                color: 'color-mix(in srgb, var(--fg) 80%, transparent)',
                 lineHeight: 1.6,
+                fontWeight: 350,
               }}
             >
-              <div style={{ color: 'var(--dim)', marginBottom: '4px' }}>
-                karan@dev ~ <span style={{ color: 'var(--accent)' }}>&gt; whoami</span>
-              </div>
-              <div style={{ color: 'var(--fg)', fontWeight: 600, fontSize: '14px' }}>
-                {PROFILE.name}
-              </div>
-              <div style={{ color: 'var(--chrome)', fontSize: '11px', marginBottom: '8px' }}>
-                {PROFILE.subtitle}
-              </div>
-              <p
-                style={{
-                  margin: '0 0 14px 0',
-                  fontFamily: '"Archivo", sans-serif',
-                  fontSize: '13px',
-                  color: 'color-mix(in srgb, var(--fg) 80%, transparent)',
-                  lineHeight: 1.6,
-                  fontWeight: 350,
-                }}
-              >
-                Second-year B.Tech Computer Science Engineering student focused on strengthening programming fundamentals, algorithmic problem solving in C++, and exploring intelligent systems and modern web technologies.
-              </p>
+              Second-year B.Tech Computer Science Engineering student focused on strengthening programming fundamentals, algorithmic problem solving in C++, and exploring intelligent systems and modern web technologies.
+            </p>
 
-              {/* Command-style Navigation Links */}
-              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '11px' }}>
-                <button
-                  type="button"
-                  onClick={() => scrollToSection('projects')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', font: 'inherit' }}
-                >
-                  &gt; projects ↵
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollToSection('journey')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', font: 'inherit' }}
-                >
-                  &gt; learning ↵
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsTerminalOpen(true)}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#66cc6a', cursor: 'pointer', font: 'inherit' }}
-                >
-                  &gt; terminal ↵
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* AREA 3: RIGHT MEANINGFUL TELEMETRY & ACTIONS PANEL (Requirement 6) */}
-          <div
-            className="right-cluster-column"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-              fontFamily: '"IBM Plex Mono", monospace',
-              fontSize: '10.5px',
-            }}
-          >
-            {/* Status & Engineering Matrix */}
-            <div
-              style={{
-                background: 'var(--line)',
-                border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                borderRadius: '3px',
-                padding: '14px',
-              }}
-            >
-              <div style={{ color: 'var(--dim)', fontSize: '9px', marginBottom: '8px', letterSpacing: '0.06em' }}>
-                // STATUS & PROFILE
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--chrome)' }}>
-                <div>
-                  <span style={{ color: 'var(--dim)', fontSize: '9px' }}>CURRENT FOCUS: </span>
-                  <a
-                    href="#focus"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      scrollToSection('focus');
-                    }}
-                    style={{ color: 'var(--fg)', textDecoration: 'none', fontWeight: 600 }}
-                  >
-                    DSA / C++ ↗
-                  </a>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--dim)', fontSize: '9px' }}>EXPLORING: </span>
-                  <span style={{ color: 'var(--accent)', fontWeight: 600 }}>AI / ML</span>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--dim)', fontSize: '9px' }}>BUILDING: </span>
-                  <span style={{ color: 'var(--chrome)', fontWeight: 600 }}>Web Development</span>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--dim)', fontSize: '9px' }}>STATUS: </span>
-                  <span style={{ color: 'var(--dim)' }}>Learning & building @ VIT-AP</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Featured Project Card: indstate */}
-            <div
-              style={{
-                background: 'var(--line)',
-                border: '1px solid color-mix(in srgb, #66cc6a 30%, transparent)',
-                borderRadius: '3px',
-                padding: '14px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: '#66cc6a', fontSize: '9px', fontWeight: 600 }}>// FEATURED PROJECT</span>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#66cc6a', boxShadow: '0 0 6px #66cc6a' }} />
-              </div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--fg)', marginBottom: '3px' }}>
-                indstate
-              </div>
-              <div style={{ fontSize: '9.5px', color: 'var(--dim)', marginBottom: '10px' }}>
-                Trusted Property Marketplace [React · Supabase]
-              </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => handleOpenProjectById('indstate')}
-                  style={{
-                    background: 'var(--fg)',
-                    color: 'var(--bg)',
-                    border: 'none',
-                    padding: '4px 8px',
-                    borderRadius: '2px',
-                    fontSize: '9.5px',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  Overview ⤢
-                </button>
-                <a
-                  href="https://github.com/Pradhan-07/indstate"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid color-mix(in srgb, var(--fg) 14%, transparent)',
-                    color: 'var(--chrome)',
-                    padding: '3px 8px',
-                    borderRadius: '2px',
-                    fontSize: '9.5px',
-                    textDecoration: 'none',
-                  }}
-                >
-                  GitHub ↗
-                </a>
-              </div>
-            </div>
-
-            {/* Quick Interactive Command Launchers */}
-            <div
-              style={{
-                background: 'var(--line)',
-                border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                borderRadius: '3px',
-                padding: '12px 14px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-              }}
-            >
-              <div style={{ color: 'var(--dim)', fontSize: '9px' }}>// TOOLS & SHORTCUTS</div>
+            {/* Command-style Navigation Links */}
+            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '11px' }}>
               <button
                 type="button"
-                onClick={() => setIsCommandPaletteOpen(true)}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  background: 'color-mix(in srgb, var(--bg) 60%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                  padding: '5px 8px',
-                  borderRadius: '2px',
-                  color: 'var(--fg)',
-                  cursor: 'pointer',
-                  fontSize: '10px',
-                  fontFamily: 'inherit',
-                }}
+                onClick={() => scrollToSection('projects')}
+                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', font: 'inherit' }}
               >
-                <span>Command Palette</span>
-                <span style={{ color: 'var(--dim)' }}>⌘K</span>
+                &gt; projects ↵
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection('journey')}
+                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', font: 'inherit' }}
+              >
+                &gt; learning ↵
               </button>
               <button
                 type="button"
                 onClick={() => setIsTerminalOpen(true)}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  background: 'color-mix(in srgb, var(--bg) 60%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                  padding: '5px 8px',
-                  borderRadius: '2px',
-                  color: 'var(--fg)',
-                  cursor: 'pointer',
-                  fontSize: '10px',
-                  fontFamily: 'inherit',
-                }}
+                style={{ background: 'none', border: 'none', padding: 0, color: '#66cc6a', cursor: 'pointer', font: 'inherit' }}
               >
-                <span>Interactive Terminal</span>
-                <span style={{ color: 'var(--dim)' }}>&gt;_</span>
+                &gt; terminal ↵
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* BOTTOM INFORMATION BAR (Frame 18) */}
-        <div
-          style={{
-            marginTop: '24px',
-            background: 'var(--line)',
-            border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-            borderRadius: '2px',
-            padding: '8px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontFamily: '"IBM Plex Mono", monospace',
-            fontSize: '10.5px',
-            color: 'var(--chrome)',
-            flexWrap: 'wrap',
-            gap: '10px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 600, color: 'var(--fg)' }}>KARAN-DEV</span>
-            <span>LANGUAGE: <strong style={{ color: 'var(--accent)' }}>C++</strong></span>
-            <span>FOCUS: <strong style={{ color: 'var(--fg)' }}>DSA</strong></span>
-            <span>EXPLORING: <strong style={{ color: 'var(--chrome)' }}>AI/ML</strong></span>
-            <span>INTEREST: <strong style={{ color: 'var(--chrome)' }}>WEB DEV</strong></span>
-            <span>FEATURED: <strong style={{ color: '#66cc6a' }}>indstate</strong></span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ color: 'var(--dim)' }}>STATUS: LEARNING &amp; BUILDING</span>
-            <span style={{ color: '#66cc6a' }}>●</span>
           </div>
         </div>
       </section>
@@ -1090,7 +558,7 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
 
           <div hidden={activeFile !== 'contact'} className="editor-file-pane">
             <ContactSection />
-            <Footer onBackToTop={handleBackToTop} onBackToIntro={onBackToIntro} />
+            <Footer onBackToTop={handleBackToTop} onBackToIntro={handleBackToIntro} />
           </div>
         </FileBuffer>
       </div>
@@ -1102,6 +570,22 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         onCommand={handleCommand}
         activeSection={activeSection}
         activeFileName={activeFileSpec.file}
+        bitAwake={bitAwake}
+        bitState={bitState}
+        onToggleBit={() => setBitAwake((prev) => !prev)}
+      />
+
+      {/* G6: the desk — the stage's bottom row. Pure decoration. */}
+      <DeskStrip themeKey={theme.name} height={deskHeightPx} />
+
+      {/* G7: Bit's overlay — full stage, click-through, below chrome. */}
+      <BitCreature
+        awake={bitAwake}
+        onAwakeChange={setBitAwake}
+        onStateChange={setBitState}
+        suspendEsc={isTerminalOpen || isCommandPaletteOpen || !!selectedProjectModal}
+        themeKey={theme.name}
+        zIndex={5}
       />
 
       {/* Interactive Project Detail Modal */}
