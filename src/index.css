@@ -142,9 +142,11 @@ a {
   padding: var(--sp-3) var(--frame-x);
 }
 
-/* The frame's wide wordmark tracking, set once here (G5) — not per element. */
+/* The landing wordmark tracking, set once here (G5) — not per element.
+   Phase 5: the landing header is text-only now, so the tracking steps
+   down from the old lockup's 0.3em to a quieter 0.12em. */
 .landing-brand {
-  letter-spacing: 0.3em;
+  letter-spacing: 0.12em;
 }
 
 .landing-stage.is-leaving {
@@ -162,8 +164,11 @@ a {
    the file tree's hover colour used to be JS mouse handlers (removed in
    the scroll pass) — it lives here now, for non-active rows only. */
 @media (hover: hover) {
+
+  /* Phase 5: the enter control is an outlined pill now — hover firms up
+     the ring instead of brightening a solid fill. */
   .enter-btn:hover {
-    filter: brightness(1.15);
+    border-color: var(--fg) !important;
     transform: translateY(-1px);
   }
 
@@ -247,14 +252,15 @@ a {
   grid-template-columns: var(--tree-w) minmax(0, 1fr);
 }
 
-/* Cockpit graph (About buffer header): 14 cells tall, 10 in the ≤640 band. */
+/* Cockpit graph (About buffer header strip): Phase 5 slimmed it from
+   14 cells to 11 (154px), 8 cells (112px) in the ≤640 band. */
 .cockpit-graph-canvas {
-  height: 196px;
+  height: 154px;
 }
 
 @media (max-width: 640px) {
   .cockpit-graph-canvas {
-    height: 140px;
+    height: 112px;
   }
 }
 
@@ -359,7 +365,8 @@ a {
 /* --- Phase 4 (G5): bottom-bar element classes ---
    Width/padding live here (not inline) so the G10 bands can restyle them. */
 .bar-mode-chip {
-  padding: 2px 8px;
+  /* Phase 5 density pass: a step tighter. */
+  padding: 1px 6px;
 }
 
 .bar-command-input {
