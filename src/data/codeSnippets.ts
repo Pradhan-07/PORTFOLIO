@@ -4,6 +4,10 @@ export interface CodeLine {
   tokens: { text: string; kind: 'keyword' | 'string' | 'number' | 'function' | 'type' | 'comment' | 'text' | 'member' }[];
 }
 
+// FALLBACK wall data (G12): the intro wall's primary source is now
+// Karan's real repo code from /data/wall.json. These hand-written
+// snippets remain only so the intro never renders blank if that file
+// is missing or fails to load.
 export const CODE_WALL_SNIPPETS: CodeLine[] = [
   {
     text: '// karan.dev — Algorithms in C++, Intelligence, and Modern Web Systems',
