@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import type { Theme } from '../types';
 import { CODE_WALL_SNIPPETS } from '../data/codeSnippets';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 interface CanvasWallProps {
   theme: Theme;
@@ -8,6 +9,7 @@ interface CanvasWallProps {
 }
 
 export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = true }) => {
+  const reducedMotion = usePrefersReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: -100, y: -100, active: false });
 
@@ -19,6 +21,7 @@ export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = tru
     if (!ctx) return;
 
     let animId: number;
+    let drawFrame: () => void = () => undefined;
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
@@ -100,6 +103,8 @@ export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = tru
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       ctx.scale(dpr, dpr);
+      // In reduced-motion mode there is no loop; keep the static frame fresh.
+      if (reducedMotion) drawFrame();
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -164,10 +169,21 @@ export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = tru
       }
 
       ctx.globalAlpha = 1.0;
-      animId = requestAnimationFrame(render);
     };
 
-    render();
+    drawFrame = render;
+
+    if (reducedMotion) {
+      // Calm state (G9): draw a single static frame — no breathing, no
+      // blinking cursor loop, no mouse-glow animation. Content is identical.
+      render();
+    } else {
+      const loop = () => {
+        render();
+        animId = requestAnimationFrame(loop);
+      };
+      loop();
+    }
 
     return () => {
       cancelAnimationFrame(animId);
@@ -175,7 +191,7 @@ export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = tru
       window.removeEventListener('mouseleave', handleMouseLeave);
       window.removeEventListener('resize', handleResize);
     };
-  }, [theme, interactive]);
+  }, [theme, interactive, reducedMotion]);
 
   return (
     <canvas

@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import type { Theme } from '../types';
+import { BrandLogo } from './BrandLogo';
+import { ContributionStrip } from './ContributionStrip';
+import { useContributionsSnapshot } from '../hooks/useContributionsSnapshot';
 
 interface EditorStatusBarProps {
   theme: Theme;
@@ -9,6 +12,21 @@ interface EditorStatusBarProps {
   activeFileName?: string;
 }
 
+/**
+ * The 46px bottom bar (G3): identity block (KP mark + KARAN.DEV + current
+ * file echo + the `:` command line), a ~38-week contribution strip fed by
+ * the local snapshot, and three state readouts that reflect REAL app
+ * state — active theme, active file, current GitHub streak.
+ *
+ * Deliberately absent: a VISITORS sparkline. There is no real visitor
+ * endpoint or data source for this static site, so nothing is faked.
+ * (hancore's worm/eye/ghost readouts are likewise not copied — the
+ * readouts here report this app's own state only.)
+ *
+ * Responsive: the strip hides ≤1100px, legacy chrome labels ≤900px, and
+ * brand text / duplicate file echoes ≤640px, so the bar never overflows
+ * at 390px wide.
+ */
 export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
   theme,
   onCommand,
@@ -18,6 +36,9 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
   const [inputVal, setInputVal] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [commandFeedback, setCommandFeedback] = useState('');
+  const snapshot = useContributionsSnapshot();
+
+  const currentFile = activeFileName ?? `${activeSection}.cpp`;
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +83,7 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: '10px',
         padding: '0 12px',
         height: '46px',
         color: 'var(--chrome)',
@@ -69,8 +91,8 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
         boxSizing: 'border-box',
       }}
     >
-      {/* Left Vim Elements */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+      {/* Left zone — identity block + command line */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', minWidth: 0 }}>
         <span
           style={{
             background: 'var(--accent)',
@@ -79,13 +101,22 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
             fontWeight: 600,
             fontSize: '10.5px',
             letterSpacing: '0.06em',
+            flexShrink: 0,
           }}
         >
           NORMAL
         </span>
 
-        <span style={{ color: 'var(--fg)', whiteSpace: 'nowrap' }}>
-          ~/portfolio/{activeFileName ?? `${activeSection}.cpp`}
+        {/* Identity: KP mark + wordmark (integrates the current-file echo that follows) */}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--fg)', flexShrink: 0 }}>
+          <BrandLogo size={13} />
+          <strong className="bar-brand-text" style={{ fontSize: '10.5px', letterSpacing: '0.08em' }}>
+            KARAN.DEV
+          </strong>
+        </span>
+
+        <span className="bar-file-path" style={{ color: 'var(--fg)', whiteSpace: 'nowrap' }}>
+          ~/portfolio/{currentFile}
         </span>
 
         <span style={{ color: 'var(--dim)', display: 'none' }} className="bar-git-branch">
@@ -97,6 +128,7 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
           <span style={{ color: 'var(--accent)', fontWeight: 600 }}>:</span>
           <input
             type="text"
+            className="bar-command-input"
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
             onFocus={() => setIsTyping(true)}
@@ -117,27 +149,49 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
         </form>
 
         {commandFeedback && (
-          <span style={{ color: 'var(--accent)', fontSize: '10.5px' }}>
+          <span style={{ color: 'var(--accent)', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
             {commandFeedback}
           </span>
         )}
       </div>
 
-      {/* Right Vim Elements */}
+      {/* Middle zone — contribution strip from the local snapshot (hidden on small screens via CSS) */}
+      <div className="bar-contrib-strip" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        {snapshot.status === 'ready' ? (
+          <ContributionStrip days={snapshot.days} weeks={38} />
+        ) : (
+          <span style={{ color: 'var(--dim)', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
+            {snapshot.status === 'loading' ? 'activity …' : 'activity unavailable'}
+          </span>
+        )}
+      </div>
+
+      {/* Right zone — real-state readouts + legacy chrome labels */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
-        <span style={{ color: 'var(--dim)', fontSize: '10px' }}>
+        <span className="bar-readout bar-readout-theme" style={{ color: 'var(--dim)', fontSize: '10px', whiteSpace: 'nowrap' }}>
           theme: <strong style={{ color: 'var(--chrome)' }}>{theme.label}</strong>
         </span>
 
-        <span style={{ color: 'var(--dim)', fontSize: '10.5px' }}>
+        <span className="bar-readout bar-readout-file" style={{ color: 'var(--dim)', fontSize: '10px', whiteSpace: 'nowrap' }}>
+          file: <strong style={{ color: 'var(--chrome)' }}>{currentFile}</strong>
+        </span>
+
+        <span className="bar-readout bar-readout-streak" style={{ color: 'var(--dim)', fontSize: '10px', whiteSpace: 'nowrap' }}>
+          streak:{' '}
+          <strong style={{ color: '#66cc6a' }}>
+            {snapshot.status === 'ready' ? `${snapshot.currentStreak}d` : '—'}
+          </strong>
+        </span>
+
+        <span className="bar-legacy" style={{ color: 'var(--dim)', fontSize: '10.5px' }}>
           utf-8
         </span>
 
-        <span style={{ color: 'var(--dim)', fontSize: '10.5px' }}>
+        <span className="bar-legacy" style={{ color: 'var(--dim)', fontSize: '10.5px' }}>
           [c++20]
         </span>
 
-        <span style={{ color: 'var(--chrome)', fontSize: '10.5px' }}>
+        <span className="bar-legacy" style={{ color: 'var(--chrome)', fontSize: '10.5px' }}>
           100% 42:1
         </span>
       </div>
