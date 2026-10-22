@@ -21,6 +21,7 @@ import { ThemesSection } from '../ThemesSection';
 import { ProjectDetailModal } from '../ProjectDetailModal';
 import { InteractiveTerminalModal } from '../InteractiveTerminalModal';
 import { CommandPaletteModal } from '../CommandPaletteModal';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 
 interface DashboardPortfolioProps {
   theme: Theme;
@@ -42,6 +43,7 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
   const [selectedProjectModal, setSelectedProjectModal] = useState<Project | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
 
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const bufferRef = useRef<HTMLDivElement | null>(null);
@@ -113,14 +115,14 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         const el = document.getElementById(anchor);
         if (el) {
           const top = el.getBoundingClientRect().top - buffer.getBoundingClientRect().top + buffer.scrollTop;
-          buffer.scrollTo({ top: Math.max(0, top - 4), behavior: 'smooth' });
+          buffer.scrollTo({ top: Math.max(0, top - 4), behavior: reducedMotion ? 'auto' : 'smooth' });
           return;
         }
       }
       buffer.scrollTo({ top: 0 });
     });
     return () => cancelAnimationFrame(raf);
-  }, [activeFile]);
+  }, [activeFile, reducedMotion]);
 
   // Global keyboard: Cmd/Ctrl+K palette, Ctrl+` terminal, and the
   // file-stepping keys (arrows / j / k) with modal + typing focus guards.
@@ -319,15 +321,25 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         ctx.fillText(`EVENT LOOP: 60FPS · REACT 19 HYDRATION · SUPABASE STREAMING TICK`, 10, height - 8);
       }
 
-      animId = requestAnimationFrame(render);
     };
 
-    render();
+    if (reducedMotion) {
+      // Calm state (G9): one static frame of the current graph mode.
+      // Pointer moves still redraw a single frame per move (the effect
+      // re-runs), but nothing animates autonomously.
+      render();
+    } else {
+      const loop = () => {
+        render();
+        animId = requestAnimationFrame(loop);
+      };
+      loop();
+    }
 
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [graphMode, pointerPos]);
+  }, [graphMode, pointerPos, reducedMotion]);
 
   // All existing navigation call sites (header, cockpit, terminal, palette,
   // status-bar commands) keep calling scrollToSection — it now resolves the
@@ -337,7 +349,7 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
 
   const handleBackToTop = () => {
     openFile('about');
-    bufferRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    bufferRef.current?.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
   };
 
   const handleCommand = (cmd: string) => {

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 
 interface RadialEclipseTransitionProps {
   onComplete: () => void;
@@ -10,8 +11,16 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
   themeAccent = '#ebe6db',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
+    // Reduced motion (G9): skip the 1.85s canvas sequence entirely and
+    // hand over to the portfolio almost immediately.
+    if (reducedMotion) {
+      const t = window.setTimeout(() => onComplete(), 60);
+      return () => window.clearTimeout(t);
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -169,7 +178,9 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [onComplete, themeAccent]);
+  }, [onComplete, themeAccent, reducedMotion]);
+
+  if (reducedMotion) return null;
 
   return (
     <canvas

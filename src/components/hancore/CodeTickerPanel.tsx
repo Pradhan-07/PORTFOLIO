@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 
 interface Snippet {
   path: string;
@@ -52,13 +53,19 @@ const SNIPPETS: Snippet[] = [
 ];
 
 export const CodeTickerPanel: React.FC = () => {
+  const reducedMotion = usePrefersReducedMotion();
   const [snippetIdx, setSnippetIdx] = useState(0);
   const [revealedCount, setRevealedCount] = useState(2);
 
   const currentSnippet = SNIPPETS[snippetIdx];
 
+  // Reduced motion (G9): no auto-cycling and no progressive reveal — the
+  // current snippet is shown in full, statically.
+  const visibleCount = reducedMotion ? currentSnippet.lines.length : revealedCount;
+
   // Progressive typing / reveal ticker effect
   useEffect(() => {
+    if (reducedMotion) return;
     const lineTimer = setInterval(() => {
       setRevealedCount((prev) => {
         if (prev < currentSnippet.lines.length) {
@@ -70,17 +77,18 @@ export const CodeTickerPanel: React.FC = () => {
     }, 450);
 
     return () => clearInterval(lineTimer);
-  }, [currentSnippet.lines.length]);
+  }, [currentSnippet.lines.length, reducedMotion]);
 
   // Switch snippet every 7 seconds
   useEffect(() => {
+    if (reducedMotion) return;
     const switchTimer = setInterval(() => {
       setSnippetIdx((prev) => (prev + 1) % SNIPPETS.length);
       setRevealedCount(2);
     }, 7200);
 
     return () => clearInterval(switchTimer);
-  }, []);
+  }, [reducedMotion]);
 
   return (
     <div
@@ -134,7 +142,7 @@ export const CodeTickerPanel: React.FC = () => {
 
       {/* Code Lines Body */}
       <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        {currentSnippet.lines.slice(0, revealedCount).map((l, idx) => (
+        {currentSnippet.lines.slice(0, visibleCount).map((l, idx) => (
           <div
             key={idx}
             style={{
@@ -200,7 +208,7 @@ export const CodeTickerPanel: React.FC = () => {
       >
         <span>utf-8</span>
         <span>c++20 / python</span>
-        <span>{revealedCount}:{currentSnippet.lines[revealedCount - 1]?.text.length || 1}</span>
+        <span>{visibleCount}:{currentSnippet.lines[visibleCount - 1]?.text.length || 1}</span>
       </div>
     </div>
   );
