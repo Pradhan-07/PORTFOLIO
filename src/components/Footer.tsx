@@ -23,9 +23,6 @@ export const Footer: React.FC<FooterProps> = ({ onBackToTop, onBackToIntro }) =>
       <div
         className="section-container"
         style={{
-          maxWidth: '920px',
-          margin: '0 auto',
-          padding: '0 24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '24px',

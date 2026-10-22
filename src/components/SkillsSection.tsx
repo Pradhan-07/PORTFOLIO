@@ -90,14 +90,13 @@ nothing to commit, working tree clean`,
   return (
     <section
       id="skills"
-      className="skills-section"
+      className="skills-section file-section"
       style={{
-        padding: '72px 0',
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
       }}
     >
-      <div className="section-container" style={{ maxWidth: '920px', margin: '0 auto', padding: '0 24px' }}>
+      <div className="section-container">
         {/* Section Header */}
         <div
           style={{
@@ -261,6 +260,7 @@ nothing to commit, working tree clean`,
 
                 {/* Code Sample */}
                 <pre
+                  className="scroll-contain"
                   style={{
                     margin: 0,
                     padding: '12px',

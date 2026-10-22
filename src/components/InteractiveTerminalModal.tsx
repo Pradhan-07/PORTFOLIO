@@ -57,10 +57,14 @@ export const InteractiveTerminalModal: React.FC<InteractiveTerminalModalProps> =
     }
   }, [isOpen]);
 
-  // Scroll to bottom on new output
+  // Scroll to bottom on new output — direct container scrolling only
+  // (SCROLL-SPEC §4.4): scrollIntoView acts on every scrollable ancestor;
+  // setting the output container's own scrollTop moves nothing behind the
+  // terminal and is instant, so it is reduced-motion safe by construction.
   useEffect(() => {
     if (isOpen) {
-      terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const container = terminalEndRef.current?.parentElement;
+      if (container) container.scrollTop = container.scrollHeight;
     }
   }, [outputs, isOpen]);
 
@@ -388,6 +392,7 @@ export const InteractiveTerminalModal: React.FC<InteractiveTerminalModalProps> =
 
         {/* Terminal Output Area */}
         <div
+          className="scroll-contain"
           style={{
             flex: 1,
             overflowY: 'auto',

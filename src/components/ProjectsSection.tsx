@@ -19,6 +19,14 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectM
     return p.category === filter;
   });
 
+  // Pinned rows: featured projects first, then the rest of the set the old
+  // cockpit tiles linked to — all rendered from PROJECTS, no second copy.
+  const pinnedIds = ['dsa-cpp', 'study-detection', 'magic-hand', 'flowerglow'];
+  const pinnedProjects = [
+    ...PROJECTS.filter((p) => p.featured),
+    ...PROJECTS.filter((p) => !p.featured && pinnedIds.includes(p.id)),
+  ];
+
   const cCount = PROJECTS.filter((p) => p.category === 'c++').length;
   const aiCount = PROJECTS.filter((p) => p.category === 'ai').length;
   const webCount = PROJECTS.filter((p) => p.category === 'web').length;
@@ -35,14 +43,13 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectM
   return (
     <section
       id="projects"
-      className="projects-section"
+      className="projects-section file-section"
       style={{
-        padding: '72px 0',
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
       }}
     >
-      <div className="section-container" style={{ maxWidth: '920px', margin: '0 auto', padding: '0 24px' }}>
+      <div className="section-container">
         {/* Section Header */}
         <div
           style={{
@@ -96,6 +103,71 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectM
           >
             view all repositories on github ↗
           </a>
+        </div>
+
+        {/* Pinned rows (G5 cockpit absorption): the cockpit's left project
+            tiles live on here as a compact list rendered from PROJECTS —
+            featured first, then the tile set. Clicking a row opens the same
+            project detail modal the tiles opened; the featured project's
+            Overview/GitHub actions survive on its row. */}
+        <div
+          className="pinned-projects"
+          style={{
+            marginBottom: '32px',
+            fontFamily: '"IBM Plex Mono", monospace',
+          }}
+        >
+          <div style={{ fontSize: '10px', color: 'var(--dim)', letterSpacing: '0.08em', marginBottom: '8px' }}>
+            {'// pinned'}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {pinnedProjects.map((project) => (
+              <div
+                key={project.id}
+                className="pinned-row"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenDetail(project)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleOpenDetail(project);
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '8px 10px',
+                  borderBottom: '1px solid color-mix(in srgb, var(--fg) 6%, transparent)',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                }}
+              >
+                <span style={{ color: 'var(--fg)', fontWeight: 600, minWidth: '130px' }}>{project.name}</span>
+                <span style={{ color: 'var(--accent)', fontSize: '9px', background: 'var(--bg)', padding: '1px 5px', borderRadius: 'var(--radius)' }}>
+                  {project.language}
+                </span>
+                <span style={{ color: 'var(--dim)', fontSize: '10px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {project.description}
+                </span>
+                {project.featured && (
+                  <span style={{ color: '#66cc6a', fontSize: '9px', letterSpacing: '0.06em', flexShrink: 0 }}>FEATURED</span>
+                )}
+                {project.githubUrl && (
+                  <a
+                    href={project.githubUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ color: 'var(--chrome)', fontSize: '10px', textDecoration: 'none', flexShrink: 0 }}
+                  >
+                    GitHub ↗
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Filter Tabs */}

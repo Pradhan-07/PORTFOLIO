@@ -311,6 +311,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
 
         {/* Results List */}
         <div
+          className="scroll-contain"
           style={{
             flex: 1,
             overflowY: 'auto',

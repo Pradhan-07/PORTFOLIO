@@ -117,6 +117,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
 
         {/* Modal Content Body */}
         <div
+          className="scroll-contain"
           style={{
             padding: '24px 26px',
             overflowY: 'auto',
@@ -266,6 +267,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
                 // SOURCE CODE PREVIEW
               </div>
               <pre
+                className="scroll-contain"
                 style={{
                   margin: 0,
                   padding: '14px',

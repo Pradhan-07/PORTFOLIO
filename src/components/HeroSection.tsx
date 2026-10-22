@@ -9,14 +9,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onExploreClick }) => {
   return (
     <section
       id="hero"
-      className="hero-section"
+      className="hero-section file-section"
       style={{
-        padding: '72px 0 64px 0',
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
       }}
     >
-      <div className="section-container" style={{ maxWidth: '920px', margin: '0 auto', padding: '0 24px' }}>
+      <div className="section-container">
         {/* Terminal Header Tag */}
         <div
           style={{

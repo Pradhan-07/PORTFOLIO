@@ -1,18 +1,74 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { LEARNING_LOG } from '../data/learningLog';
 
+/**
+ * Real activity dates for the log entries (Comparison Round 1, §7.6).
+ * LEARNING_LOG's `updatedAt` fields are cadence phrases ("Daily
+ * consistency"), not dates — so each entry's date is derived from the
+ * Phase-3 GitHub snapshot: the latest real `pushedAt` month among the
+ * repos that represent the entry's category. Nothing is invented: if
+ * the snapshot is unavailable, no date is rendered at all.
+ */
+const CATEGORY_REPOS: Record<string, string[]> = {
+  dsa: ['DSA_CPP', 'leetcode_question_answer', 'DSA'],
+  'ai-ml': ['study_detection', 'magic_hand', 'meme_gesture', 'SMOKE'],
+  web: ['PORTFOLIO', 'indstate', 'Clientele', 'Resolutions_Tracker'],
+};
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+interface SnapshotRepo {
+  name: string;
+  pushedAt: string;
+}
+
+const useActivityMonths = (): Record<string, string> => {
+  const [months, setMonths] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/data/github-snapshot.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { repos?: SnapshotRepo[] } | null) => {
+        if (cancelled || !data?.repos) return;
+        const byRepo = new Map(data.repos.map((r) => [r.name, r.pushedAt]));
+        const out: Record<string, string> = {};
+        for (const [category, repos] of Object.entries(CATEGORY_REPOS)) {
+          let latest = '';
+          for (const name of repos) {
+            const pushed = byRepo.get(name);
+            if (pushed && pushed > latest) latest = pushed;
+          }
+          if (latest) {
+            const d = new Date(latest);
+            if (!Number.isNaN(d.getTime())) {
+              out[category] = `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+            }
+          }
+        }
+        setMonths(out);
+      })
+      .catch(() => {
+        // Snapshot unavailable — entries simply render without a date.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return months;
+};
+
 export const LearningJourney: React.FC = () => {
+  const activityMonths = useActivityMonths();
   return (
     <section
       id="journey"
-      className="journey-section"
+      className="journey-section file-section"
       style={{
-        padding: '72px 0',
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
       }}
     >
-      <div className="section-container" style={{ maxWidth: '920px', margin: '0 auto', padding: '0 24px' }}>
+      <div className="section-container">
         {/* Section Header */}
         <div
           style={{
@@ -129,6 +185,9 @@ export const LearningJourney: React.FC = () => {
                   }}
                 >
                   {item.domain} · {item.updatedAt}
+                  {activityMonths[item.category]
+                    ? ` · activity ${activityMonths[item.category]}`
+                    : ''}
                 </div>
 
                 <p

@@ -242,7 +242,7 @@ export const GitHubStreakTracker: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div
+        <div className="scroll-contain"
           style={{
             background: 'color-mix(in srgb, var(--bg) 85%, transparent)',
             borderRadius: '2px',

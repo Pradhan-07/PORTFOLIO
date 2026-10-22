@@ -5,14 +5,13 @@ export const CertificationsSection: React.FC = () => {
   return (
     <section
       id="certifications"
-      className="certifications-section"
+      className="certifications-section file-section"
       style={{
-        padding: '72px 0',
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
       }}
     >
-      <div className="section-container" style={{ maxWidth: '920px', margin: '0 auto', padding: '0 24px' }}>
+      <div className="section-container">
         {/* Section Label */}
         <div
           style={{

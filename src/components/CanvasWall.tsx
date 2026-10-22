@@ -1,14 +1,24 @@
 import React, { useEffect, useRef } from 'react';
-import type { Theme } from '../types';
+import type { CodeLineTokens, CodeTokenKind, Theme } from '../types';
 import { CODE_WALL_SNIPPETS } from '../data/codeSnippets';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 interface CanvasWallProps {
   theme: Theme;
   interactive?: boolean;
+  /**
+   * G12: the wall's lines, flattened from Karan's real repo files
+   * (`/data/wall.json`). Null/absent → the built-in CODE_WALL_SNIPPETS
+   * are used — the intro never renders blank.
+   */
+  wallLines?: CodeLineTokens[] | null;
+  /** Wall navigation offset in lines (SCROLL-SPEC §4.5): the grid starts
+   *  this many lines into the data; the landing's status line derives
+   *  the currently displayed file from the same offset. */
+  wallRowOffset?: number;
 }
 
-export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = true }) => {
+export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = true, wallLines, wallRowOffset = 0 }) => {
   const reducedMotion = usePrefersReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: -100, y: -100, active: false });
@@ -30,30 +40,42 @@ export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = tru
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
 
-    const CELL_W = 7.5;
-    const CELL_H = 14;
+    // Cell size has ONE source: the --cell-w / --cell-h CSS tokens (G5).
+    // Read once here and re-read on resize — never per frame (R9).
+    const readCellSize = () => {
+      const cs = getComputedStyle(document.documentElement);
+      const w = parseFloat(cs.getPropertyValue('--cell-w'));
+      const h = parseFloat(cs.getPropertyValue('--cell-h'));
+      return {
+        w: Number.isFinite(w) && w > 0 ? w : 7.5,
+        h: Number.isFinite(h) && h > 0 ? h : 14,
+      };
+    };
+    let { w: CELL_W, h: CELL_H } = readCellSize();
     const FONT_SIZE = 11;
     const FONT_FAMILY = '"IBM Plex Mono", ui-monospace, monospace';
 
     const cols = Math.ceil(width / CELL_W) + 2;
     const rows = Math.ceil(height / CELL_H) + 2;
 
-    // Generate repeated code matrix grid
-    const codeLines = CODE_WALL_SNIPPETS;
+    // Generate repeated code matrix grid. Primary source: the G12 wall
+    // data (his real code); fallback: the built-in snippets.
+    const codeLines: readonly { tokens: readonly { text: string; kind: CodeTokenKind }[] }[] =
+      wallLines && wallLines.length > 0 ? wallLines : CODE_WALL_SNIPPETS;
     const grid: {
       char: string;
-      kind: 'keyword' | 'string' | 'number' | 'function' | 'type' | 'comment' | 'text' | 'member';
+      kind: CodeTokenKind;
       baseAlpha: number;
     }[][] = [];
 
     let lineIdx = 0;
     for (let r = 0; r < rows; r++) {
-      const lineData = codeLines[lineIdx % codeLines.length];
+      const lineData = codeLines[(lineIdx + wallRowOffset) % codeLines.length];
       lineIdx++;
 
       const rowChars: {
         char: string;
-        kind: 'keyword' | 'string' | 'number' | 'function' | 'type' | 'comment' | 'text' | 'member';
+        kind: CodeTokenKind;
         baseAlpha: number;
       }[] = [];
 
@@ -98,6 +120,7 @@ export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = tru
 
     const handleResize = () => {
       if (!canvas) return;
+      ({ w: CELL_W, h: CELL_H } = readCellSize());
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
       canvas.width = width * dpr;
@@ -191,7 +214,7 @@ export const CanvasWall: React.FC<CanvasWallProps> = ({ theme, interactive = tru
       window.removeEventListener('mouseleave', handleMouseLeave);
       window.removeEventListener('resize', handleResize);
     };
-  }, [theme, interactive, reducedMotion]);
+  }, [theme, interactive, reducedMotion, wallLines, wallRowOffset]);
 
   return (
     <canvas
