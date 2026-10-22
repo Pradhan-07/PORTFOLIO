@@ -48,6 +48,26 @@ export interface Certification {
   issued: string;
 }
 
+export type EditorFileId =
+  | 'about'
+  | 'certifications'
+  | 'projects'
+  | 'stack'
+  | 'journey'
+  | 'leetcode'
+  | 'themes'
+  | 'contact';
+
+export interface EditorFileSpec {
+  id: EditorFileId;
+  /** Legacy section id this file maps to (status bar, commands, anchors). */
+  section: string;
+  file: string;
+  language: string;
+  kind: string;
+  dot: string;
+}
+
 export interface FocusArea {
   id: string;
   number: string;
