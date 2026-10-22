@@ -1,6 +1,11 @@
 import React from 'react';
 import { CERTIFICATIONS } from '../data/profile';
 
+/**
+ * Phase 5 (visual parity): certifications.md entries are text blocks —
+ * the credential chip and cards are gone. Credential renders as plain
+ * green text, issuer/issued as a meta line. All data verbatim.
+ */
 export const CertificationsSection: React.FC = () => {
   return (
     <section
@@ -9,111 +14,88 @@ export const CertificationsSection: React.FC = () => {
       style={{
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
+        fontFamily: '"IBM Plex Mono", monospace',
       }}
     >
       <div className="section-container">
         {/* Section Label */}
         <div
           style={{
-            fontFamily: '"IBM Plex Mono", monospace',
             fontSize: '11px',
             color: 'var(--dim)',
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            marginBottom: '16px',
+            marginBottom: '14px',
           }}
         >
           {'// CREDENTIALS · CERTIFICATIONS'}
         </div>
 
-        {/* Section Heading */}
+        {/* Section heading — plain text line, no serif */}
         <h2
           style={{
-            margin: '0 0 16px 0',
-            fontFamily: '"Instrument Serif", Georgia, serif',
-            fontSize: 'clamp(2.4rem, 5vw, 3.6rem)',
-            fontWeight: 400,
+            margin: '0 0 12px 0',
+            fontFamily: 'inherit',
+            fontSize: '13px',
+            fontWeight: 500,
             color: 'var(--fg)',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.15,
+            letterSpacing: '0.01em',
+            lineHeight: 1.5,
           }}
         >
-          Certified on <span style={{ fontStyle: 'italic', color: 'var(--chrome)' }}>Hedera.</span>
+          Certified on <span style={{ color: 'var(--chrome)' }}>Hedera.</span>
         </h2>
 
         <p
           style={{
-            margin: '0 0 36px 0',
-            fontFamily: '"Archivo", sans-serif',
-            fontSize: '15px',
+            margin: '0 0 28px 0',
+            fontSize: '12.5px',
             color: 'var(--dim)',
-            maxWidth: '680px',
-            lineHeight: 1.6,
+            maxWidth: '76ch',
+            lineHeight: 1.75,
           }}
         >
           Industry certifications earned alongside my degree — distributed ledger fundamentals and
           Hedera development, issued by the Hashgraph Association.
         </p>
 
-        {/* Certification Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '16px',
-          }}
-        >
-          {CERTIFICATIONS.map((cert) => (
+        {/* Certification entries — text blocks separated by hairlines */}
+        <div>
+          {CERTIFICATIONS.map((cert, idx) => (
             <div
               key={cert.id}
               style={{
-                background: 'var(--line)',
-                border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                borderRadius: '3px',
-                padding: '22px',
-                fontFamily: '"IBM Plex Mono", monospace',
+                padding: '16px 0',
+                borderTop: idx === 0 ? 'none' : '1px solid color-mix(in srgb, var(--fg) 7%, transparent)',
               }}
             >
               <div
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '14px',
+                  alignItems: 'baseline',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginBottom: '5px',
                 }}
               >
                 <span
                   style={{
-                    fontSize: '10px',
+                    fontSize: '10.5px',
                     fontWeight: 600,
                     letterSpacing: '0.08em',
                     color: '#66cc6a',
-                    border: '1px solid color-mix(in srgb, #66cc6a 40%, transparent)',
-                    background: 'color-mix(in srgb, #66cc6a 10%, transparent)',
-                    padding: '2px 8px',
-                    borderRadius: '2px',
                   }}
                 >
                   {cert.credential}
                 </span>
-                <span style={{ fontSize: '10px', color: 'var(--dim)' }}>{cert.issued}</span>
-              </div>
-
-              <div
-                style={{
-                  fontFamily: '"Archivo", sans-serif',
-                  fontSize: '16.5px',
-                  fontWeight: 600,
-                  color: 'var(--fg)',
-                  lineHeight: 1.4,
-                  marginBottom: '8px',
-                }}
-              >
-                {cert.name}
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--fg)', lineHeight: 1.5 }}>
+                  {cert.name}
+                </span>
               </div>
 
               <div style={{ fontSize: '11px', color: 'var(--dim)', letterSpacing: '0.04em' }}>
                 ISSUER: <span style={{ color: 'var(--chrome)' }}>{cert.issuer}</span>
+                {' · '}ISSUED: <span style={{ color: 'var(--chrome)' }}>{cert.issued}</span>
               </div>
             </div>
           ))}

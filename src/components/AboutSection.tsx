@@ -1,6 +1,12 @@
 import React from 'react';
 import { PROFILE } from '../data/profile';
 
+/**
+ * Phase 5 (visual parity): the About block inside about.tsx is bare text —
+ * the two-column editorial grid and the principles CARD are gone. The
+ * three paragraphs stack as transcript text and the principles render as
+ * comment/dash lines. All copy is verbatim from the card version.
+ */
 export const AboutSection: React.FC = () => {
   return (
     <section
@@ -9,86 +15,70 @@ export const AboutSection: React.FC = () => {
       style={{
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
+        fontFamily: '"IBM Plex Mono", monospace',
       }}
     >
       <div className="section-container">
         {/* Section Label */}
         <div
           style={{
-            fontFamily: '"IBM Plex Mono", monospace',
             fontSize: '11px',
             color: 'var(--dim)',
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            marginBottom: '16px',
+            marginBottom: '14px',
           }}
         >
           // 01 · ABOUT
         </div>
 
-        {/* Section Heading */}
+        {/* Section heading — a plain text line now, no serif display type */}
         <h2
           style={{
-            margin: '0 0 36px 0',
-            fontFamily: '"Instrument Serif", Georgia, serif',
-            fontSize: 'clamp(2.4rem, 5vw, 3.6rem)',
-            fontWeight: 400,
+            margin: '0 0 24px 0',
+            fontFamily: 'inherit',
+            fontSize: '13px',
+            fontWeight: 500,
             color: 'var(--fg)',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.15,
+            letterSpacing: '0.01em',
+            lineHeight: 1.5,
           }}
         >
-          A little <span style={{ fontStyle: 'italic', color: 'var(--chrome)' }}>about me.</span>
+          A little <span style={{ color: 'var(--chrome)' }}>about me.</span>
         </h2>
 
-        {/* Editorial Text Blocks */}
+        {/* Paragraphs — single-column transcript text */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '32px',
-            fontFamily: '"Archivo", sans-serif',
-            fontSize: '16px',
-            lineHeight: 1.8,
-            color: 'color-mix(in srgb, var(--fg) 85%, transparent)',
-            fontWeight: 350,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            fontSize: '12.5px',
+            lineHeight: 1.75,
+            color: 'color-mix(in srgb, var(--fg) 82%, transparent)',
+            maxWidth: '76ch',
+            marginBottom: '28px',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <p style={{ margin: 0 }}>
-              {PROFILE.aboutParagraphs[0]}
-            </p>
-            <p style={{ margin: 0 }}>
-              {PROFILE.aboutParagraphs[1]}
-            </p>
+          <p style={{ margin: 0 }}>{PROFILE.aboutParagraphs[0]}</p>
+          <p style={{ margin: 0 }}>{PROFILE.aboutParagraphs[1]}</p>
+          <p style={{ margin: 0 }}>{PROFILE.aboutParagraphs[2]}</p>
+        </div>
+
+        {/* Core learning principles — comment line + dash lines, no card */}
+        <div style={{ fontSize: '12px', lineHeight: 1.8 }}>
+          <div style={{ color: 'var(--chrome)', letterSpacing: '0.06em', marginBottom: '4px' }}>
+            // CORE LEARNING PRINCIPLES
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <p style={{ margin: 0 }}>
-              {PROFILE.aboutParagraphs[2]}
-            </p>
-
-            {/* Engineering Principles Card */}
-            <div
-              style={{
-                marginTop: 'auto',
-                background: 'var(--line)',
-                border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                borderRadius: '3px',
-                padding: '20px',
-                fontFamily: '"IBM Plex Mono", monospace',
-                fontSize: '11.5px',
-                lineHeight: 1.7,
-              }}
-            >
-              <div style={{ color: 'var(--chrome)', marginBottom: '8px', fontWeight: 500, letterSpacing: '0.06em' }}>
-                // CORE LEARNING PRINCIPLES
-              </div>
-              <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--dim)' }}>
-                <li>Depth in fundamentals over shallow breadth</li>
-                <li>Algorithmic thinking tested with code implementation</li>
-                <li>Active exploration: learn by building real projects</li>
-              </ul>
+          <div style={{ color: 'color-mix(in srgb, var(--fg) 78%, transparent)' }}>
+            <div>
+              <span style={{ color: 'var(--dim)' }}>- </span>Depth in fundamentals over shallow breadth
+            </div>
+            <div>
+              <span style={{ color: 'var(--dim)' }}>- </span>Algorithmic thinking tested with code implementation
+            </div>
+            <div>
+              <span style={{ color: 'var(--dim)' }}>- </span>Active exploration: learn by building real projects
             </div>
           </div>
         </div>

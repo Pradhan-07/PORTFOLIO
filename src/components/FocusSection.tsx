@@ -1,6 +1,13 @@
 import React from 'react';
 import { FOCUS_AREAS } from '../data/profile';
 
+/**
+ * Phase 5 (visual parity): the three focus CARDS are now text entries in
+ * the buffer — a numbered title line, the status as plain text (no pill
+ * badge, per the comparison notes), subtitle/description as transcript
+ * text, and topics as one `·`-joined line instead of tag chips. Entries
+ * are separated by hairlines only. All copy is verbatim.
+ */
 export const FocusSection: React.FC = () => {
   return (
     <section
@@ -9,177 +16,114 @@ export const FocusSection: React.FC = () => {
       style={{
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
+        fontFamily: '"IBM Plex Mono", monospace',
       }}
     >
       <div className="section-container">
         {/* Section Header */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-            marginBottom: '36px',
+            fontSize: '11px',
+            color: 'var(--dim)',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            marginBottom: '14px',
           }}
         >
-          <div>
-            <div
-              style={{
-                fontFamily: '"IBM Plex Mono", monospace',
-                fontSize: '11px',
-                color: 'var(--dim)',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                marginBottom: '8px',
-              }}
-            >
-              // 02 · DIRECTION
-            </div>
-            <h2
-              style={{
-                margin: 0,
-                fontFamily: '"Instrument Serif", Georgia, serif',
-                fontSize: 'clamp(2.2rem, 4.5vw, 3.4rem)',
-                fontWeight: 400,
-                color: 'var(--fg)',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              Current <span style={{ fontStyle: 'italic', color: 'var(--chrome)' }}>focus areas.</span>
-            </h2>
-          </div>
-
-          <p
-            style={{
-              margin: 0,
-              fontFamily: '"IBM Plex Mono", monospace',
-              fontSize: '11px',
-              color: 'var(--dim)',
-              maxWidth: '320px',
-              lineHeight: 1.6,
-            }}
-          >
-            Actively exploring these technical areas during my second year of computer science engineering.
-          </p>
+          // 02 · DIRECTION
         </div>
-
-        {/* 3 Editorial Cards Grid */}
-        <div
+        <h2
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))',
-            gap: '20px',
+            margin: '0 0 10px 0',
+            fontFamily: 'inherit',
+            fontSize: '13px',
+            fontWeight: 500,
+            color: 'var(--fg)',
+            letterSpacing: '0.01em',
+            lineHeight: 1.5,
           }}
         >
-          {FOCUS_AREAS.map((area) => (
+          Current <span style={{ color: 'var(--chrome)' }}>focus areas.</span>
+        </h2>
+        <p
+          style={{
+            margin: '0 0 28px 0',
+            fontSize: '11.5px',
+            color: 'var(--dim)',
+            maxWidth: '76ch',
+            lineHeight: 1.7,
+          }}
+        >
+          Actively exploring these technical areas during my second year of computer science engineering.
+        </p>
+
+        {/* Focus entries — text blocks separated by hairlines */}
+        <div>
+          {FOCUS_AREAS.map((area, idx) => (
             <div
               key={area.id}
-              className="focus-card"
               style={{
-                background: 'var(--line)',
-                border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                borderRadius: '3px',
-                padding: '28px 24px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'border-color 200ms ease, transform 200ms ease',
+                padding: '20px 0',
+                borderTop: idx === 0 ? 'none' : '1px solid color-mix(in srgb, var(--fg) 7%, transparent)',
               }}
             >
-              <div>
-                {/* Index & Status */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '16px',
-                    fontFamily: '"IBM Plex Mono", monospace',
-                    fontSize: '11px',
-                  }}
-                >
-                  <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{area.number}</span>
-                  <span
-                    style={{
-                      color: 'var(--dim)',
-                      fontSize: '10px',
-                      padding: '2px 6px',
-                      background: 'color-mix(in srgb, var(--bg) 60%, transparent)',
-                      borderRadius: '2px',
-                    }}
-                  >
-                    {area.status}
-                  </span>
-                </div>
-
-                {/* Title */}
+              {/* Index · Title · Status (plain text, no badge) */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginBottom: '6px',
+                  fontSize: '12.5px',
+                }}
+              >
+                <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{area.number}</span>
                 <h3
                   style={{
-                    margin: '0 0 8px 0',
-                    fontFamily: '"Archivo", sans-serif',
-                    fontSize: '17px',
+                    margin: 0,
+                    fontFamily: 'inherit',
+                    fontSize: '13px',
                     fontWeight: 600,
                     color: 'var(--fg)',
-                    letterSpacing: '-0.01em',
+                    letterSpacing: '0.01em',
                   }}
                 >
                   {area.title}
                 </h3>
-
-                {/* Subtitle */}
-                <p
-                  style={{
-                    margin: '0 0 16px 0',
-                    fontFamily: '"IBM Plex Mono", monospace',
-                    fontSize: '11px',
-                    color: 'var(--chrome)',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {area.subtitle}
-                </p>
-
-                {/* Description */}
-                <p
-                  style={{
-                    margin: '0 0 20px 0',
-                    fontFamily: '"Archivo", sans-serif',
-                    fontSize: '13.5px',
-                    lineHeight: 1.6,
-                    color: 'color-mix(in srgb, var(--fg) 75%, transparent)',
-                    fontWeight: 350,
-                  }}
-                >
-                  {area.description}
-                </p>
+                <span style={{ color: 'var(--dim)', fontSize: '10.5px', letterSpacing: '0.04em' }}>
+                  {area.status}
+                </span>
               </div>
 
-              {/* Topics Tag List */}
-              <div
+              {/* Subtitle */}
+              <p
                 style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '6px',
-                  borderTop: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
-                  paddingTop: '16px',
+                  margin: '0 0 10px 0',
+                  fontSize: '11.5px',
+                  color: 'var(--chrome)',
+                  lineHeight: 1.6,
                 }}
               >
-                {area.topics.map((topic, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      fontFamily: '"IBM Plex Mono", monospace',
-                      fontSize: '10px',
-                      color: 'var(--dim)',
-                      background: 'color-mix(in srgb, var(--bg) 50%, transparent)',
-                      padding: '3px 7px',
-                      borderRadius: '2px',
-                    }}
-                  >
-                    {topic}
-                  </span>
-                ))}
+                {area.subtitle}
+              </p>
+
+              {/* Description */}
+              <p
+                style={{
+                  margin: '0 0 12px 0',
+                  fontSize: '12.5px',
+                  lineHeight: 1.75,
+                  color: 'color-mix(in srgb, var(--fg) 80%, transparent)',
+                  maxWidth: '76ch',
+                }}
+              >
+                {area.description}
+              </p>
+
+              {/* Topics — one joined text line, no chips */}
+              <div style={{ fontSize: '11px', color: 'var(--dim)', lineHeight: 1.7 }}>
+                <span style={{ color: 'var(--chrome)' }}>topics:</span> {area.topics.join(' · ')}
               </div>
             </div>
           ))}

@@ -28,6 +28,13 @@ interface EditorStatusBarProps {
  * The NODE: readout (G7) reports this app's own creature — Bit, the
  * stray node — and always shows his real state machine state.
  *
+ * Phase 5 (visual parity): density pass — the static `[git:main@…]`
+ * echo segment is removed (it duplicated the identity block and was
+ * hidden by default anyway), readout type drops a step, and the zone
+ * gaps tighten. Every remaining readout is real state; the decorative
+ * .bar-legacy labels stay (the verify matrix has a decided rule about
+ * them: hidden ≤900px is per spec, not a failure).
+ *
  * Responsive: the strip hides ≤1100px, legacy chrome labels ≤900px, and
  * brand text / duplicate file echoes ≤640px, so the bar never overflows
  * at 390px wide.
@@ -87,7 +94,7 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
         background: 'var(--bg)',
         borderTop: '1px solid color-mix(in srgb, var(--fg) 12%, transparent)',
         fontFamily: '"IBM Plex Mono", monospace',
-        fontSize: '11px',
+        fontSize: '10.5px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -125,10 +132,6 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
 
         <span className="bar-file-path" style={{ color: 'var(--fg)', whiteSpace: 'nowrap' }}>
           ~/portfolio/{currentFile}
-        </span>
-
-        <span style={{ color: 'var(--dim)', display: 'none' }} className="bar-git-branch">
-          [git:main@Pradhan-07]
         </span>
 
         {/* Command Form */}
@@ -174,24 +177,24 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = ({
       </div>
 
       {/* Right zone — real-state readouts + legacy chrome labels */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexShrink: 0 }}>
         {onToggleBit && (
           <>
             <DenButton awake={!!bitAwake} onToggle={onToggleBit} className="den-btn" />
-            <span className="bar-readout bar-readout-node" style={{ color: 'var(--dim)', fontSize: '10px', whiteSpace: 'nowrap' }}>
+            <span className="bar-readout bar-readout-node" style={{ color: 'var(--dim)', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
               NODE: <strong style={{ color: 'var(--chrome)' }}>{bitState ?? 'sleeping'}</strong>
             </span>
           </>
         )}
-        <span className="bar-readout bar-readout-theme" style={{ color: 'var(--dim)', fontSize: '10px', whiteSpace: 'nowrap' }}>
+        <span className="bar-readout bar-readout-theme" style={{ color: 'var(--dim)', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
           theme: <strong style={{ color: 'var(--chrome)' }}>{theme.label}</strong>
         </span>
 
-        <span className="bar-readout bar-readout-file" style={{ color: 'var(--dim)', fontSize: '10px', whiteSpace: 'nowrap' }}>
+        <span className="bar-readout bar-readout-file" style={{ color: 'var(--dim)', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
           file: <strong style={{ color: 'var(--chrome)' }}>{currentFile}</strong>
         </span>
 
-        <span className="bar-readout bar-readout-streak" style={{ color: 'var(--dim)', fontSize: '10px', whiteSpace: 'nowrap' }}>
+        <span className="bar-readout bar-readout-streak" style={{ color: 'var(--dim)', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
           streak:{' '}
           <strong style={{ color: '#66cc6a' }}>
             {snapshot.status === 'ready' ? `${snapshot.currentStreak}d` : '—'}

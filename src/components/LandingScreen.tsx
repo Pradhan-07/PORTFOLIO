@@ -1,11 +1,9 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { Theme } from '../types';
 import type { WallDataState } from '../hooks/useWallData';
-import { BrandLogo } from './BrandLogo';
 import { PROFILE } from '../data/profile';
 import { CODE_WALL_SNIPPETS } from '../data/codeSnippets';
 import { CodeTickerPanel } from './hancore/CodeTickerPanel';
-import { WireframeHandsKeyboard } from './hancore/WireframeHandsKeyboard';
 import { useWheelStepper, WHEEL_COOLDOWN_MS } from '../hooks/useWheelStepper';
 
 interface LandingScreenProps {
@@ -216,31 +214,20 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
           zIndex: 10,
         }}
       >
+        {/* Phase 5 (visual parity): the header is text-only — a plain
+            wordmark left, one github link right. No logo lockup, no
+            version chip, no second social link. */}
         <div
           className="brand landing-brand"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '12px',
             color: 'var(--fg)',
             fontSize: '12px',
             textDecoration: 'none',
           }}
         >
-          <BrandLogo size={18} />
           <span style={{ fontWeight: 500 }}>{PROFILE.domain}</span>
-          <span
-            style={{
-              fontSize: '10px',
-              padding: '1px 5px',
-              borderRadius: '2px',
-              background: 'var(--line)',
-              color: 'var(--dim)',
-              letterSpacing: '0.04em',
-            }}
-          >
-            v2.0
-          </span>
         </div>
 
         <nav
@@ -266,25 +253,14 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
           >
             github ↗
           </a>
-
-          <a
-            href={PROFILE.linkedinUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="quiet-link"
-            style={{
-              color: 'var(--dim)',
-              textDecoration: 'none',
-              letterSpacing: '0.08em',
-              transition: 'color 180ms ease',
-            }}
-          >
-            linkedin ↗
-          </a>
         </nav>
       </header>
 
-      {/* CENTER VIEWPORT: CODE TICKER & WIREFRAME HANDS (Frames 03, 04, 05) */}
+      {/* CENTER VIEWPORT: borderless floating code (Frames 03, 04).
+          Phase 5 (visual parity): the keyboard + wireframe-hands diagram
+          no longer sits on the landing — that motif lives in the editor's
+          desk strip (G6), which draws its own keyboard + hands. The
+          landing centre is the code ticker only, floating frameless. */}
       <main
         style={{
           flex: 1,
@@ -301,14 +277,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
           padding: '10px 0',
         }}
       >
-        {/* Frame 03 & 04: Live Code Editor Ticker Panel (Central 50-60% width) */}
         <CodeTickerPanel />
-
-        {/* Frame 05: Bottom Keyboard & Hand-Wireframe Visualization */}
-        <WireframeHandsKeyboard
-          themeFg={theme.fg}
-          themeAccent={theme.accent}
-        />
       </main>
 
       {/* FRAME 06 & 07 — BOTTOM BAR: LOWER LEFT TAGLINE & THEME/ENTER CONTROL */}
@@ -342,7 +311,8 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
 
         {/* FRAME 07 — THEME AND ENTER CONTROL */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Theme switcher */}
+          {/* Theme switcher — Phase 5: a tiny borderless text control
+              (the 44px min-height stays: touch target rule from G10). */}
           <button
             type="button"
             onClick={onToggleTheme}
@@ -353,22 +323,24 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
               alignItems: 'center',
               gap: '6px',
               background: 'none',
-              border: '1px solid color-mix(in srgb, var(--fg) 12%, transparent)',
-              borderRadius: '2px',
-              padding: '4px 10px',
+              border: 'none',
+              padding: '4px 6px',
               minHeight: '44px',
-              color: 'var(--chrome)',
+              color: 'var(--dim)',
               fontFamily: '"IBM Plex Mono", monospace',
-              fontSize: '11px',
+              fontSize: '10.5px',
               cursor: 'pointer',
-              transition: 'all 180ms ease',
+              transition: 'color 180ms ease',
             }}
           >
             <span style={{ color: 'var(--accent)' }}>⌁</span>
             <span>theme [{theme.label}]</span>
           </button>
 
-          {/* Enter Button */}
+          {/* Enter Button — Phase 5: a small OUTLINED pill (transparent
+              fill, hairline ring, pill radius) instead of the solid block.
+              Gate behaviour is untouched: click, Enter key, the App-level
+              timer fallback and Esc all work exactly as in Phase 4. */}
           <button
             type="button"
             onClick={onEnter}
@@ -378,19 +350,18 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '6px 14px',
+              padding: '6px 18px',
               minHeight: '44px',
-              background: 'var(--fg)',
-              color: 'var(--bg)',
-              border: 'none',
-              borderRadius: '2px',
+              background: 'transparent',
+              color: 'var(--fg)',
+              border: '1px solid color-mix(in srgb, var(--fg) 45%, transparent)',
+              borderRadius: '999px',
               fontFamily: '"IBM Plex Mono", monospace',
               fontSize: '11.5px',
-              fontWeight: 600,
+              fontWeight: 500,
               letterSpacing: '0.08em',
               cursor: 'pointer',
-              boxShadow: 'var(--ring)',
-              transition: 'transform 180ms ease, filter 180ms ease',
+              transition: 'border-color 180ms ease, color 180ms ease',
             }}
           >
             <span>enter</span>

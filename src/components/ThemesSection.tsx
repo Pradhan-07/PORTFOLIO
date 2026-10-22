@@ -7,7 +7,7 @@ interface ThemesSectionProps {
   onSelectTheme: (index: number) => void;
 }
 
-const SYNTAX_CHIPS: Array<{ key: keyof Theme['kinds']; label: string }> = [
+const SYNTAX_TOKENS: Array<{ key: keyof Theme['kinds']; label: string }> = [
   { key: 'keyword', label: 'kw' },
   { key: 'string', label: 'str' },
   { key: 'function', label: 'fn' },
@@ -16,10 +16,17 @@ const SYNTAX_CHIPS: Array<{ key: keyof Theme['kinds']; label: string }> = [
 ];
 
 /**
- * Themes as a browsable editor file: every palette Karan ships, with its
- * base + syntax colours as swatches. Selecting one re-skins the whole
- * stage live through the existing CSS-variable theme engine, and the
- * choice persists in localStorage (handled in App).
+ * Themes as a browsable editor file: every palette Karan ships.
+ * Selecting one re-skins the whole stage live through the existing
+ * CSS-variable theme engine, and the choice persists in localStorage
+ * (handled in App).
+ *
+ * Phase 5 (visual parity): the theme CARDS are gone — above all, no row
+ * is ever painted in a theme's own background (the bright full-block
+ * light-theme card was the worst offender). Each theme is one compact
+ * text row in the CURRENT theme's colours: name, DARK/LIGHT as plain
+ * text, a few small inline swatch squares (base colours) and the syntax
+ * kinds as coloured text tokens, with ACTIVE as a text marker.
  */
 export const ThemesSection: React.FC<ThemesSectionProps> = ({ activeTheme, onSelectTheme }) => {
   return (
@@ -29,17 +36,17 @@ export const ThemesSection: React.FC<ThemesSectionProps> = ({ activeTheme, onSel
       style={{
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
+        fontFamily: '"IBM Plex Mono", monospace',
       }}
     >
       <div className="section-container">
         <div
           style={{
-            fontFamily: '"IBM Plex Mono", monospace',
             fontSize: '11px',
             color: 'var(--dim)',
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            marginBottom: '16px',
+            marginBottom: '14px',
           }}
         >
           {'// 07 · THEMES'}
@@ -47,38 +54,32 @@ export const ThemesSection: React.FC<ThemesSectionProps> = ({ activeTheme, onSel
 
         <h2
           style={{
-            margin: '0 0 16px 0',
-            fontFamily: '"Instrument Serif", Georgia, serif',
-            fontSize: 'clamp(2.4rem, 5vw, 3.6rem)',
-            fontWeight: 400,
+            margin: '0 0 12px 0',
+            fontFamily: 'inherit',
+            fontSize: '13px',
+            fontWeight: 500,
             color: 'var(--fg)',
-            letterSpacing: '-0.02em',
+            letterSpacing: '0.01em',
+            lineHeight: 1.5,
           }}
         >
-          Editor <span style={{ fontStyle: 'italic', color: 'var(--chrome)' }}>themes.</span>
+          Editor <span style={{ color: 'var(--chrome)' }}>themes.</span>
         </h2>
 
         <p
           style={{
-            margin: '0 0 36px 0',
-            fontFamily: '"Archivo", sans-serif',
-            fontSize: '15px',
+            margin: '0 0 28px 0',
+            fontSize: '12.5px',
             color: 'var(--dim)',
-            maxWidth: '680px',
-            lineHeight: 1.6,
+            maxWidth: '76ch',
+            lineHeight: 1.75,
           }}
         >
           Eight palettes this site ships with. Pick one and the whole editor — wall, buffer and bar —
           re-skins instantly. Your choice is remembered on this device for your next visit.
         </p>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '14px',
-          }}
-        >
+        <div>
           {THEMES.map((t, index) => {
             const isActive = t.name === activeTheme.name;
             return (
@@ -88,30 +89,32 @@ export const ThemesSection: React.FC<ThemesSectionProps> = ({ activeTheme, onSel
                 onClick={() => onSelectTheme(index)}
                 aria-pressed={isActive}
                 style={{
-                  textAlign: 'left',
-                  background: t.bg,
-                  color: t.fg,
-                  border: isActive
-                    ? `1px solid ${t.accent}`
-                    : '1px solid color-mix(in srgb, var(--fg) 14%, transparent)',
-                  borderRadius: '3px',
-                  padding: '16px',
-                  cursor: 'pointer',
-                  fontFamily: '"IBM Plex Mono", monospace',
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
+                  alignItems: 'center',
+                  gap: '14px',
+                  flexWrap: 'wrap',
+                  width: '100%',
+                  textAlign: 'left',
+                  background: 'none',
+                  color: 'var(--fg)',
+                  border: 'none',
+                  borderBottom: '1px solid color-mix(in srgb, var(--fg) 7%, transparent)',
+                  padding: '11px 2px',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  fontSize: '12px',
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                  <span style={{ fontSize: '12.5px', fontWeight: 600 }}>{t.label}</span>
-                  <span style={{ fontSize: '9px', color: t.dim, letterSpacing: '0.08em' }}>
-                    {isActive ? '● ACTIVE' : t.light ? 'LIGHT' : 'DARK'}
+                {/* Name + mode as plain text */}
+                <span style={{ minWidth: '150px', display: 'inline-flex', alignItems: 'baseline', gap: '10px' }}>
+                  <span style={{ fontWeight: 600, color: isActive ? 'var(--fg)' : 'var(--chrome)' }}>{t.label}</span>
+                  <span style={{ fontSize: '9.5px', color: 'var(--dim)', letterSpacing: '0.08em' }}>
+                    {t.light ? 'LIGHT' : 'DARK'}
                   </span>
                 </span>
 
-                {/* Base swatches */}
-                <span style={{ display: 'flex', gap: '6px' }}>
+                {/* Base swatches — small squares only, never a block */}
+                <span style={{ display: 'inline-flex', gap: '5px', alignItems: 'center' }}>
                   {[
                     { c: t.bg, label: 'bg' },
                     { c: t.fg, label: 'fg' },
@@ -119,39 +122,35 @@ export const ThemesSection: React.FC<ThemesSectionProps> = ({ activeTheme, onSel
                     { c: t.chrome, label: 'chrome' },
                     { c: t.line, label: 'line' },
                   ].map((s) => (
-                    <span key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                      <span
-                        style={{
-                          width: '22px',
-                          height: '22px',
-                          borderRadius: '2px',
-                          background: s.c,
-                          border: '1px solid rgba(127,127,127,0.35)',
-                          display: 'block',
-                        }}
-                      />
-                      <span style={{ fontSize: '8px', color: t.dim }}>{s.label}</span>
+                    <span
+                      key={s.label}
+                      title={`${s.label} ${s.c}`}
+                      style={{
+                        width: '11px',
+                        height: '11px',
+                        background: s.c,
+                        border: '1px solid rgba(127,127,127,0.4)',
+                        display: 'inline-block',
+                      }}
+                    />
+                  ))}
+                </span>
+
+                {/* Syntax kinds as coloured text tokens */}
+                <span style={{ display: 'inline-flex', gap: '10px', flexWrap: 'wrap' }}>
+                  {SYNTAX_TOKENS.map((chip) => (
+                    <span key={chip.key} style={{ fontSize: '10.5px', color: t.kinds[chip.key] }}>
+                      {chip.label}
                     </span>
                   ))}
                 </span>
 
-                {/* Syntax-kind swatches */}
-                <span style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {SYNTAX_CHIPS.map((chip) => (
-                    <span
-                      key={chip.key}
-                      style={{
-                        fontSize: '9px',
-                        color: t.kinds[chip.key],
-                        border: '1px solid rgba(127,127,127,0.3)',
-                        borderRadius: '2px',
-                        padding: '2px 6px',
-                      }}
-                    >
-                      {chip.label} {t.kinds[chip.key]}
-                    </span>
-                  ))}
-                </span>
+                {/* Active marker — text only */}
+                {isActive && (
+                  <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--accent)', letterSpacing: '0.08em' }}>
+                    ● ACTIVE
+                  </span>
+                )}
               </button>
             );
           })}

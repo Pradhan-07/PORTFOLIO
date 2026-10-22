@@ -1,6 +1,12 @@
 import React from 'react';
 import { PROFILE } from '../data/profile';
 
+/**
+ * Phase 5 (visual parity): leetcode.tsx is bare text — the framed card
+ * around the stats image is gone. The path line and profile link render
+ * as plain text above the (frameless) LeetCode card image. All copy and
+ * the verified solved line are verbatim.
+ */
 export const LeetCodeSection: React.FC = () => {
   return (
     <section
@@ -9,44 +15,43 @@ export const LeetCodeSection: React.FC = () => {
       style={{
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
+        fontFamily: '"IBM Plex Mono", monospace',
       }}
     >
       <div className="section-container">
         {/* Section Label */}
         <div
           style={{
-            fontFamily: '"IBM Plex Mono", monospace',
             fontSize: '11px',
             color: 'var(--dim)',
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            marginBottom: '16px',
+            marginBottom: '14px',
           }}
         >
           {'// LEETCODE · DSA PRACTICE LOG'}
         </div>
 
-        {/* Section Heading */}
+        {/* Section heading — plain text line, no serif */}
         <h2
           style={{
-            margin: '0 0 16px 0',
-            fontFamily: '"Instrument Serif", Georgia, serif',
-            fontSize: 'clamp(2.4rem, 5vw, 3.6rem)',
-            fontWeight: 400,
+            margin: '0 0 12px 0',
+            fontFamily: 'inherit',
+            fontSize: '13px',
+            fontWeight: 500,
             color: 'var(--fg)',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.15,
+            letterSpacing: '0.01em',
+            lineHeight: 1.5,
           }}
         >
-          LeetCode, in <span style={{ fontStyle: 'italic', color: 'var(--chrome)' }}>C++.</span>
+          LeetCode, in <span style={{ color: 'var(--chrome)' }}>C++.</span>
         </h2>
 
         {/* Verified solved summary */}
         <p
           style={{
-            margin: '0 0 28px 0',
-            fontFamily: '"IBM Plex Mono", monospace',
-            fontSize: '13px',
+            margin: '0 0 20px 0',
+            fontSize: '12.5px',
             color: 'var(--fg)',
             letterSpacing: '0.04em',
           }}
@@ -56,38 +61,29 @@ export const LeetCodeSection: React.FC = () => {
 
         <p
           style={{
-            margin: '0 0 36px 0',
-            fontFamily: '"Archivo", sans-serif',
-            fontSize: '15px',
+            margin: '0 0 32px 0',
+            fontSize: '12.5px',
             color: 'var(--dim)',
-            maxWidth: '680px',
-            lineHeight: 1.6,
+            maxWidth: '76ch',
+            lineHeight: 1.75,
           }}
         >
           Daily algorithmic practice in C++ — arrays, two pointers, backtracking and beyond.
           Mediums outnumber Easies: fewer, harder problems over padded counts.
         </p>
 
-        {/* Live LeetCode Card */}
-        <div
-          style={{
-            background: 'var(--line)',
-            border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-            borderRadius: '3px',
-            padding: '20px',
-            fontFamily: '"IBM Plex Mono", monospace',
-          }}
-        >
+        {/* LeetCode card — path line as text, image frameless */}
+        <div>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
-              paddingBottom: '10px',
-              marginBottom: '16px',
+              flexWrap: 'wrap',
+              gap: '8px',
+              marginBottom: '14px',
               fontSize: '11px',
-              color: 'var(--chrome)',
+              color: 'var(--dim)',
             }}
           >
             <span>~/leetcode/{PROFILE.leetcodeDisplay}</span>
@@ -115,8 +111,6 @@ export const LeetCodeSection: React.FC = () => {
                 maxWidth: '640px',
                 height: 'auto',
                 display: 'block',
-                margin: '0 auto',
-                borderRadius: '2px',
               }}
             />
           </a>

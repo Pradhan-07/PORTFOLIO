@@ -14,6 +14,13 @@ const LinkedInIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
+/**
+ * Phase 5 (visual parity): contact.tsx is text lines — the three contact
+ * CARDS become hairline-separated rows and the dispatch form loses its
+ * panel (fields are underline inputs on empty space). Every handler,
+ * validation message, the copy-email state and the mailto handoff are
+ * byte-for-byte the Phase 4 behaviour.
+ */
 export const ContactSection: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
@@ -90,6 +97,20 @@ export const ContactSection: React.FC = () => {
     },
   ];
 
+  const fieldStyle: React.CSSProperties = {
+    width: '100%',
+    boxSizing: 'border-box',
+    background: 'transparent',
+    border: 'none',
+    borderBottom: '1px solid color-mix(in srgb, var(--fg) 18%, transparent)',
+    borderRadius: 0,
+    padding: '9px 2px',
+    color: 'var(--fg)',
+    fontFamily: '"IBM Plex Mono", monospace',
+    fontSize: '12.5px',
+    outline: 'none',
+  };
+
   return (
     <section
       id="contact"
@@ -97,104 +118,81 @@ export const ContactSection: React.FC = () => {
       style={{
         borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
         position: 'relative',
+        fontFamily: '"IBM Plex Mono", monospace',
       }}
     >
       <div className="section-container">
         {/* Section Tag */}
         <div
           style={{
-            fontFamily: '"IBM Plex Mono", monospace',
             fontSize: '11px',
             color: 'var(--dim)',
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            marginBottom: '16px',
+            marginBottom: '14px',
           }}
         >
           // 06 · INQUIRIES & COLLABORATION
         </div>
 
-        {/* Primary Heading */}
+        {/* Primary Heading — plain text line, no serif */}
         <h2
           style={{
-            margin: '0 0 16px 0',
-            fontFamily: '"Instrument Serif", Georgia, serif',
-            fontSize: 'clamp(2.4rem, 5vw, 3.6rem)',
-            fontWeight: 400,
+            margin: '0 0 12px 0',
+            fontFamily: 'inherit',
+            fontSize: '13px',
+            fontWeight: 500,
             color: 'var(--fg)',
-            letterSpacing: '-0.02em',
+            letterSpacing: '0.01em',
+            lineHeight: 1.5,
           }}
         >
-          Let's <span style={{ fontStyle: 'italic', color: 'var(--chrome)' }}>connect.</span>
+          Let's <span style={{ color: 'var(--chrome)' }}>connect.</span>
         </h2>
 
         {/* Description */}
         <p
           style={{
-            margin: '0 0 40px 0',
-            fontFamily: '"Archivo", sans-serif',
-            fontSize: '16px',
+            margin: '0 0 32px 0',
+            fontSize: '12.5px',
             color: 'var(--dim)',
-            maxWidth: '700px',
-            lineHeight: 1.6,
+            maxWidth: '76ch',
+            lineHeight: 1.75,
           }}
         >
           {PROFILE.contactDescription}
         </p>
 
-        {/* Three Clearly Visible Contact Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '16px',
-            marginBottom: '36px',
-          }}
-        >
-          {contactLinks.map((item) => (
+        {/* Contact rows — hairline-separated text, no cards */}
+        <div style={{ marginBottom: '36px' }}>
+          {contactLinks.map((item, idx) => (
             <div
               key={item.id}
-              className="contact-card"
+              className="contact-row"
               style={{
-                background: 'var(--line)',
-                border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                borderRadius: '3px',
-                padding: '20px 22px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'border-color 200ms ease, transform 200ms ease',
-                position: 'relative',
+                padding: '16px 0',
+                borderTop: idx === 0 ? 'none' : '1px solid color-mix(in srgb, var(--fg) 7%, transparent)',
               }}
             >
-              <div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '14px',
-                    fontFamily: '"IBM Plex Mono", monospace',
-                    fontSize: '11px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--chrome)' }}>
-                    <span style={{ color: 'var(--accent)' }}>{item.icon}</span>
-                    <span style={{ fontWeight: 500, letterSpacing: '0.04em' }}>{item.label}</span>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '9.5px',
-                      color: 'var(--dim)',
-                      padding: '2px 6px',
-                      background: 'color-mix(in srgb, var(--bg) 60%, transparent)',
-                      borderRadius: '2px',
-                    }}
-                  >
-                    {item.tag}
-                  </span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px',
+                  fontSize: '11px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--chrome)' }}>
+                  <span style={{ color: 'var(--accent)', display: 'inline-flex' }}>{item.icon}</span>
+                  <span style={{ fontWeight: 500, letterSpacing: '0.04em' }}>{item.label}</span>
                 </div>
+                <span style={{ fontSize: '9.5px', color: 'var(--dim)', letterSpacing: '0.06em' }}>
+                  {item.tag}
+                </span>
+              </div>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                 <a
                   href={item.url}
                   target={item.isExternal ? '_blank' : undefined}
@@ -203,44 +201,26 @@ export const ContactSection: React.FC = () => {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    fontFamily: '"IBM Plex Mono", monospace',
-                    fontSize: '13.5px',
+                    fontSize: '13px',
                     color: 'var(--fg)',
                     textDecoration: 'none',
                     fontWeight: 500,
                     wordBreak: 'break-all',
-                    transition: 'color 180ms ease',
                   }}
                 >
                   <span>{item.display}</span>
                   {item.isExternal ? <ExternalLink size={13} style={{ color: 'var(--dim)', flexShrink: 0 }} /> : null}
                 </a>
-              </div>
 
-              {/* Action row */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  marginTop: '18px',
-                  paddingTop: '12px',
-                  borderTop: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
-                  fontFamily: '"IBM Plex Mono", monospace',
-                  fontSize: '11px',
-                }}
-              >
                 <a
                   href={item.url}
                   target={item.isExternal ? '_blank' : undefined}
                   rel={item.isExternal ? 'noreferrer noopener' : undefined}
                   style={{
-                    color: 'var(--chrome)',
+                    color: 'var(--dim)',
                     textDecoration: 'none',
                     letterSpacing: '0.04em',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
+                    fontSize: '11px',
                   }}
                 >
                   <span>{item.id === 'email' ? 'Compose mail ↗' : 'Visit profile ↗'}</span>
@@ -274,16 +254,8 @@ export const ContactSection: React.FC = () => {
           ))}
         </div>
 
-        {/* Message Dispatch Buffer Container */}
-        <div
-          style={{
-            background: 'var(--line)',
-            border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-            borderRadius: '3px',
-            padding: '28px',
-            fontFamily: '"IBM Plex Mono", monospace',
-          }}
-        >
+        {/* Message dispatch — no panel; a comment line over underline fields */}
+        <div>
           <div
             style={{
               display: 'flex',
@@ -301,8 +273,8 @@ export const ContactSection: React.FC = () => {
           </div>
 
           {formStatus === 'sent' ? (
-            <div style={{ padding: '28px 0', textAlign: 'center' }}>
-              <div style={{ color: 'var(--accent)', fontSize: '14.5px', fontWeight: 600, marginBottom: '8px' }}>
+            <div style={{ padding: '20px 0', textAlign: 'center' }}>
+              <div style={{ color: 'var(--accent)', fontSize: '13.5px', fontWeight: 600, marginBottom: '8px' }}>
                 [SUCCESS: MESSAGE PAYLOAD PREPARED]
               </div>
               <p style={{ color: 'var(--dim)', fontSize: '12px', lineHeight: 1.6, margin: '0 0 18px 0' }}>
@@ -315,25 +287,26 @@ export const ContactSection: React.FC = () => {
                   setFormStatus('idle');
                 }}
                 style={{
-                  background: 'var(--fg)',
-                  color: 'var(--bg)',
-                  border: 'none',
+                  background: 'none',
+                  color: 'var(--fg)',
+                  border: '1px solid color-mix(in srgb, var(--fg) 30%, transparent)',
                   padding: '9px 18px',
                   fontSize: '11.5px',
                   borderRadius: '2px',
                   cursor: 'pointer',
                   fontWeight: 500,
                   letterSpacing: '0.06em',
+                  fontFamily: 'inherit',
                 }}
               >
                 Send another message
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--chrome)', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--chrome)', marginBottom: '2px' }}>
                     YOUR NAME / IDENTIFIER:
                   </label>
                   <input
@@ -342,22 +315,12 @@ export const ContactSection: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g. Fellow Engineer"
                     required
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      background: 'color-mix(in srgb, var(--bg) 70%, transparent)',
-                      border: '1px solid color-mix(in srgb, var(--fg) 12%, transparent)',
-                      borderRadius: '2px',
-                      padding: '10px 12px',
-                      color: 'var(--fg)',
-                      fontFamily: '"IBM Plex Mono", monospace',
-                      fontSize: '12px',
-                    }}
+                    style={fieldStyle}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--chrome)', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--chrome)', marginBottom: '2px' }}>
                     YOUR EMAIL ADDRESS:
                   </label>
                   <input
@@ -366,23 +329,13 @@ export const ContactSection: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="your.email@domain.com"
                     required
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      background: 'color-mix(in srgb, var(--bg) 70%, transparent)',
-                      border: '1px solid color-mix(in srgb, var(--fg) 12%, transparent)',
-                      borderRadius: '2px',
-                      padding: '10px 12px',
-                      color: 'var(--fg)',
-                      fontFamily: '"IBM Plex Mono", monospace',
-                      fontSize: '12px',
-                    }}
+                    style={fieldStyle}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--chrome)', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--chrome)', marginBottom: '2px' }}>
                   MESSAGE / TOPIC / COLLABORATION:
                 </label>
                 <textarea
@@ -391,18 +344,7 @@ export const ContactSection: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   placeholder="Share a thought, discuss algorithms, AI/ML, or web development..."
                   required
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    background: 'color-mix(in srgb, var(--bg) 70%, transparent)',
-                    border: '1px solid color-mix(in srgb, var(--fg) 12%, transparent)',
-                    borderRadius: '2px',
-                    padding: '10px 12px',
-                    color: 'var(--fg)',
-                    fontFamily: '"IBM Plex Mono", monospace',
-                    fontSize: '12px',
-                    resize: 'vertical',
-                  }}
+                  style={{ ...fieldStyle, resize: 'vertical' }}
                 />
               </div>
 
@@ -420,17 +362,17 @@ export const ContactSection: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  padding: '11px 20px',
-                  background: 'var(--fg)',
-                  color: 'var(--bg)',
-                  border: 'none',
+                  padding: '10px 18px',
+                  background: 'none',
+                  color: 'var(--fg)',
+                  border: '1px solid color-mix(in srgb, var(--fg) 35%, transparent)',
                   borderRadius: '2px',
-                  fontSize: '12px',
+                  fontSize: '11.5px',
                   fontWeight: 500,
                   letterSpacing: '0.08em',
                   cursor: formStatus === 'validating' ? 'wait' : 'pointer',
-                  transition: 'filter 180ms ease',
                   alignSelf: 'flex-start',
+                  fontFamily: 'inherit',
                 }}
               >
                 <Send size={13} />
