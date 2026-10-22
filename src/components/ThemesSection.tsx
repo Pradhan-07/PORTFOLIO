@@ -55,7 +55,7 @@ export const ThemesSection: React.FC<ThemesSectionProps> = ({ activeTheme, onSel
         <h2
           style={{
             margin: '0 0 12px 0',
-            fontFamily: 'inherit',
+            fontFamily: '"IBM Plex Mono", monospace',
             fontSize: '13px',
             fontWeight: 500,
             color: 'var(--fg)',

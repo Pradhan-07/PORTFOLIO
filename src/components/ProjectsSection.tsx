@@ -152,7 +152,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectM
             <h2
               style={{
                 margin: 0,
-                fontFamily: 'inherit',
+                fontFamily: '"IBM Plex Mono", monospace',
                 fontSize: '13px',
                 fontWeight: 500,
                 color: 'var(--fg)',

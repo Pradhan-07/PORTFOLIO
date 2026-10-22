@@ -44,7 +44,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onExploreClick }) => {
         <h1
           style={{
             margin: '0 0 4px 0',
-            fontFamily: 'inherit',
+            fontFamily: '"IBM Plex Mono", monospace',
             fontSize: '15px',
             fontWeight: 600,
             color: 'var(--fg)',
@@ -59,7 +59,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onExploreClick }) => {
         <h2
           style={{
             margin: '0 0 10px 0',
-            fontFamily: 'inherit',
+            fontFamily: '"IBM Plex Mono", monospace',
             fontSize: '12.5px',
             fontWeight: 500,
             color: 'var(--accent)',

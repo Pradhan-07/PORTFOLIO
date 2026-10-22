@@ -93,7 +93,7 @@ export const LearningJourney: React.FC = () => {
         <h2
           style={{
             margin: '0 0 12px 0',
-            fontFamily: 'inherit',
+            fontFamily: '"IBM Plex Mono", monospace',
             fontSize: '13px',
             fontWeight: 500,
             color: 'var(--fg)',
@@ -141,7 +141,7 @@ export const LearningJourney: React.FC = () => {
                 <h3
                   style={{
                     margin: 0,
-                    fontFamily: 'inherit',
+                    fontFamily: '"IBM Plex Mono", monospace',
                     fontSize: '13px',
                     fontWeight: 600,
                     color: 'var(--fg)',
