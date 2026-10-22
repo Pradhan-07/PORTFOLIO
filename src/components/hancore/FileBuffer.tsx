@@ -68,7 +68,10 @@ export const FileBuffer: React.FC<FileBufferProps> = ({ file, bufferRef, childre
           gap: '10px',
           padding: 'var(--sp-1) var(--sp-2)',
           borderBottom: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-          background: 'color-mix(in srgb, var(--bg) 88%, var(--line))',
+          // Phase 5: the winbar fill is gone — text on the buffer's own
+          // background, separated by the hairline only. Path/language/
+          // kind text is byte-identical to Phase 4.
+          background: 'transparent',
           fontFamily: '"IBM Plex Mono", monospace',
           fontSize: '11px',
           color: 'var(--chrome)',

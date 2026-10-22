@@ -90,71 +90,34 @@ export const CodeTickerPanel: React.FC = () => {
     return () => clearInterval(switchTimer);
   }, [reducedMotion]);
 
+  // Phase 5 (visual parity): NO window chrome. The reference landing is a
+  // near-empty void where code floats borderless as faint ambience — no
+  // frame, no title bar, no mode badge, no status bar, no line numbers.
+  // The rotation / progressive-reveal behaviour above is unchanged; only
+  // the presentation is frameless now. (The snippet `path`/`mode` fields
+  // remain in the data above as documentation of each snippet's source.)
   return (
     <div
       className="code-ticker-panel"
       style={{
         width: '100%',
-        maxWidth: '560px',
-        margin: '0 auto 20px auto',
-        background: 'color-mix(in srgb, var(--bg) 95%, #101010)',
-        border: '1px solid color-mix(in srgb, var(--fg) 12%, transparent)',
-        borderRadius: 'var(--radius)',
-        boxShadow: 'var(--ring)',
-        overflow: 'hidden',
+        maxWidth: '640px',
+        margin: '0 auto',
         fontFamily: '"IBM Plex Mono", monospace',
         fontSize: '12px',
-        transition: 'border-color 200ms ease',
+        textAlign: 'left',
+        opacity: 0.92,
       }}
     >
-      {/* Top Header Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '6px 12px',
-          background: 'var(--line)',
-          borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
-          fontSize: '10.5px',
-          color: 'var(--chrome)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>●</span>
-          <span style={{ color: 'var(--fg)', letterSpacing: '0.02em' }}>{currentSnippet.path}</span>
-        </div>
-
-        <span
-          style={{
-            fontSize: '9.5px',
-            padding: '1px 5px',
-            background: currentSnippet.mode === 'INSERT' ? 'var(--accent)' : 'color-mix(in srgb, var(--bg) 80%, transparent)',
-            color: currentSnippet.mode === 'INSERT' ? 'var(--bg)' : 'var(--chrome)',
-            fontWeight: 600,
-            borderRadius: '2px',
-            letterSpacing: '0.06em',
-          }}
-        >
-          {currentSnippet.mode}
-        </span>
-      </div>
-
-      {/* Code Lines Body */}
-      <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {currentSnippet.lines.slice(0, visibleCount).map((l, idx) => (
           <div
             key={idx}
             style={{
-              display: 'flex',
-              gap: '14px',
               lineHeight: 1.5,
               animation: 'fadeIn 200ms ease',
             }}
           >
-            <span style={{ color: 'var(--dim)', width: '20px', userSelect: 'none', textAlign: 'right' }}>
-              {l.num}
-            </span>
             <span
               style={{
                 color:
@@ -178,8 +141,7 @@ export const CodeTickerPanel: React.FC = () => {
         ))}
 
         {/* Cursor line */}
-        <div style={{ display: 'flex', gap: '14px', lineHeight: 1.5 }}>
-          <span style={{ width: '20px' }} />
+        <div style={{ lineHeight: 1.5 }}>
           <span
             className="cursor-blink"
             style={{
@@ -191,24 +153,6 @@ export const CodeTickerPanel: React.FC = () => {
             }}
           />
         </div>
-      </div>
-
-      {/* Bottom Thin Status Readout */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '4px 12px',
-          background: 'color-mix(in srgb, var(--bg) 90%, transparent)',
-          borderTop: '1px solid color-mix(in srgb, var(--fg) 6%, transparent)',
-          fontSize: '9.5px',
-          color: 'var(--dim)',
-        }}
-      >
-        <span>utf-8</span>
-        <span>c++20 / python</span>
-        <span>{visibleCount}:{currentSnippet.lines[visibleCount - 1]?.text.length || 1}</span>
       </div>
     </div>
   );

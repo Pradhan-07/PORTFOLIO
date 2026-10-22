@@ -13,8 +13,11 @@ type GraphMode = 'dsa' | 'ai' | 'web';
  * about.tsx buffer as its header visual (G5 absorption, item 1). All three
  * modes (DSA / AI-ML / Web), the mode switcher, pointer reactivity and the
  * reduced-motion static frame are preserved from the cockpit original.
- * Height is grid-snapped: 14 cells (196px) on desktop bands, 10 cells
- * (140px) in the ≤640 band — driven by the .cockpit-graph-canvas CSS rule.
+ * Phase 5 (visual parity): the panel chrome is gone — no card fill, no
+ * border, no shadow; the graph renders as a slim borderless strip at the
+ * top of the buffer, its mode switcher and telemetry readouts as plain
+ * text. Height: 11 cells (154px) on desktop bands, 8 cells (112px) in
+ * the ≤640 band — driven by the .cockpit-graph-canvas CSS rule.
  */
 export const CockpitGraph: React.FC<CockpitGraphProps> = ({ onNavigate }) => {
   const [graphMode, setGraphMode] = useState<GraphMode>('dsa');
@@ -195,23 +198,16 @@ export const CockpitGraph: React.FC<CockpitGraphProps> = ({ onNavigate }) => {
     <div
       className="cockpit-graph"
       style={{
-        background: 'color-mix(in srgb, var(--bg) 95%, #101010)',
-        border: '1px solid color-mix(in srgb, var(--fg) 14%, transparent)',
-        borderRadius: 'var(--radius)',
-        padding: 'var(--sp-3)',
         fontFamily: '"IBM Plex Mono", monospace',
-        boxShadow: 'var(--ring)',
       }}
     >
-      {/* Terminal Header & Mode Switcher */}
+      {/* Header line & mode switcher — plain text, no panel chrome */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
-          paddingBottom: '10px',
-          marginBottom: '16px',
+          marginBottom: '8px',
           fontSize: '11px',
           color: 'var(--chrome)',
           flexWrap: 'wrap',
@@ -220,23 +216,26 @@ export const CockpitGraph: React.FC<CockpitGraphProps> = ({ onNavigate }) => {
       >
         <span>fish ~ · KARAN-DEV</span>
 
-        {/* Interactive Graph Mode Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {/* Interactive Graph Mode Switcher — text tokens, active underlined */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           {(['dsa', 'ai', 'web'] as const).map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => setGraphMode(m)}
+              aria-pressed={graphMode === m}
               style={{
-                background: graphMode === m ? 'var(--accent)' : 'transparent',
-                color: graphMode === m ? 'var(--bg)' : 'var(--dim)',
-                border: '1px solid color-mix(in srgb, var(--fg) 10%, transparent)',
-                borderRadius: 'var(--radius)',
-                padding: '2px 6px',
+                background: 'none',
+                color: graphMode === m ? 'var(--fg)' : 'var(--dim)',
+                border: 'none',
+                padding: '2px 0',
                 fontSize: '9.5px',
                 cursor: 'pointer',
                 fontWeight: 600,
                 fontFamily: 'inherit',
+                letterSpacing: '0.06em',
+                textDecoration: graphMode === m ? 'underline' : 'none',
+                textUnderlineOffset: '3px',
               }}
             >
               {m === 'dsa' ? 'DSA / C++' : m === 'ai' ? 'AI / ML' : 'WEB DEV'}
@@ -247,7 +246,7 @@ export const CockpitGraph: React.FC<CockpitGraphProps> = ({ onNavigate }) => {
 
       {/* Interactive Graph Canvas with pointer tracking */}
       <div
-        style={{ position: 'relative', marginBottom: '20px', width: '100%', touchAction: 'pan-y' }}
+        style={{ position: 'relative', marginBottom: '10px', width: '100%', touchAction: 'pan-y' }}
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           setPointerPos({ x: e.clientX - rect.left, y: e.clientY - rect.top, active: true });
@@ -268,44 +267,48 @@ export const CockpitGraph: React.FC<CockpitGraphProps> = ({ onNavigate }) => {
           style={{
             width: '100%',
             display: 'block',
-            background: 'color-mix(in srgb, var(--bg) 90%, #060806)',
-            borderRadius: 'var(--radius)',
-            border: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
+            background: 'transparent',
+            border: 'none',
             cursor: 'crosshair',
           }}
         />
       </div>
 
-      {/* Telemetry Summary Badges */}
+      {/* Telemetry readouts — one plain text row (labels dim, values
+          token-coloured). Same navigation targets as the old tiles:
+          focus / focus / projects. */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '10px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '8px 28px',
           fontSize: '10px',
         }}
       >
-        <div
+        <button
+          type="button"
           onClick={() => onNavigate('focus')}
-          style={{ background: 'var(--line)', padding: '8px 10px', borderRadius: 'var(--radius)', cursor: 'pointer' }}
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', textAlign: 'left' }}
         >
-          <div style={{ color: 'var(--dim)', fontSize: '8.5px' }}>CURRENT FOCUS</div>
-          <div style={{ color: 'var(--fg)', fontWeight: 600, marginTop: '2px' }}>DSA / C++ ↗</div>
-        </div>
-        <div
+          <span style={{ color: 'var(--dim)', fontSize: '8.5px', letterSpacing: '0.06em' }}>CURRENT FOCUS </span>
+          <span style={{ color: 'var(--fg)', fontWeight: 600 }}>DSA / C++ ↗</span>
+        </button>
+        <button
+          type="button"
           onClick={() => onNavigate('focus')}
-          style={{ background: 'var(--line)', padding: '8px 10px', borderRadius: 'var(--radius)', cursor: 'pointer' }}
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', textAlign: 'left' }}
         >
-          <div style={{ color: 'var(--dim)', fontSize: '8.5px' }}>EXPLORING</div>
-          <div style={{ color: 'var(--accent)', fontWeight: 600, marginTop: '2px' }}>AI / ML ↗</div>
-        </div>
-        <div
+          <span style={{ color: 'var(--dim)', fontSize: '8.5px', letterSpacing: '0.06em' }}>EXPLORING </span>
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>AI / ML ↗</span>
+        </button>
+        <button
+          type="button"
           onClick={() => onNavigate('projects')}
-          style={{ background: 'var(--line)', padding: '8px 10px', borderRadius: 'var(--radius)', cursor: 'pointer' }}
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit', textAlign: 'left' }}
         >
-          <div style={{ color: 'var(--dim)', fontSize: '8.5px' }}>BUILDING</div>
-          <div style={{ color: 'var(--chrome)', fontWeight: 600, marginTop: '2px' }}>WEB DEVELOPMENT ↗</div>
-        </div>
+          <span style={{ color: 'var(--dim)', fontSize: '8.5px', letterSpacing: '0.06em' }}>BUILDING </span>
+          <span style={{ color: 'var(--chrome)', fontWeight: 600 }}>WEB DEVELOPMENT ↗</span>
+        </button>
       </div>
     </div>
   );

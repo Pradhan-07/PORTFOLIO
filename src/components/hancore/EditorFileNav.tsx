@@ -183,7 +183,7 @@ export const EditorFileNav: React.FC<EditorFileNavProps> = ({ activeFile, onNavi
           overflow: 'hidden',
         }}
       >
-        {/* Explorer header */}
+        {/* Explorer header — Phase 5: flatter (hairline under it removed) */}
         <div
           style={{
             display: 'flex',
@@ -193,7 +193,6 @@ export const EditorFileNav: React.FC<EditorFileNavProps> = ({ activeFile, onNavi
             fontSize: '9.5px',
             letterSpacing: '0.1em',
             color: 'var(--dim)',
-            borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
             flexShrink: 0,
           }}
         >
@@ -228,11 +227,12 @@ export const EditorFileNav: React.FC<EditorFileNavProps> = ({ activeFile, onNavi
                   alignItems: 'center',
                   gap: '8px',
                   width: '100%',
-                  background: isActive ? 'var(--line)' : 'transparent',
+                  // Phase 5: quieter active row — a faint wash instead of
+                  // the filled var(--line) block, and no per-row hairlines.
+                  background: isActive ? 'color-mix(in srgb, var(--fg) 7%, transparent)' : 'transparent',
                   color: isActive ? 'var(--fg)' : 'var(--dim)',
                   border: 'none',
                   borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-                  borderBottom: '1px solid color-mix(in srgb, var(--fg) 5%, transparent)',
                   padding: 'var(--sp-1) var(--sp-2)',
                   fontSize: '11px',
                   fontFamily: 'inherit',

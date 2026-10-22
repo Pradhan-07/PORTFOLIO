@@ -91,9 +91,21 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
   }, []);
 
   // Legacy section ids (hero, focus, skills, …) resolve to their file.
+  // Phase 5 bug fix (59-point verification, the one FAIL): the status
+  // bar's `:stack` command sends the FILE ID 'stack', but the stack
+  // file's legacy section is 'skills' — a section-only lookup missed and
+  // fell through to about.tsx. Resolution now also matches file ids, so
+  // 'stack' opens stack.ts exactly like the header nav (which pre-maps
+  // stack → skills) does. All other command mappings were verified
+  // working live and resolve identically under the widened lookup:
+  // whoami/about → about.tsx, focus → about's #focus anchor,
+  // experiments → projects.tsx, journey/contact/certifications/
+  // leetcode/themes → their files' sections.
   const openSection = useCallback(
     (sectionId: string) => {
-      const spec = EDITOR_FILES.find((f) => f.section === sectionId);
+      const spec =
+        EDITOR_FILES.find((f) => f.section === sectionId) ??
+        EDITOR_FILES.find((f) => f.id === sectionId);
       if (spec) {
         openFile(spec.id, sectionId);
       } else {
@@ -459,38 +471,36 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         <div className="section-container">
           <CockpitGraph onNavigate={scrollToSection} />
 
-          {/* whoami — the About buffer's opening lines */}
+          {/* whoami — the About buffer's opening lines. Phase 5 (visual
+              parity): no terminal CARD — the buffer opens as bare
+              transcript text on empty space: a prompt line, then its
+              output lines, token-coloured. Same content, same nav
+              commands below. */}
           <div
             className="whoami-block"
             style={{
               marginTop: 'var(--sp-3)',
-              background: 'color-mix(in srgb, var(--bg) 95%, #101010)',
-              border: '1px solid color-mix(in srgb, var(--fg) 14%, transparent)',
-              borderRadius: 'var(--radius)',
-              padding: 'var(--sp-3)',
               fontFamily: '"IBM Plex Mono", monospace',
-              boxShadow: 'var(--ring)',
-              fontSize: '12px',
+              fontSize: '12.5px',
               lineHeight: 1.6,
             }}
           >
-            <div style={{ color: 'var(--dim)', marginBottom: '4px' }}>
-              karan@dev ~ <span style={{ color: 'var(--accent)' }}>&gt; whoami</span>
+            <div style={{ color: 'var(--dim)', marginBottom: '6px' }}>
+              {PROFILE.terminalPrompt} <span style={{ color: 'var(--accent)' }}>whoami</span>
             </div>
             <div style={{ color: 'var(--fg)', fontWeight: 600, fontSize: '14px' }}>
               {PROFILE.name}
             </div>
-            <div style={{ color: 'var(--chrome)', fontSize: '11px', marginBottom: '8px' }}>
+            <div style={{ color: 'var(--chrome)', fontSize: '11.5px', marginBottom: '10px' }}>
               {PROFILE.subtitle}
             </div>
             <p
               style={{
                 margin: '0 0 14px 0',
-                fontFamily: '"Archivo", sans-serif',
-                fontSize: '13px',
-                color: 'color-mix(in srgb, var(--fg) 80%, transparent)',
-                lineHeight: 1.6,
-                fontWeight: 350,
+                fontSize: '12.5px',
+                color: 'color-mix(in srgb, var(--fg) 82%, transparent)',
+                lineHeight: 1.75,
+                maxWidth: '76ch',
               }}
             >
               Second-year B.Tech Computer Science Engineering student focused on strengthening programming fundamentals, algorithmic problem solving in C++, and exploring intelligent systems and modern web technologies.
