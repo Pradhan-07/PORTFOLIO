@@ -12,6 +12,9 @@ import { LearningJourney } from '../LearningJourney';
 import { ContactSection } from '../ContactSection';
 import { Footer } from '../Footer';
 import { EditorStatusBar } from '../EditorStatusBar';
+import { EditorFileNav } from './EditorFileNav';
+import { CertificationsSection } from '../CertificationsSection';
+import { LeetCodeSection } from '../LeetCodeSection';
 import { ProjectDetailModal } from '../ProjectDetailModal';
 import { InteractiveTerminalModal } from '../InteractiveTerminalModal';
 import { CommandPaletteModal } from '../CommandPaletteModal';
@@ -427,6 +430,9 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           </a>
         </div>
       </header>
+
+      {/* Editor-style file tree / tabline — sections presented as source files */}
+      <EditorFileNav activeSection={activeSection} onNavigate={scrollToSection} />
 
       {/* ========================================================================= */}
       {/* 3-AREA DASHBOARD COCKPIT (Frames 13 - 19) */}
@@ -912,10 +918,12 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
       <main style={{ flex: 1, paddingBottom: '40px' }}>
         <HeroSection onExploreClick={() => scrollToSection('projects')} />
         <AboutSection />
+        <CertificationsSection />
         <FocusSection />
         <SkillsSection />
         <ProjectsSection onOpenProjectModal={(p) => setSelectedProjectModal(p)} />
         <LearningJourney />
+        <LeetCodeSection />
         <ContactSection />
       </main>
 
