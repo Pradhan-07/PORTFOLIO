@@ -13,6 +13,41 @@ interface EditorFileNavProps {
 const TOUCH_STEP_PX = 56;
 
 /**
+ * Phase 7 — the arc stack. Each file is a small tilted card; the tilt
+ * follows a shallow arc (ends tilted most, middle nearly straight) and
+ * a parabolic x-offset bows the column outward at its centre. Angles
+ * are computed here and handed to CSS as custom properties so the
+ * hover-straighten and reduced-motion rules in index.css can reach
+ * them (media queries cannot see inline transforms).
+ */
+const arcFor = (index: number, count: number) => {
+  const mid = (count - 1) / 2;
+  const t = mid === 0 ? 0 : (index - mid) / mid; // −1 (top) … +1 (bottom)
+  return {
+    rot: `${(-2.4 * t).toFixed(2)}deg`,
+    x: `${(6 * (1 - t * t)).toFixed(1)}px`,
+  };
+};
+
+/**
+ * Phase 7 — card excerpts: two short lines per file, copied from the
+ * strings the buffers themselves render (whoami output, the pinned
+ * rows, the snapshot language shares, theme names, the LeetCode stat
+ * line, the first certification, the first journey entry, the contact
+ * email). Static labels only — they do not claim to be live renders.
+ */
+const NAV_EXCERPTS: Record<EditorFileId, [string, string]> = {
+  about: ['Karan Kumar Pradhan', 'B.Tech CSE Student @ VIT-AP University'],
+  certifications: ['Hedera Certified Foundation', 'Hashgraph Association · Jun 2026'],
+  projects: ['// pinned', 'indstate [FEATURED]'],
+  stack: ['JavaScript 62.6% · 8 repos', 'TypeScript 18.9% · 3 repos'],
+  journey: ['01 · Practising DSA in C++', 'C++20 · STL · Algorithms'],
+  leetcode: ['29 solved', 'Easy 12 · Medium 15 · Hard 2'],
+  themes: ['blackmoney', 'demon'],
+  contact: ['pradhankaran058@gmail.com', 'github.com/Pradhan-07'],
+};
+
+/**
  * The file tree — the editor's primary navigation control.
  * - Click / Enter / Space opens a file (native button behaviour).
  * - Wheel over the tree steps one file at a time via the shared
@@ -112,6 +147,28 @@ export const EditorFileNav: React.FC<EditorFileNavProps> = ({ activeFile, onNavi
     }
   };
 
+  // Phase 7: the card stack is taller than the old one-line rows, so at
+  // the shortest stage heights the list's own scroll region can leave
+  // the active card below the fold. Keep it reachable: after every file
+  // change, nudge ONLY the list's scrollTop (never an ancestor) by the
+  // smallest amount that brings the active card fully into view.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const list = root.querySelector<HTMLElement>('.editor-file-list');
+    const btn = root.querySelector<HTMLElement>(`[data-file-button="${activeFile}"]`);
+    if (!list || !btn) return;
+    const listRect = list.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    if (listRect.height === 0 || btnRect.height === 0) return; // sheet closed / hidden
+    const deltaTop = btnRect.top - listRect.top;
+    if (deltaTop < 0) {
+      list.scrollTop += deltaTop - 4;
+    } else if (deltaTop + btnRect.height > listRect.height) {
+      list.scrollTop += deltaTop + btnRect.height - listRect.height + 4;
+    }
+  }, [activeFile]);
+
   return (
     <div
       ref={rootRef}
@@ -200,7 +257,12 @@ export const EditorFileNav: React.FC<EditorFileNavProps> = ({ activeFile, onNavi
           <span>EXPLORER · karan.dev / src</span>
         </div>
 
-        {/* File list */}
+        {/* File list — Phase 7: an arc stack of tilted cards (see
+            arcFor / NAV_EXCERPTS above). Same buttons, same order,
+            same click/wheel/keyboard behaviour; only the rendering
+            changed. The horizontal padding absorbs the rotated
+            corners; overflow-x is clipped so a tilt can never summon
+            a horizontal scrollbar. */}
         <div
           role="navigation"
           aria-label="Portfolio files"
@@ -209,11 +271,15 @@ export const EditorFileNav: React.FC<EditorFileNavProps> = ({ activeFile, onNavi
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
+            overflowX: 'hidden',
             minHeight: 0,
+            padding: '10px 12px 12px',
           }}
         >
-          {EDITOR_FILES.map((f) => {
+          {EDITOR_FILES.map((f, i) => {
             const isActive = activeFile === f.id;
+            const arc = arcFor(i, EDITOR_FILES.length);
+            const excerpt = NAV_EXCERPTS[f.id];
             return (
               <button
                 key={f.id}
@@ -222,36 +288,92 @@ export const EditorFileNav: React.FC<EditorFileNavProps> = ({ activeFile, onNavi
                 onClick={() => handleSelect(f.id)}
                 aria-current={isActive ? 'true' : undefined}
                 className="editor-file-button"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  // Phase 5: quieter active row — a faint wash instead of
-                  // the filled var(--line) block, and no per-row hairlines.
-                  background: isActive ? 'color-mix(in srgb, var(--fg) 7%, transparent)' : 'transparent',
-                  color: isActive ? 'var(--fg)' : 'var(--dim)',
-                  border: 'none',
-                  borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-                  padding: 'var(--sp-1) var(--sp-2)',
-                  fontSize: '11px',
-                  fontFamily: 'inherit',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'color 160ms ease, background 160ms ease',
-                }}
+                style={
+                  {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'stretch',
+                    gap: '3px',
+                    width: '100%',
+                    position: 'relative',
+                    zIndex: isActive ? 20 : EDITOR_FILES.length - i,
+                    // Cards overlap slightly, like a fanned stack.
+                    marginTop: i === 0 ? 0 : '-6px',
+                    // The tilt lives in CSS custom properties so the
+                    // hover and reduced-motion rules in index.css can
+                    // reach it; the active card eases straight.
+                    '--arc-rot': isActive ? '0deg' : arc.rot,
+                    '--arc-x': arc.x,
+                    background: isActive
+                      ? 'color-mix(in srgb, var(--fg) 6%, var(--bg))'
+                      : 'color-mix(in srgb, var(--fg) 3%, var(--bg))',
+                    color: isActive ? 'var(--fg)' : 'var(--dim)',
+                    border: 'none',
+                    boxShadow: isActive
+                      ? '0 0 0 1px var(--accent)'
+                      : '0 0 0 1px color-mix(in srgb, var(--fg) 13%, transparent)',
+                    borderRadius: 'var(--radius)',
+                    padding: '7px 10px',
+                    fontSize: '11px',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition:
+                      'color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 220ms ease',
+                  } as React.CSSProperties
+                }
               >
-                <span
-                  style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    background: f.dot,
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.file}</span>
-                <span style={{ fontSize: '8.5px', color: 'var(--dim)', letterSpacing: '0.06em' }}>{f.kind}</span>
+                {/* Active marker — sits in the list's padding gutter at
+                    the card's left edge (the active card is unrotated,
+                    so the marker is always straight). */}
+                {isActive && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute',
+                      left: '-10px',
+                      top: '9px',
+                      fontSize: '8px',
+                      lineHeight: 1,
+                      color: 'var(--accent)',
+                    }}
+                  >
+                    ▶
+                  </span>
+                )}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      background: f.dot,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.file}</span>
+                  <span style={{ fontSize: '8.5px', color: 'var(--dim)', letterSpacing: '0.06em' }}>{f.kind}</span>
+                </span>
+                {/* Excerpt — presentational label text (aria-hidden so
+                    the button's accessible name stays the file name). */}
+                <span aria-hidden="true" className="editor-file-excerpt" style={{ display: 'block' }}>
+                  {excerpt.map((line) => (
+                    <span
+                      key={line}
+                      style={{
+                        display: 'block',
+                        fontSize: '8.5px',
+                        lineHeight: 1.5,
+                        color: isActive ? 'color-mix(in srgb, var(--fg) 62%, transparent)' : 'var(--dim)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {line}
+                    </span>
+                  ))}
+                </span>
               </button>
             );
           })}

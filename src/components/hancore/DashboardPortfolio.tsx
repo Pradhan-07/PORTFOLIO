@@ -15,6 +15,7 @@ import { Footer } from '../Footer';
 import { EditorStatusBar } from '../EditorStatusBar';
 import { EditorFileNav } from './EditorFileNav';
 import { FileBuffer } from './FileBuffer';
+import { WatchingGlyph } from './WatchingGlyph';
 import { CockpitGraph } from './CockpitGraph';
 import { DeskStrip } from './DeskStrip';
 import { BitCreature, type BitState } from './BitCreature';
@@ -458,7 +459,12 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           {/* about.tsx — cockpit + hero + about + focus. Inactive files stay
               mounted but hidden, so interactive state (skills pane, project
               filter, streak tracker) survives file switches. */}
-          <div hidden={activeFile !== 'about'} className="editor-file-pane">
+          <div hidden={activeFile !== 'about'} className="editor-file-pane" style={{ position: 'relative' }}>
+          {/* Phase 7: the watching glyph — an original parametric ASCII
+              eye for the About buffer's right margin. It self-gates on
+              viewport width and measured empty margin, and renders
+              nothing at all when either check fails. */}
+          <WatchingGlyph />
 
       {/* ========================================================================= */}
       {/* ABOUT OPENER — the cockpit, absorbed (G5). The animated graph is    */}
