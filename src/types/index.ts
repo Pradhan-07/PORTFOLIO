@@ -23,12 +23,12 @@ export interface Theme {
 export interface Project {
   id: string;
   name: string;
-  category: 'c++' | 'ai' | 'web';
+  category: 'c++' | 'ai' | 'web' | 'iot';
   language: string;
   description: string;
   details: string;
   tech: string[];
-  githubUrl: string;
+  githubUrl?: string;
   demoUrl?: string;
   snippet?: string;
   features?: string[];
@@ -38,6 +38,14 @@ export interface Project {
     updated?: string;
     status: string;
   };
+}
+
+export interface Certification {
+  id: string;
+  name: string;
+  credential: string;
+  issuer: string;
+  issued: string;
 }
 
 export interface FocusArea {
