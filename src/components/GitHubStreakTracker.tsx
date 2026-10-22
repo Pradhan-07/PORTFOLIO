@@ -35,9 +35,8 @@ export const GitHubStreakTracker: React.FC = () => {
       setLastSynced(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       setCacheBuster(Date.now());
     } catch (err) {
-      console.warn('Could not fetch GitHub contributions JSON, falling back to streak card mode:', err);
-      setError('Live API sync delayed; showing real-time streak card.');
-      setViewMode('card');
+      console.warn('Could not fetch GitHub contributions JSON:', err);
+      setError('GitHub activity unavailable right now — live contribution data could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -53,7 +52,7 @@ export const GitHubStreakTracker: React.FC = () => {
   // Compute streaks
   const { currentStreak, longestStreak, totalCount, recentCommits } = useMemo(() => {
     if (!data || !data.contributions || data.contributions.length === 0) {
-      return { currentStreak: 0, longestStreak: 21, totalCount: 130, recentCommits: 15 };
+      return { currentStreak: 0, longestStreak: 0, totalCount: 0, recentCommits: 0 };
     }
 
     const days = [...data.contributions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -87,8 +86,8 @@ export const GitHubStreakTracker: React.FC = () => {
 
     return {
       currentStreak: current,
-      longestStreak: Math.max(longest, 21),
-      totalCount: data.total?.lastYear ?? 130,
+      longestStreak: longest,
+      totalCount: data.total?.lastYear ?? days.reduce((sum, d) => sum + d.count, 0),
       recentCommits: last14,
     };
   }, [data]);
@@ -204,7 +203,7 @@ export const GitHubStreakTracker: React.FC = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
             <span style={{ fontSize: '20px', fontWeight: 700, color: '#66cc6a' }}>
-              {currentStreak}
+              {data ? currentStreak : '—'}
             </span>
             <span style={{ fontSize: '10.5px', color: 'var(--chrome)' }}>days 🔥</span>
           </div>
@@ -224,7 +223,7 @@ export const GitHubStreakTracker: React.FC = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
             <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fg)' }}>
-              {longestStreak}
+              {data ? longestStreak : '—'}
             </span>
             <span style={{ fontSize: '10.5px', color: 'var(--chrome)' }}>days ⚡</span>
           </div>
@@ -244,7 +243,7 @@ export const GitHubStreakTracker: React.FC = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
             <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fg)' }}>
-              {totalCount}
+              {data ? totalCount : '—'}
             </span>
             <span style={{ fontSize: '10.5px', color: 'var(--dim)' }}>commits</span>
           </div>
@@ -264,7 +263,7 @@ export const GitHubStreakTracker: React.FC = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
             <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--accent)' }}>
-              {recentCommits}
+              {data ? recentCommits : '—'}
             </span>
             <span style={{ fontSize: '10.5px', color: 'var(--dim)' }}>commits</span>
           </div>
@@ -288,7 +287,8 @@ export const GitHubStreakTracker: React.FC = () => {
         </div>
       )}
 
-      {/* View Switcher: Heatmap vs Streak Card */}
+      {/* View Switcher: Heatmap vs Streak Card (only once real data has loaded) */}
+      {data && (
       <div
         style={{
           display: 'flex',
@@ -339,9 +339,46 @@ export const GitHubStreakTracker: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Main View Area */}
-      {viewMode === 'heatmap' ? (
+      {!data && !loading ? (
+        /* Honest neutral state: the live fetch failed, so show no numbers at all */
+        <div
+          style={{
+            background: 'color-mix(in srgb, var(--bg) 85%, transparent)',
+            borderRadius: '2px',
+            border: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
+            padding: '28px 16px',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ color: 'var(--fg)', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>
+            GitHub activity unavailable right now
+          </div>
+          <p style={{ color: 'var(--dim)', fontSize: '11px', lineHeight: 1.6, margin: '0 0 14px 0' }}>
+            Live contribution data could not be loaded, so no activity numbers are shown.
+          </p>
+          <button
+            type="button"
+            onClick={fetchContributions}
+            style={{
+              background: 'var(--fg)',
+              color: 'var(--bg)',
+              border: 'none',
+              borderRadius: '2px',
+              padding: '6px 14px',
+              fontSize: '10.5px',
+              fontWeight: 600,
+              letterSpacing: '0.06em',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            RETRY
+          </button>
+        </div>
+      ) : viewMode === 'heatmap' ? (
         <div
           style={{
             background: 'color-mix(in srgb, var(--bg) 85%, transparent)',

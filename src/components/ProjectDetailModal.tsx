@@ -298,7 +298,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
           }}
         >
           <span style={{ fontSize: '10.5px', color: 'var(--dim)' }}>
-            github.com/Pradhan-07/{project.name}
+            {project.githubUrl ? `github.com/Pradhan-07/${project.name}` : 'Team project · no public repository yet'}
           </span>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -319,28 +319,30 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({ project,
               Close
             </button>
 
-            <a
-              href={project.githubUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '7px 16px',
-                background: 'var(--fg)',
-                color: 'var(--bg)',
-                textDecoration: 'none',
-                borderRadius: '2px',
-                fontSize: '11px',
-                fontWeight: 600,
-                letterSpacing: '0.06em',
-                transition: 'filter 180ms ease',
-              }}
-            >
-              <span>Open on GitHub</span>
-              <span>↗</span>
-            </a>
+            {project.githubUrl && (
+              <a
+                href={project.githubUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '7px 16px',
+                  background: 'var(--fg)',
+                  color: 'var(--bg)',
+                  textDecoration: 'none',
+                  borderRadius: '2px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  transition: 'filter 180ms ease',
+                }}
+              >
+                <span>Open on GitHub</span>
+                <span>↗</span>
+              </a>
+            )}
           </div>
         </div>
       </div>

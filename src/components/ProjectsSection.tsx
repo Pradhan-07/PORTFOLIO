@@ -10,7 +10,7 @@ interface ProjectsSectionProps {
 }
 
 export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectModal }) => {
-  const [filter, setFilter] = useState<'all' | 'c++' | 'ai' | 'web'>('all');
+  const [filter, setFilter] = useState<'all' | 'c++' | 'ai' | 'web' | 'iot'>('all');
   const [activeProject, setActiveProject] = useState<Project>(PROJECTS[0]);
   const [localModalProject, setLocalModalProject] = useState<Project | null>(null);
 
@@ -22,6 +22,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectM
   const cCount = PROJECTS.filter((p) => p.category === 'c++').length;
   const aiCount = PROJECTS.filter((p) => p.category === 'ai').length;
   const webCount = PROJECTS.filter((p) => p.category === 'web').length;
+  const iotCount = PROJECTS.filter((p) => p.category === 'iot').length;
 
   const handleOpenDetail = (p: Project) => {
     if (onOpenProjectModal) {
@@ -113,6 +114,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectM
             { id: 'c++', label: `c++ & dsa (${cCount})` },
             { id: 'ai', label: `ai & vision (${aiCount})` },
             { id: 'web', label: `web development (${webCount})` },
+            { id: 'iot', label: `iot & embedded (${iotCount})` },
           ].map((item) => (
             <button
               key={item.id}
@@ -357,28 +359,47 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectM
 
               {/* Actions: View on GitHub + Open Detail Modal */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
-                <a
-                  href={activeProject.githubUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 14px',
-                    background: 'var(--fg)',
-                    color: 'var(--bg)',
-                    textDecoration: 'none',
-                    borderRadius: '2px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    letterSpacing: '0.06em',
-                    transition: 'filter 180ms ease',
-                  }}
-                >
-                  <span>View on GitHub</span>
-                  <span>↗</span>
-                </a>
+                {activeProject.githubUrl ? (
+                  <a
+                    href={activeProject.githubUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      background: 'var(--fg)',
+                      color: 'var(--bg)',
+                      textDecoration: 'none',
+                      borderRadius: '2px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      letterSpacing: '0.06em',
+                      transition: 'filter 180ms ease',
+                    }}
+                  >
+                    <span>View on GitHub</span>
+                    <span>↗</span>
+                  </a>
+                ) : (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      background: 'color-mix(in srgb, var(--bg) 60%, transparent)',
+                      color: 'var(--dim)',
+                      border: '1px dashed color-mix(in srgb, var(--fg) 20%, transparent)',
+                      borderRadius: '2px',
+                      fontSize: '11px',
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    Team project · no public repo yet
+                  </span>
+                )}
 
                 <button
                   type="button"
