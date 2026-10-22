@@ -1,0 +1,50 @@
+{
+  "fetchedAt": "2026-10-22T07:03:11.782Z",
+  "source": "GitHub REST API /repos/{owner}/{repo}/languages, summed over all non-fork repos",
+  "totalBytes": 2232318,
+  "reposAudited": 21,
+  "languages": [
+    {
+      "name": "JavaScript",
+      "bytes": 1397217,
+      "share": 0.6259,
+      "repos": 8
+    },
+    {
+      "name": "TypeScript",
+      "bytes": 421100,
+      "share": 0.1886,
+      "repos": 3
+    },
+    {
+      "name": "CSS",
+      "bytes": 161790,
+      "share": 0.0725,
+      "repos": 8
+    },
+    {
+      "name": "Python",
+      "bytes": 138821,
+      "share": 0.0622,
+      "repos": 5
+    },
+    {
+      "name": "HTML",
+      "bytes": 56026,
+      "share": 0.0251,
+      "repos": 11
+    },
+    {
+      "name": "C++",
+      "bytes": 41449,
+      "share": 0.0186,
+      "repos": 2
+    },
+    {
+      "name": "PLpgSQL",
+      "bytes": 15915,
+      "share": 0.0071,
+      "repos": 1
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "fetchedAt": "2026-10-22T07:03:11.782Z",
+  "source": "Derived at generation time from the contributions snapshot (monthly totals) and GitHub repo pushedAt timestamps (top repos)",
+  "months": [
+    {
+      "month": "2025-10",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2025-11",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2025-12",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2026-01",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2026-02",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2026-03",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2026-04",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2026-05",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2026-06",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2026-07",
+      "contributions": 0,
+      "topRepos": []
+    },
+    {
+      "month": "2026-08",
+      "contributions": 27,
+      "topRepos": [
+        {
+          "name": "karan-pradhan",
+          "pushedAt": "2026-08-22T22:52:49Z",
+          "url": "https://github.com/Pradhan-07/karan-pradhan"
+        },
+        {
+          "name": "PRADHAN-MUSIC",
+          "pushedAt": "2026-08-12T05:22:23Z",
+          "url": "https://github.com/Pradhan-07/PRADHAN-MUSIC"
+        },
+        {
+          "name": "Pradhan-website",
+          "pushedAt": "2026-08-12T01:13:22Z",
+          "url": "https://github.com/Pradhan-07/Pradhan-website"
+        }
+      ]
+    },
+    {
+      "month": "2026-09",
+      "contributions": 84,
+      "topRepos": [
+        {
+          "name": "Clientele",
+          "pushedAt": "2026-09-28T21:33:29Z",
+          "url": "https://github.com/Pradhan-07/Clientele"
+        },
+        {
+          "name": "Resolutions_Tracker",
+          "pushedAt": "2026-09-22T18:12:02Z",
+          "url": "https://github.com/Pradhan-07/Resolutions_Tracker"
+        },
+        {
+          "name": "justchill",
+          "pushedAt": "2026-09-21T17:51:21Z",
+          "url": "https://github.com/Pradhan-07/justchill"
+        }
+      ]
+    },
+    {
+      "month": "2026-10",
+      "contributions": 28,
+      "topRepos": [
+        {
+          "name": "PORTFOLIO",
+          "pushedAt": "2026-10-22T06:58:41Z",
+          "url": "https://github.com/Pradhan-07/PORTFOLIO"
+        },
+        {
+          "name": "DSA_CPP",
+          "pushedAt": "2026-10-22T06:45:48Z",
+          "url": "https://github.com/Pradhan-07/DSA_CPP"
+        },
+        {
+          "name": "Pradhan-07",
+          "pushedAt": "2026-10-22T06:24:08Z",
+          "url": "https://github.com/Pradhan-07/Pradhan-07"
+        }
+      ]
+    }
+  ]
+}

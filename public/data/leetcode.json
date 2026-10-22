@@ -1,0 +1,48 @@
+{
+  "fetchedAt": "2026-10-22T07:03:11.782Z",
+  "source": "LeetCode GraphQL (leetcode.com/graphql), public profile stats",
+  "username": "pradhan_07",
+  "profileUrl": "https://leetcode.com/u/pradhan_07/",
+  "ranking": 3820854,
+  "reputation": 0,
+  "solved": {
+    "easy": 12,
+    "medium": 15,
+    "hard": 2,
+    "all": 29
+  },
+  "acceptedSubmissions": {
+    "easy": 34,
+    "medium": 26,
+    "hard": 2,
+    "all": 62
+  },
+  "attemptedProblems": {
+    "easy": 13,
+    "medium": 17,
+    "hard": 2,
+    "all": 32
+  },
+  "totalSubmissions": {
+    "easy": 56,
+    "medium": 35,
+    "hard": 2,
+    "all": 93
+  },
+  "acceptanceRate": 0.667,
+  "calendar": {
+    "streak": 5,
+    "totalActiveDays": 23,
+    "activeYears": [
+      2026
+    ]
+  },
+  "contest": null,
+  "badges": [],
+  "platformTotals": {
+    "all": 4087,
+    "easy": 972,
+    "medium": 2131,
+    "hard": 984
+  }
+}
