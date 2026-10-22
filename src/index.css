@@ -204,6 +204,12 @@ a {
   .editor-file-button:not([aria-current="true"]):hover {
     color: var(--fg);
   }
+
+  /* Phase 7: arc-stack cards ease toward straight under the pointer
+     (the active card already sits at 0deg, so this is a no-op there). */
+  .editor-file-button:hover {
+    transform: translateX(var(--arc-x, 0px)) rotate(calc(var(--arc-rot, 0deg) * 0.3));
+  }
 }
 
 /* Touch targets: interactive chrome never drops below 44px tall where
@@ -290,6 +296,14 @@ a {
   text-align: right;
   padding-right: 10px;
   opacity: 0.6;
+}
+
+/* Phase 7: the file tree is an arc stack of tilted cards. The tilt is
+   carried in custom properties set per card (EditorFileNav.arcFor) so
+   this rule, the hover rule above, and the reduced-motion block below
+   are the only places transforms are decided. */
+.editor-file-button {
+  transform: translateX(var(--arc-x, 0px)) rotate(var(--arc-rot, 0deg));
 }
 
 /* Buffer body: content sits right of the gutter, on a faint horizontal
@@ -632,5 +646,11 @@ a {
   .cursor-blink {
     animation: none !important;
     opacity: 1 !important;
+  }
+
+  /* Phase 7: under reduced motion the arc stack renders flat — the
+     cards keep their stack order and overlap, only the tilt goes. */
+  .editor-file-button {
+    transform: none !important;
   }
 }
