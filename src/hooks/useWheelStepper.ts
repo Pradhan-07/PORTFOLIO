@@ -24,7 +24,7 @@ import { useCallback, useEffect, useRef } from 'react';
 export const WHEEL_LINE_PX = 16; // deltaMode 1 unit → px
 export const WHEEL_PAGE_PX = 400; // deltaMode 2 unit → px (fixed step quantum)
 export const WHEEL_THRESHOLD_PX = 48; // accumulated |delta| per step
-export const WHEEL_COOLDOWN_MS = 320; // after a step, deltas are discarded
+export const WHEEL_COOLDOWN_MS = 500; // after a step, deltas are discarded (Phase 9 §2.5: raised 320 → 500)
 export const WHEEL_GESTURE_GAP_MS = 140; // silence longer than this = new gesture
 
 /** Normalise a wheel event's dominant-axis delta to pixels. */
