@@ -289,11 +289,22 @@ export function GhostPromptLine({
       React.createElement('span', { style: { color: 'var(--num)' } }, '› '),
       React.createElement('span', { style: { color: 'var(--fg)' } }, isTyping ? partial : command),
       isTyping
-        ? React.createElement(
-            'span',
-            { className: 'cursor-blink', style: { color: 'var(--accent)' } },
-            '█'
-          )
+        ? React.createElement('span', {
+            className: 'cursor-blink',
+            // CSS block, not a '█' glyph: IBM Plex Mono ships no
+            // U+2588, so the glyph caret painted only via implicit
+            // local-font fallback and vanished where that fallback
+            // lacks block elements. Same block idiom as the landing
+            // cursor (CodeTickerPanel BLOCK_CURSOR_STYLE).
+            style: {
+              display: 'inline-block',
+              width: '7px',
+              height: '12px',
+              marginLeft: '2px',
+              background: 'var(--accent)',
+              verticalAlign: '-2px',
+            },
+          })
         : null
     )
   );
