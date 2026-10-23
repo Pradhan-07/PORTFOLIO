@@ -32,32 +32,71 @@ interface SnapshotTotals {
 }
 
 /**
- * Star share bar (DESIGN-SPEC §3.3): ≈10 cells from the eighths
- * charset `░▏▎▍▌▋▊▉█` — full cells plus one eighths partial cell,
- * padded with `░` to exactly 10. Returns the bar and the rounded
- * percentage of all snapshot stars.
+ * Star share bar (DESIGN-SPEC §3.3): 10 cells at eighths resolution —
+ * the share scaled to 80 eighths, rendered by ShareBarCells as real
+ * DOM cells (the SkillsSection idiom), NOT eighths glyph text:
+ * IBM Plex Mono ships none of U+2588–U+258F/U+2591 in
+ * any Google Fonts subset, so a glyph bar paints only via implicit
+ * per-glyph fallback to an unnamed local font and vanishes where that
+ * fallback lacks block elements. Returns the eighths count (0–80),
+ * the snapshot total, and the rounded percentage of all stars.
  */
-const EIGHTH_PARTIALS = ' ▏▎▍▌▋▊▉█';
-const shareBar = (stars: number, totalStars: number): { bar: string; pct: number } => {
+const SHARE_CELLS = 10;
+const shareBar = (
+  stars: number,
+  totalStars: number
+): { eighths: number; total: number; pct: number } => {
   const frac = totalStars > 0 ? stars / totalStars : 0;
-  const scaled = frac * 10;
-  const full = Math.floor(scaled);
-  const rem = Math.round((scaled - full) * 8);
-  let cells = '█'.repeat(Math.min(full, 10));
-  let used = full;
-  if (rem === 8) {
-    cells += '█';
-    used += 1;
-  } else if (rem > 0) {
-    cells += EIGHTH_PARTIALS[rem];
-    used += 1;
-  }
-  while (used < 10) {
-    cells += '░';
-    used += 1;
-  }
-  return { bar: cells.slice(0, 10), pct: Math.round(frac * 100) };
+  return {
+    eighths: Math.round(frac * SHARE_CELLS * 8),
+    total: totalStars,
+    pct: Math.round(frac * 100),
+  };
 };
+
+/**
+ * The share bar as 10 solid cells. Each cell is an inline-block span
+ * (same box as the old glyphs: 1ch wide incl. the 1px gap, 11px tall)
+ * over the empty tint; the filled portion is an overlay at eighths
+ * precision (full cells 8/8, at most one partial cell, rest 0/8).
+ * role="img" + label keeps the bar in the accessibility tree.
+ */
+const ShareBarCells: React.FC<{ eighths: number; label: string }> = ({ eighths, label }) => (
+  <span
+    role="img"
+    aria-label={label}
+    style={{ display: 'inline-flex', gap: '1px', lineHeight: 0 }}
+  >
+    {Array.from({ length: SHARE_CELLS }, (_, cell) => {
+      const fill = Math.min(8, Math.max(0, eighths - cell * 8)) / 8;
+      return (
+        <span
+          key={cell}
+          style={{
+            position: 'relative',
+            display: 'inline-block',
+            width: 'calc(1ch - 1px)',
+            height: '11px',
+            background: 'color-mix(in srgb, var(--dim) 30%, transparent)',
+          }}
+        >
+          {fill > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: `${fill * 100}%`,
+                background: 'var(--num)',
+              }}
+            />
+          )}
+        </span>
+      );
+    })}
+  </span>
+);
 
 /**
  * Split a project snippet into shots of ≤12 lines, breaking on
@@ -448,7 +487,10 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ onOpenProjectM
                 'stars',
                 <>
                   <span style={{ color: 'var(--num)' }}>{repo.stars}</span>{' '}
-                  <span style={{ color: 'var(--num)' }}>{share.bar}</span>{' '}
+                  <ShareBarCells
+                    eighths={share.eighths}
+                    label={`${repo.stars} of ${share.total} stars — ${share.pct}% of all stars`}
+                  />{' '}
                   <span style={{ color: 'var(--dim)' }}>{share.pct}% of all stars</span>
                 </>
               )}
