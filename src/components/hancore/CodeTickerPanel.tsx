@@ -116,7 +116,7 @@ const LANG_LABELS: Record<string, string> = {
 const MAX_LINES = 30;
 /** Unresolved chars rendered as scramble glyphs ahead of the frontier. */
 const SCRAMBLE_WINDOW = 24;
-const SCRAMBLE_GLYPHS = '▓▒░<>/\\|#$%&@+=~';
+const SCRAMBLE_GLYPHS = '<>/\\|#$%&@+=~';
 /** Target burst durations (s) — speed derives from the file's size. */
 const BURST_SINGLE_S = 14;
 const BURST_SPLIT_S = 9;
