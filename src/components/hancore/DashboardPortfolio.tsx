@@ -15,8 +15,8 @@ import { Footer } from '../Footer';
 import { EditorStatusBar } from '../EditorStatusBar';
 import { EditorFileNav } from './EditorFileNav';
 import { FileBuffer } from './FileBuffer';
-import { WatchingGlyph } from './WatchingGlyph';
-import { CockpitGraph } from './CockpitGraph';
+import { Eye, EyeTether } from '../../fx/Eye';
+import { AboutOpener } from '../AboutOpener';
 import { DeskStrip } from './DeskStrip';
 import { BitCreature, type BitState } from './BitCreature';
 import { CertificationsSection } from '../CertificationsSection';
@@ -27,51 +27,65 @@ import { InteractiveTerminalModal } from '../InteractiveTerminalModal';
 import { CommandPaletteModal } from '../CommandPaletteModal';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { normalisedWheelDelta } from '../../hooks/useWheelStepper';
+import { useCreatureBus } from '../../fx/creatureBus';
 
 interface DashboardPortfolioProps {
   theme: Theme;
   onBackToIntro: () => void;
   onToggleTheme: () => void;
   onSelectTheme: (index: number) => void;
+  /** Phase 9 (§2.9): deep-linked file from the URL hash, when App found one. */
+  initialFile?: EditorFileId;
 }
+
+const FILE_IDS: readonly string[] = EDITOR_FILES.map((f) => f.id);
 
 export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
   theme,
   onBackToIntro,
   onToggleTheme,
   onSelectTheme,
+  initialFile,
 }) => {
-  const [activeSection, setActiveSection] = useState('hero');
-  const [activeFile, setActiveFile] = useState<EditorFileId>('about');
+  const bus = useCreatureBus();
+  const [activeSection, setActiveSection] = useState(
+    () => EDITOR_FILES.find((f) => f.id === initialFile)?.section ?? 'hero'
+  );
+  const [activeFile, setActiveFile] = useState<EditorFileId>(initialFile ?? 'about');
   const [selectedProjectModal, setSelectedProjectModal] = useState<Project | null>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   // G7: Bit, the stray node — the shell owns his awake flag (the bar's
   // den button toggles it) and mirrors his state for the NODE: readout.
   const [bitAwake, setBitAwake] = useState(false);
-  const [bitState, setBitState] = useState<BitState>('sleeping');
-  // G6: the desk height is owned by the --desk-h CSS token (height bands
-  // in index.css); resolve it to px for DeskStrip's height prop so the
-  // strip, the stage grid row and Bit's ground line all agree.
-  const [deskHeightPx, setDeskHeightPx] = useState(0);
-  useEffect(() => {
-    const read = () => {
-      const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--desk-h'));
-      setDeskHeightPx(Number.isFinite(v) && v > 0 ? v : 0);
-    };
-    read();
-    window.addEventListener('resize', read);
-    return () => window.removeEventListener('resize', read);
-  }, []);
+  const [bitState, setBitState] = useState<BitState>('asleep');
+  // Phase 9 (§2.8): the desk is a page section below the fold now —
+  // DeskStrip self-budgets its height from the viewport (deskHeight.ts);
+  // the old --desk-h stage-row plumbing is gone.
   const reducedMotion = usePrefersReducedMotion();
 
   const bufferRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
+
+  // Phase 9 (§2.8): page scrolling (stage ↔ desk below the fold). The
+  // document's CSS scroll-behavior is smooth; wheel/key page moves must
+  // be instant, so the behaviour is suspended for the duration of the
+  // programmatic scroll.
+  const scrollPageBy = useCallback((delta: number) => {
+    const html = document.documentElement;
+    const prev = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    window.scrollBy(0, delta);
+    html.style.scrollBehavior = prev;
+  }, []);
+  // §2.9: true while a popstate-driven file change is being applied, so
+  // openFile does not push a duplicate history entry for it.
+  const applyingPopRef = useRef(false);
   // Per-file buffer scroll memory (SCROLL-SPEC §4.6): each file is a
   // buffer — leaving and returning restores its scroll position. Explicit
   // anchor navigation overrides the remembered position.
   const scrollMemoryRef = useRef<Partial<Record<EditorFileId, number>>>({});
-  const activeFileRef = useRef<EditorFileId>('about');
+  const activeFileRef = useRef<EditorFileId>(initialFile ?? 'about');
   const pendingAnchorRef = useRef<string | null>(null);
   const navFocusPendingRef = useRef(false);
 
@@ -89,6 +103,32 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
     pendingAnchorRef.current = anchorSection && anchorSection !== spec.section ? anchorSection : null;
     setActiveFile(spec.id);
     setActiveSection(anchorSection ?? spec.section);
+    // §2.9: section changes push their hash (deep-linkable history).
+    if (!applyingPopRef.current && window.location.hash !== `#${spec.id}`) {
+      window.history.pushState(null, '', `#${spec.id}`);
+    }
+  }, []);
+
+  // §2.9: on mount, sync the hash to the file we opened with (replace —
+  // the landing stays the implicit entry before #about); afterwards,
+  // browser back/forward walks section history via popstate.
+  useEffect(() => {
+    const target = `#${activeFileRef.current}`;
+    if (window.location.hash !== target) {
+      window.history.replaceState(null, '', target);
+    }
+    const onPopState = () => {
+      const h = window.location.hash.replace(/^#/, '');
+      if (!FILE_IDS.includes(h)) return;
+      const id = h as EditorFileId;
+      if (id === activeFileRef.current) return;
+      applyingPopRef.current = true;
+      openFile(id);
+      applyingPopRef.current = false;
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Legacy section ids (hero, focus, skills, …) resolve to their file.
@@ -158,9 +198,9 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
   }, [activeFile, reducedMotion]);
 
   // Stage wheel routing (SCROLL-SPEC §4.3): wheel over non-scrollable
-  // stage chrome (header, winbar, gutter, status bar) scrolls the buffer
-  // instead of dying — the pointer's resting place never disables the
-  // primary input. Zones that own their wheel behaviour bail out first.
+  // stage chrome (header, status bar) scrolls the buffer instead of
+  // dying — the pointer's resting place never disables the primary
+  // input. Zones that own their wheel behaviour bail out first.
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -180,12 +220,47 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
       const buffer = bufferRef.current;
       if (!buffer) return;
       e.preventDefault();
+      // §2.8: while the page is scrolled toward the desk, chrome wheel
+      // moves the page, not the buffer.
+      if (window.scrollY > 0) {
+        scrollPageBy(normalisedWheelDelta(e));
+        return;
+      }
       buffer.scrollTop += normalisedWheelDelta(e);
     };
 
     stage.addEventListener('wheel', handleStageWheel, { passive: false });
     return () => stage.removeEventListener('wheel', handleStageWheel);
-  }, [isCommandPaletteOpen, isTerminalOpen, selectedProjectModal]);
+  }, [isCommandPaletteOpen, isTerminalOpen, selectedProjectModal, scrollPageBy]);
+
+  // §2.8 wheel chaining at the buffer's edges: buffer at its bottom +
+  // wheel down → the page scrolls to the desk; page scrolled + wheel
+  // up → the page scrolls back before the buffer resumes.
+  useEffect(() => {
+    const buffer = bufferRef.current;
+    if (!buffer) return;
+    const onWheel = (e: WheelEvent) => {
+      if (isCommandPaletteOpen || isTerminalOpen || selectedProjectModal) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[role="dialog"], input, textarea, select, [contenteditable="true"]')) return;
+      const maxPage = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxPage <= 0) return;
+      const delta = normalisedWheelDelta(e);
+      const pageY = window.scrollY;
+      if (delta > 0) {
+        const atBottom = buffer.scrollTop + buffer.clientHeight >= buffer.scrollHeight - 1;
+        if (atBottom && pageY < maxPage) {
+          e.preventDefault();
+          scrollPageBy(Math.min(delta, maxPage - pageY));
+        }
+      } else if (delta < 0 && pageY > 0) {
+        e.preventDefault();
+        scrollPageBy(Math.max(delta, -pageY));
+      }
+    };
+    buffer.addEventListener('wheel', onWheel, { passive: false });
+    return () => buffer.removeEventListener('wheel', onWheel);
+  }, [isCommandPaletteOpen, isTerminalOpen, selectedProjectModal, scrollPageBy]);
 
   // Global keyboard: Cmd/Ctrl+K palette, Ctrl+` terminal, and the
   // file-stepping keys (arrows / j / k) with modal + typing focus guards.
@@ -222,9 +297,24 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         if (target.closest('button, a, input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
       }
 
+      // Phase 9 (§2.8): PageDown / PageUp scroll the PAGE (stage ↔ desk).
+      if (e.key === 'PageDown' || e.key === 'PageUp') {
+        const tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return;
+        e.preventDefault();
+        scrollPageBy((e.key === 'PageDown' ? 1 : -1) * window.innerHeight * 0.9);
+        return;
+      }
+
       let direction: 1 | -1 | 0 = 0;
-      if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'j' || e.key === 'J') direction = 1;
-      else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'k' || e.key === 'K') direction = -1;
+      if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') direction = 1;
+      else if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') direction = -1;
+      // §3.3: in projects.tsx, ←/→ belong to the shot viewer, not file
+      // stepping (the viewer's own capture listener consumes them).
+      else if (activeFileRef.current !== 'projects') {
+        if (e.key === 'ArrowRight') direction = 1;
+        else if (e.key === 'ArrowLeft') direction = -1;
+      }
       if (!direction) return;
 
       e.preventDefault();
@@ -233,7 +323,7 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [stepFile, isCommandPaletteOpen, isTerminalOpen, selectedProjectModal]);
+  }, [stepFile, isCommandPaletteOpen, isTerminalOpen, selectedProjectModal, scrollPageBy]);
 
   // All existing navigation call sites (header, cockpit, terminal, palette,
   // status-bar commands) keep calling scrollToSection — it now resolves the
@@ -251,9 +341,12 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
   // the portfolio does not resurrect him.
   const handleBackToIntro = useCallback(() => {
     setBitAwake(false);
-    setBitState('sleeping');
+    setBitState('asleep');
+    bus.setBit('asleep');
+    // Leaving the editor clears the section hash (§2.9).
+    window.history.pushState(null, '', window.location.pathname + window.location.search);
     onBackToIntro();
-  }, [onBackToIntro]);
+  }, [onBackToIntro, bus]);
 
   const handleCommand = (cmd: string) => {
     if (cmd === 'intro') handleBackToIntro();
@@ -273,11 +366,13 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
   };
 
   return (
+    <div className="dashboard-scroll-root" style={{ position: 'relative' }}>
     <div
       ref={stageRef}
       className="dashboard-portfolio-wrapper editor-stage"
       style={{
-        position: 'relative',
+        position: 'sticky',
+        top: 0,
         zIndex: 10,
         height: '100svh',
         // Below 560px viewport height the stage compresses instead of
@@ -286,7 +381,7 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         overflow: 'hidden',
         background: 'color-mix(in srgb, var(--bg) 96%, transparent)',
         display: 'grid',
-        gridTemplateRows: 'auto minmax(0, 1fr) var(--bar-h) minmax(0, var(--desk-h))',
+        gridTemplateRows: 'auto minmax(0, 1fr) var(--bar-h)',
       }}
     >
       {/* Top Header — frame row of the stage */}
@@ -337,40 +432,10 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           </span>
         </button>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '6px' }} className="nav-links">
-          {['whoami', 'focus', 'stack', 'experiments', 'journey', 'contact'].map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() =>
-                scrollToSection(
-                  item === 'whoami'
-                    ? 'hero'
-                    : item === 'stack'
-                      ? 'skills'
-                      : item === 'experiments'
-                        ? 'projects'
-                        : item
-                )
-              }
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--dim)',
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: 'var(--radius)',
-                fontSize: '11px',
-                letterSpacing: '0.04em',
-                transition: 'color 180ms ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--fg)')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--dim)')}
-            >
-              {item}
-            </button>
-          ))}
-        </nav>
+        {/* Phase 8: the top-center nav row (whoami/focus/stack/
+            experiments/journey/contact) is REMOVED — the file rail is
+            the navigation, full stop. The header carries only the
+            brand (back to intro) and the right-side utilities. */}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {/* Quick Palette Trigger */}
@@ -453,94 +518,36 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           minWidth: 0,
         }}
       >
-        <EditorFileNav activeFile={activeFile} onNavigate={(f) => openFile(f)} onStepFile={stepFile} />
+        <EditorFileNav
+          activeFile={activeFile}
+          onNavigate={(f) => openFile(f)}
+          onStepFile={stepFile}
+          collapsed={!bitAwake}
+          onWake={() => setBitAwake(true)}
+        />
 
         <FileBuffer file={activeFileSpec} bufferRef={bufferRef}>
           {/* about.tsx — cockpit + hero + about + focus. Inactive files stay
               mounted but hidden, so interactive state (skills pane, project
               filter, streak tracker) survives file switches. */}
           <div hidden={activeFile !== 'about'} className="editor-file-pane" style={{ position: 'relative' }}>
-          {/* Phase 7: the watching glyph — an original parametric ASCII
-              eye for the About buffer's right margin. It self-gates on
-              viewport width and the empty margin measured beside the
-              whoami paragraph (the data-watching-anchor below), and
-              stays display:none when there genuinely is no room. */}
-          <WatchingGlyph />
+          {/* Phase 9 (§3.1): the WatchingGlyph margin mechanism is
+              retired — the eye now lives in the stage's eye column
+              (§2.4) in every section. WatchingGlyph.tsx stays in the
+              repo unmounted, like CockpitGraph. */}
 
       {/* ========================================================================= */}
-      {/* ABOUT OPENER — the cockpit, absorbed (G5). The animated graph is    */}
-      {/* now this buffer's header visual and the whoami panel its opening    */}
-      {/* lines. Status readouts live in the bottom bar; the project tiles   */}
-      {/* became the pinned rows at the top of projects.tsx; the wireframe   */}
-      {/* hands/keyboard motif lives on in the desk strip (G6).              */}
+      {/* ABOUT OPENER — Phase 9 (§3.1): the opener is now the ghost-typed  */}
+      {/* transcript in AboutOpener: the contribution-tree panel group,    */}
+      {/* the whoami block with its glitch overlay, the fetch block and     */}
+      {/* the links row. AsciiChartPanel is retired (unmounted, kept in     */}
+      {/* the repo like CockpitGraph); the whoami copy lives in AboutOpener. */}
       {/* ========================================================================= */}
-      <section className="about-opener file-section">
-        <div className="section-container">
-          <CockpitGraph onNavigate={scrollToSection} />
-
-          {/* whoami — the About buffer's opening lines. Phase 5 (visual
-              parity): no terminal CARD — the buffer opens as bare
-              transcript text on empty space: a prompt line, then its
-              output lines, token-coloured. Same content, same nav
-              commands below. */}
-          <div
-            className="whoami-block"
-            style={{
-              marginTop: 'var(--sp-3)',
-              fontFamily: '"IBM Plex Mono", monospace',
-              fontSize: '12.5px',
-              lineHeight: 1.6,
-            }}
-          >
-            <div style={{ color: 'var(--dim)', marginBottom: '6px' }}>
-              {PROFILE.terminalPrompt} <span style={{ color: 'var(--accent)' }}>whoami</span>
-            </div>
-            <div style={{ color: 'var(--fg)', fontWeight: 600, fontSize: '14px' }}>
-              {PROFILE.name}
-            </div>
-            <div style={{ color: 'var(--chrome)', fontSize: '11.5px', marginBottom: '10px' }}>
-              {PROFILE.subtitle}
-            </div>
-            <p
-              data-watching-anchor="whoami"
-              style={{
-                margin: '0 0 14px 0',
-                fontSize: '12.5px',
-                color: 'color-mix(in srgb, var(--fg) 82%, transparent)',
-                lineHeight: 1.75,
-                maxWidth: '76ch',
-              }}
-            >
-              Second-year B.Tech Computer Science Engineering student focused on strengthening programming fundamentals, algorithmic problem solving in C++, and exploring intelligent systems and modern web technologies.
-            </p>
-
-            {/* Command-style Navigation Links */}
-            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '11px' }}>
-              <button
-                type="button"
-                onClick={() => scrollToSection('projects')}
-                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', font: 'inherit' }}
-              >
-                &gt; projects ↵
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollToSection('journey')}
-                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', cursor: 'pointer', font: 'inherit' }}
-              >
-                &gt; learning ↵
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsTerminalOpen(true)}
-                style={{ background: 'none', border: 'none', padding: 0, color: '#66cc6a', cursor: 'pointer', font: 'inherit' }}
-              >
-                &gt; terminal ↵
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AboutOpener
+        active={activeFile === 'about'}
+        onNavigate={scrollToSection}
+        onOpenTerminal={() => setIsTerminalOpen(true)}
+      />
 
       {/* ========================================================================= */}
       {/* COMPLETE PORTFOLIO CONTENT SECTIONS (Part 4) */}
@@ -551,35 +558,46 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
           </div>
 
           <div hidden={activeFile !== 'certifications'} className="editor-file-pane">
-            <CertificationsSection />
+            <CertificationsSection active={activeFile === 'certifications'} />
           </div>
 
           <div hidden={activeFile !== 'projects'} className="editor-file-pane">
-            <ProjectsSection onOpenProjectModal={(p) => setSelectedProjectModal(p)} />
+            <ProjectsSection active={activeFile === 'projects'} onOpenProjectModal={(p) => setSelectedProjectModal(p)} />
           </div>
 
           <div hidden={activeFile !== 'stack'} className="editor-file-pane">
-            <SkillsSection />
+            <SkillsSection active={activeFile === 'stack'} />
           </div>
 
           <div hidden={activeFile !== 'journey'} className="editor-file-pane">
-            <LearningJourney />
+            <LearningJourney active={activeFile === 'journey'} />
           </div>
 
           <div hidden={activeFile !== 'leetcode'} className="editor-file-pane">
-            <LeetCodeSection />
+            <LeetCodeSection active={activeFile === 'leetcode'} />
           </div>
 
           <div hidden={activeFile !== 'themes'} className="editor-file-pane">
-            <ThemesSection activeTheme={theme} onSelectTheme={onSelectTheme} />
+            <ThemesSection active={activeFile === 'themes'} activeTheme={theme} onSelectTheme={onSelectTheme} />
           </div>
 
           <div hidden={activeFile !== 'contact'} className="editor-file-pane">
-            <ContactSection />
+            <ContactSection active={activeFile === 'contact'} />
             <Footer onBackToTop={handleBackToTop} onBackToIntro={handleBackToIntro} />
           </div>
         </FileBuffer>
+
+        {/* Phase 9 (§1.1/§2.4): the eye zone — third grid column, the
+            eye's fixed home at the panel's top-right, same spot in
+            every section. The zone collapses below 1150px. */}
+        <div className="eye-zone" data-eye-zone="true">
+          <Eye activeFile={activeFile} />
+        </div>
       </div>
+
+      {/* §2.4: the eye's dashed tether — a stage-level overlay drawing
+          from the eye to its current focus target. */}
+      <EyeTether />
 
 
       {/* Vim Bottom Status Bar */}
@@ -593,14 +611,14 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         onToggleBit={() => setBitAwake((prev) => !prev)}
       />
 
-      {/* G6: the desk — the stage's bottom row. Pure decoration. */}
-      <DeskStrip themeKey={theme.name} height={deskHeightPx} />
-
       {/* G7: Bit's overlay — full stage, click-through, below chrome. */}
       <BitCreature
         awake={bitAwake}
         onAwakeChange={setBitAwake}
-        onStateChange={setBitState}
+        onStateChange={(s) => {
+          setBitState(s);
+          bus.setBit(s);
+        }}
         suspendEsc={isTerminalOpen || isCommandPaletteOpen || !!selectedProjectModal}
         themeKey={theme.name}
         zIndex={5}
@@ -632,6 +650,12 @@ export const DashboardPortfolio: React.FC<DashboardPortfolioProps> = ({
         onOpenTerminal={() => setIsTerminalOpen(true)}
         onOpenProjectDetail={handleOpenProjectById}
       />
+      </div>
+
+      {/* Phase 9 (§2.8): the desk — a page section BELOW the sticky
+          stage, reached by page scroll. Pure decoration (aria-hidden);
+          height self-budgeted by deskHeight.ts (≤184px, hidden ≤640px). */}
+      <DeskStrip themeKey={theme.name} />
     </div>
   );
 };
