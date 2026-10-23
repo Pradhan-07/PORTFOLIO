@@ -8,10 +8,23 @@ interface RadialEclipseTransitionProps {
   themeAccent?: string;
 }
 
-const DURATION = 1850; // Total transition time in ms (~1.85s)
+const DURATION = 3600; // Total transition time in ms (~3.6s, §2.2)
 /** Hard ceiling: completion is guaranteed by this timer even if rAF stalls. */
-const FALLBACK_MS = DURATION + 450;
+const FALLBACK_MS = DURATION + 600;
 
+/**
+ * Staged, eye-centred enter transition (DESIGN-SPEC §2.2):
+ *   A (0–0.8s)   the landing dims (LandingScreen's isLeaving styles);
+ *                here, particles drift toward the eye point.
+ *   B (0.8–1.8s) a small dense dot-eye condenses at right-of-centre
+ *                (0.68w × 0.42h) with a dark pupil centre.
+ *   C (1.8–3.2s) warp — radial streaks + an expanding black circle
+ *                centred on the eye point, radius covering the screen;
+ *                the dot-eye stays visible at the centre while it grows.
+ *   D (3.2–3.6s) hold black, then hand over to the main view.
+ * A second Enter/click mid-transition is handled at App level (skip to
+ * completion); Escape cancels here.
+ */
 export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = ({
   onComplete,
   onCancel,
@@ -92,12 +105,15 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
 
-    const cx = width / 2;
-    const cy = height / 2;
+    // The eye point: right of centre (§2.2-B). The warp is centred here.
+    const cx = width * 0.68;
+    const cy = height * 0.42;
+    // Radius that covers the whole screen from the eye point.
+    const maxRadius = Math.hypot(Math.max(cx, width - cx), Math.max(cy, height - cy)) + 40;
 
     const startTime = performance.now();
 
-    // Procedural radial streaks (280 rays of varying length, angle, and thickness)
+    // Procedural radial streaks (rays of varying length, angle, thickness)
     const RAY_COUNT = 320;
     const rays = Array.from({ length: RAY_COUNT }, (_, i) => {
       const angle = (i / RAY_COUNT) * Math.PI * 2;
@@ -107,7 +123,7 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
       return { angle, lengthMult, alphaMult, widthMult };
     });
 
-    // Orbiting particles in core
+    // Orbiting particles that converge during phase A
     const PARTICLE_COUNT = 60;
     const particles = Array.from({ length: PARTICLE_COUNT }, () => ({
       angle: Math.random() * Math.PI * 2,
@@ -116,90 +132,67 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
       size: 1 + Math.random() * 2,
     }));
 
+    // Phase B/C dot-eye: dots on a grid inside r≈26px, dark pupil centre.
+    const EYE_R = 26;
+    const eyeDots: { x: number; y: number }[] = [];
+    for (let gy = -EYE_R; gy <= EYE_R; gy += 4) {
+      for (let gx = -EYE_R; gx <= EYE_R; gx += 4) {
+        if (gx * gx + gy * gy <= EYE_R * EYE_R) eyeDots.push({ x: gx, y: gy });
+      }
+    }
+    const drawEye = (alpha: number, scale: number) => {
+      ctx.fillStyle = `color-mix(in srgb, ${themeAccent} ${(alpha * 90).toFixed(1)}%, transparent)`;
+      eyeDots.forEach((d) => {
+        ctx.fillRect(cx + d.x * scale - 1, cy + d.y * scale - 1, 2, 2);
+      });
+      // Dark pupil void at the exact centre.
+      ctx.fillStyle = '#050505';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
     let animId = 0;
 
     const render = (now: number) => {
       if (settled) return;
       const elapsed = now - startTime;
-      const progress = Math.min(1.0, elapsed / DURATION);
 
       ctx.clearRect(0, 0, width, height);
 
-      // Phase calculation
-      // 0.0 -> 0.25: Core convergence
-      // 0.25 -> 0.60: Ring formation & particle swirl
-      // 0.60 -> 0.90: Eclipse burst expansion
-      // 0.90 -> 1.00: Fullscreen takeover & resolve
-
-      if (progress < 0.25) {
-        // Phase 1: Small particle cluster convergence
-        const p1 = progress / 0.25;
-        ctx.fillStyle = `color-mix(in srgb, ${themeAccent} ${p1 * 70}%, transparent)`;
+      if (elapsed < 800) {
+        // Phase A (0–0.8s): particles drift toward the eye point while
+        // the landing itself dims (LandingScreen isLeaving styles).
+        const pA = elapsed / 800;
+        ctx.fillStyle = `color-mix(in srgb, ${themeAccent} ${(pA * 55).toFixed(1)}%, transparent)`;
         particles.forEach((pt) => {
-          const currentDist = pt.dist * (1 - p1 * 0.5);
+          const currentDist = pt.dist * (1 - pA * 0.55);
           const x = cx + Math.cos(pt.angle) * currentDist;
           const y = cy + Math.sin(pt.angle) * currentDist;
           ctx.beginPath();
           ctx.arc(x, y, pt.size, 0, Math.PI * 2);
           ctx.fill();
         });
-
-        // Small center core
-        ctx.strokeStyle = `color-mix(in srgb, ${themeAccent} ${p1 * 80}%, transparent)`;
+      } else if (elapsed < 1800) {
+        // Phase B (0.8–1.8s): the dot-eye condenses at the eye point.
+        const pB = (elapsed - 800) / 1000;
+        drawEye(pB, 1.3 - 0.3 * pB);
+        ctx.strokeStyle = `color-mix(in srgb, ${themeAccent} ${(pB * 70).toFixed(1)}%, transparent)`;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(cx, cy, 14 * p1, 0, Math.PI * 2);
+        ctx.arc(cx, cy, EYE_R * (1.3 - 0.3 * pB) + 3, 0, Math.PI * 2);
         ctx.stroke();
+      } else if (elapsed < 3200) {
+        // Phase C (1.8–3.2s): warp — streaks + expanding black circle
+        // centred on the eye point; the eye stays visible at its centre.
+        const pC = (elapsed - 1800) / 1400;
+        const eased = pC * pC;
+        const radius = EYE_R + eased * (maxRadius - EYE_R);
 
-      } else if (progress < 0.60) {
-        // Phase 2: Ring formation & micro-rays
-        const p2 = (progress - 0.25) / 0.35;
-        const ringRadius = 24 + p2 * 70;
-
-        // Draw radial streaks emerging from ring perimeter
         rays.forEach((ray) => {
-          const rInner = ringRadius;
-          const rOuter = ringRadius + ray.lengthMult * 60 * p2;
-
-          ctx.strokeStyle = `color-mix(in srgb, ${themeAccent} ${(ray.alphaMult * p2 * 85).toFixed(1)}%, transparent)`;
-          ctx.lineWidth = ray.widthMult;
-          ctx.beginPath();
-          ctx.moveTo(cx + Math.cos(ray.angle) * rInner, cy + Math.sin(ray.angle) * rInner);
-          ctx.lineTo(cx + Math.cos(ray.angle) * rOuter, cy + Math.sin(ray.angle) * rOuter);
-          ctx.stroke();
-        });
-
-        // Luminous perimeter
-        ctx.strokeStyle = themeAccent;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Dark circular center
-        ctx.fillStyle = '#050505';
-        ctx.beginPath();
-        ctx.arc(cx, cy, ringRadius - 1, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Technical coordinates text
-        ctx.font = '9px "IBM Plex Mono", monospace';
-        ctx.fillStyle = `color-mix(in srgb, ${themeAccent} 50%, transparent)`;
-        ctx.textAlign = 'center';
-        ctx.fillText(`PORTAL // 0x${Math.round(p2 * 255).toString(16).toUpperCase()}`, cx, cy + 3);
-
-      } else {
-        // Phase 3 & 4: Full-screen radial expansion & eclipse takeover
-        const p3 = (progress - 0.60) / 0.40;
-        const maxDiagonal = Math.hypot(width, height) * 1.1;
-        const ringRadius = 94 + p3 * maxDiagonal;
-
-        // Massive radial burst
-        rays.forEach((ray) => {
-          const rInner = ringRadius;
-          const rOuter = ringRadius + ray.lengthMult * 180 * (1 - p3 * 0.4);
-
-          ctx.strokeStyle = `color-mix(in srgb, ${themeAccent} ${(ray.alphaMult * (1 - p3 * 0.6) * 90).toFixed(1)}%, transparent)`;
+          const rInner = radius;
+          const rOuter = radius + ray.lengthMult * 180 * (1 - pC * 0.4);
+          ctx.strokeStyle = `color-mix(in srgb, ${themeAccent} ${(ray.alphaMult * (1 - pC * 0.6) * 90).toFixed(1)}%, transparent)`;
           ctx.lineWidth = ray.widthMult * 1.5;
           ctx.beginPath();
           ctx.moveTo(cx + Math.cos(ray.angle) * rInner, cy + Math.sin(ray.angle) * rInner);
@@ -207,23 +200,27 @@ export const RadialEclipseTransition: React.FC<RadialEclipseTransitionProps> = (
           ctx.stroke();
         });
 
-        // Expanding dark circular center that consumes the screen
         ctx.fillStyle = '#050505';
         ctx.beginPath();
-        ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Luminous ring leading the charge
-        if (p3 < 0.95) {
+        if (pC < 0.95) {
           ctx.strokeStyle = themeAccent;
-          ctx.lineWidth = 2 * (1 - p3);
+          ctx.lineWidth = 2 * (1 - pC);
           ctx.beginPath();
-          ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
           ctx.stroke();
         }
+
+        if (pC < 0.8) drawEye(1 - pC / 0.8, 1);
+      } else {
+        // Phase D (3.2–3.6s): hold black, then finish.
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, width, height);
       }
 
-      if (progress < 1.0) {
+      if (elapsed < DURATION) {
         animId = requestAnimationFrame(render);
       } else {
         finish();
