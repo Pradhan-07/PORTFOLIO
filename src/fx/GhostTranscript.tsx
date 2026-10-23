@@ -121,9 +121,21 @@ export const GhostTranscript: React.FC<GhostTranscriptProps> = ({
           <div style={{ color: 'var(--dim)' }}>{GHOST_PROMPT_HEAD}</div>
           <div>
             <span style={{ color: 'var(--num)' }}>› </span>
-            <span className="cursor-blink" style={{ color: 'var(--accent)' }}>
-              █
-            </span>
+            {/* CSS block caret (CodeTickerPanel BLOCK_CURSOR_STYLE
+                idiom), not a '█' glyph: IBM Plex Mono ships no
+                U+2588, so the glyph version painted only via local
+                font fallback and could vanish (SkillsSection fix). */}
+            <span
+              className="cursor-blink"
+              style={{
+                display: 'inline-block',
+                width: '7px',
+                height: '12px',
+                marginLeft: '2px',
+                background: 'var(--accent)',
+                verticalAlign: '-2px',
+              }}
+            />
           </div>
         </div>
       )}
