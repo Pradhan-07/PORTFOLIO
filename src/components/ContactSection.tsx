@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Mail, ExternalLink, Copy, Check, Send } from 'lucide-react';
+import { Mail, ExternalLink, Copy, Check } from 'lucide-react';
 import { PROFILE } from '../data/profile';
+import { GhostTranscript, type GhostBlock } from '../fx/GhostTranscript';
 
 const GitHubIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -15,13 +16,16 @@ const LinkedInIcon = ({ size = 16 }: { size?: number }) => (
 );
 
 /**
- * Phase 5 (visual parity): contact.tsx is text lines — the three contact
- * CARDS become hairline-separated rows and the dispatch form loses its
- * panel (fields are underline inputs on empty space). Every handler,
- * validation message, the copy-email state and the mailto handoff are
- * byte-for-byte the Phase 4 behaviour.
+ * Phase 9 (§3.8): contact.tsx as a ghost transcript — `fetch
+ * contact/` prints the header copy and the existing contact rows
+ * (with the copy-email button), then `mail --compose` reveals the
+ * existing dispatch form restyled as transcript: lowercase dim
+ * prompt labels, hairline-underlined inputs, a `send ↵` text submit.
+ * Every handler, validation message, the copy-email state and the
+ * mailto handoff are byte-for-byte the Phase 4 behaviour.
  */
-export const ContactSection: React.FC = () => {
+export const ContactSection: React.FC<{ active?: boolean }> = ({ active }) => {
+  const effectiveActive = active ?? true;
   const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [formStatus, setFormStatus] = useState<'idle' | 'validating' | 'sent' | 'error'>('idle');
@@ -111,6 +115,275 @@ export const ContactSection: React.FC = () => {
     outline: 'none',
   };
 
+  const fetchOut = (
+    <>
+      {/* Section Tag */}
+      <div
+        style={{
+          fontSize: '11px',
+          color: 'var(--dim)',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          marginBottom: '14px',
+        }}
+      >
+        // 06 · INQUIRIES & COLLABORATION
+      </div>
+
+      {/* Primary Heading — plain text line, no serif */}
+      <h2
+        style={{
+          margin: '0 0 12px 0',
+          fontFamily: '"IBM Plex Mono", monospace',
+          fontSize: '13px',
+          fontWeight: 400,
+          color: 'var(--fg)',
+          letterSpacing: '0.01em',
+          lineHeight: 1.5,
+        }}
+      >
+        Let's <span style={{ color: 'var(--chrome)' }}>connect.</span>
+      </h2>
+
+      {/* Description */}
+      <p
+        style={{
+          margin: '0 0 32px 0',
+          fontSize: '12.5px',
+          color: 'var(--dim)',
+          maxWidth: '76ch',
+          lineHeight: 1.75,
+        }}
+      >
+        {PROFILE.contactDescription}
+      </p>
+
+      {/* Contact rows — hairline-separated text, no cards */}
+      <div style={{ marginBottom: '36px' }}>
+        {contactLinks.map((item, idx) => (
+          <div
+            key={item.id}
+            className="contact-row"
+            style={{
+              padding: '16px 0',
+              borderTop: idx === 0 ? 'none' : '1px solid color-mix(in srgb, var(--fg) 7%, transparent)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '8px',
+                fontSize: '11px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--chrome)' }}>
+                <span style={{ color: 'var(--accent)', display: 'inline-flex' }}>{item.icon}</span>
+                <span style={{ fontWeight: 500, letterSpacing: '0.04em' }}>{item.label}</span>
+              </div>
+              <span style={{ fontSize: '9.5px', color: 'var(--dim)', letterSpacing: '0.06em' }}>
+                {item.tag}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <a
+                href={item.url}
+                target={item.isExternal ? '_blank' : undefined}
+                rel={item.isExternal ? 'noreferrer noopener' : undefined}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '13px',
+                  color: 'var(--fg)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  wordBreak: 'break-all',
+                }}
+              >
+                <span>{item.display}</span>
+                {item.isExternal ? <ExternalLink size={13} style={{ color: 'var(--dim)', flexShrink: 0 }} /> : null}
+              </a>
+
+              <a
+                href={item.url}
+                target={item.isExternal ? '_blank' : undefined}
+                rel={item.isExternal ? 'noreferrer noopener' : undefined}
+                style={{
+                  color: 'var(--dim)',
+                  textDecoration: 'none',
+                  letterSpacing: '0.04em',
+                  fontSize: '11px',
+                }}
+              >
+                <span>{item.id === 'email' ? 'Compose mail ↗' : 'Visit profile ↗'}</span>
+              </a>
+
+              {item.copyable && (
+                <button
+                  type="button"
+                  onClick={handleCopyEmail}
+                  title="Copy email address"
+                  style={{
+                    marginLeft: 'auto',
+                    background: 'none',
+                    border: 'none',
+                    color: copied ? 'var(--accent)' : 'var(--dim)',
+                    cursor: 'pointer',
+                    padding: '2px 6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    font: 'inherit',
+                    fontSize: '10.5px',
+                  }}
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  <span>{copied ? 'Copied' : 'Copy'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+
+  const composeOut = (
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '11px',
+          color: 'var(--dim)',
+          borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
+          paddingBottom: '12px',
+          marginBottom: '20px',
+        }}
+      >
+        <span>// DISPATCH MESSAGE BUFFER [karan@vit-ap]</span>
+        <span style={{ color: 'var(--accent)' }}>ACTIVE</span>
+      </div>
+
+      {formStatus === 'sent' ? (
+        <div style={{ padding: '20px 0', textAlign: 'center' }}>
+          <div style={{ color: 'var(--accent)', fontSize: '13.5px', fontWeight: 600, marginBottom: '8px' }}>
+            [SUCCESS: MESSAGE PAYLOAD PREPARED]
+          </div>
+          <p style={{ color: 'var(--dim)', fontSize: '12px', lineHeight: 1.6, margin: '0 0 18px 0' }}>
+            Email dispatch initialized for {PROFILE.email}. You can also email directly from any client.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({ name: '', email: '', message: '' });
+              setFormStatus('idle');
+            }}
+            style={{
+              background: 'none',
+              color: 'var(--fg)',
+              border: '1px solid color-mix(in srgb, var(--fg) 30%, transparent)',
+              padding: '9px 18px',
+              fontSize: '11.5px',
+              borderRadius: '2px',
+              cursor: 'pointer',
+              fontWeight: 500,
+              letterSpacing: '0.06em',
+              fontFamily: 'inherit',
+            }}
+          >
+            Send another message
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', color: 'var(--dim)', marginBottom: '2px' }}>
+                your name / identifier:
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Fellow Engineer"
+                required
+                style={fieldStyle}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', color: 'var(--dim)', marginBottom: '2px' }}>
+                your email address:
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="your.email@domain.com"
+                required
+                style={fieldStyle}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', color: 'var(--dim)', marginBottom: '2px' }}>
+              message / topic / collaboration:
+            </label>
+            <textarea
+              rows={4}
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              placeholder="Share a thought, discuss algorithms, AI/ML, or web development..."
+              required
+              style={{ ...fieldStyle, resize: 'vertical' }}
+            />
+          </div>
+
+          {errorMessage && (
+            <div style={{ color: '#ef4444', fontSize: '11px' }}>
+              ! ERROR: {errorMessage}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={formStatus === 'validating'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              background: 'none',
+              color: 'var(--fg)',
+              border: '1px solid color-mix(in srgb, var(--fg) 35%, transparent)',
+              borderRadius: '2px',
+              fontSize: '11.5px',
+              fontWeight: 500,
+              letterSpacing: '0.08em',
+              cursor: formStatus === 'validating' ? 'wait' : 'pointer',
+              alignSelf: 'flex-start',
+              fontFamily: 'inherit',
+            }}
+          >
+            <span>{formStatus === 'validating' ? 'preparing dispatch...' : 'send ↵'}</span>
+          </button>
+        </form>
+      )}
+    </div>
+  );
+
+  const blocks: GhostBlock[] = [
+    { id: 'fetch', cmd: 'fetch contact/', out: fetchOut },
+    { id: 'compose', cmd: 'mail --compose', out: composeOut },
+  ];
+
   return (
     <section
       id="contact"
@@ -122,265 +395,7 @@ export const ContactSection: React.FC = () => {
       }}
     >
       <div className="section-container">
-        {/* Section Tag */}
-        <div
-          style={{
-            fontSize: '11px',
-            color: 'var(--dim)',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            marginBottom: '14px',
-          }}
-        >
-          // 06 · INQUIRIES & COLLABORATION
-        </div>
-
-        {/* Primary Heading — plain text line, no serif */}
-        <h2
-          style={{
-            margin: '0 0 12px 0',
-            fontFamily: '"IBM Plex Mono", monospace',
-            fontSize: '13px',
-            fontWeight: 500,
-            color: 'var(--fg)',
-            letterSpacing: '0.01em',
-            lineHeight: 1.5,
-          }}
-        >
-          Let's <span style={{ color: 'var(--chrome)' }}>connect.</span>
-        </h2>
-
-        {/* Description */}
-        <p
-          style={{
-            margin: '0 0 32px 0',
-            fontSize: '12.5px',
-            color: 'var(--dim)',
-            maxWidth: '76ch',
-            lineHeight: 1.75,
-          }}
-        >
-          {PROFILE.contactDescription}
-        </p>
-
-        {/* Contact rows — hairline-separated text, no cards */}
-        <div style={{ marginBottom: '36px' }}>
-          {contactLinks.map((item, idx) => (
-            <div
-              key={item.id}
-              className="contact-row"
-              style={{
-                padding: '16px 0',
-                borderTop: idx === 0 ? 'none' : '1px solid color-mix(in srgb, var(--fg) 7%, transparent)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '8px',
-                  fontSize: '11px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--chrome)' }}>
-                  <span style={{ color: 'var(--accent)', display: 'inline-flex' }}>{item.icon}</span>
-                  <span style={{ fontWeight: 500, letterSpacing: '0.04em' }}>{item.label}</span>
-                </div>
-                <span style={{ fontSize: '9.5px', color: 'var(--dim)', letterSpacing: '0.06em' }}>
-                  {item.tag}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                <a
-                  href={item.url}
-                  target={item.isExternal ? '_blank' : undefined}
-                  rel={item.isExternal ? 'noreferrer noopener' : undefined}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '13px',
-                    color: 'var(--fg)',
-                    textDecoration: 'none',
-                    fontWeight: 500,
-                    wordBreak: 'break-all',
-                  }}
-                >
-                  <span>{item.display}</span>
-                  {item.isExternal ? <ExternalLink size={13} style={{ color: 'var(--dim)', flexShrink: 0 }} /> : null}
-                </a>
-
-                <a
-                  href={item.url}
-                  target={item.isExternal ? '_blank' : undefined}
-                  rel={item.isExternal ? 'noreferrer noopener' : undefined}
-                  style={{
-                    color: 'var(--dim)',
-                    textDecoration: 'none',
-                    letterSpacing: '0.04em',
-                    fontSize: '11px',
-                  }}
-                >
-                  <span>{item.id === 'email' ? 'Compose mail ↗' : 'Visit profile ↗'}</span>
-                </a>
-
-                {item.copyable && (
-                  <button
-                    type="button"
-                    onClick={handleCopyEmail}
-                    title="Copy email address"
-                    style={{
-                      marginLeft: 'auto',
-                      background: 'none',
-                      border: 'none',
-                      color: copied ? 'var(--accent)' : 'var(--dim)',
-                      cursor: 'pointer',
-                      padding: '2px 6px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      font: 'inherit',
-                      fontSize: '10.5px',
-                    }}
-                  >
-                    {copied ? <Check size={12} /> : <Copy size={12} />}
-                    <span>{copied ? 'Copied' : 'Copy'}</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Message dispatch — no panel; a comment line over underline fields */}
-        <div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '11px',
-              color: 'var(--dim)',
-              borderBottom: '1px solid color-mix(in srgb, var(--fg) 8%, transparent)',
-              paddingBottom: '12px',
-              marginBottom: '20px',
-            }}
-          >
-            <span>// DISPATCH MESSAGE BUFFER [karan@vit-ap]</span>
-            <span style={{ color: 'var(--accent)' }}>ACTIVE</span>
-          </div>
-
-          {formStatus === 'sent' ? (
-            <div style={{ padding: '20px 0', textAlign: 'center' }}>
-              <div style={{ color: 'var(--accent)', fontSize: '13.5px', fontWeight: 600, marginBottom: '8px' }}>
-                [SUCCESS: MESSAGE PAYLOAD PREPARED]
-              </div>
-              <p style={{ color: 'var(--dim)', fontSize: '12px', lineHeight: 1.6, margin: '0 0 18px 0' }}>
-                Email dispatch initialized for {PROFILE.email}. You can also email directly from any client.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({ name: '', email: '', message: '' });
-                  setFormStatus('idle');
-                }}
-                style={{
-                  background: 'none',
-                  color: 'var(--fg)',
-                  border: '1px solid color-mix(in srgb, var(--fg) 30%, transparent)',
-                  padding: '9px 18px',
-                  fontSize: '11.5px',
-                  borderRadius: '2px',
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                  letterSpacing: '0.06em',
-                  fontFamily: 'inherit',
-                }}
-              >
-                Send another message
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--chrome)', marginBottom: '2px' }}>
-                    YOUR NAME / IDENTIFIER:
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Fellow Engineer"
-                    required
-                    style={fieldStyle}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--chrome)', marginBottom: '2px' }}>
-                    YOUR EMAIL ADDRESS:
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="your.email@domain.com"
-                    required
-                    style={fieldStyle}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--chrome)', marginBottom: '2px' }}>
-                  MESSAGE / TOPIC / COLLABORATION:
-                </label>
-                <textarea
-                  rows={4}
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Share a thought, discuss algorithms, AI/ML, or web development..."
-                  required
-                  style={{ ...fieldStyle, resize: 'vertical' }}
-                />
-              </div>
-
-              {errorMessage && (
-                <div style={{ color: '#ef4444', fontSize: '11px' }}>
-                  ! ERROR: {errorMessage}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={formStatus === 'validating'}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
-                  background: 'none',
-                  color: 'var(--fg)',
-                  border: '1px solid color-mix(in srgb, var(--fg) 35%, transparent)',
-                  borderRadius: '2px',
-                  fontSize: '11.5px',
-                  fontWeight: 500,
-                  letterSpacing: '0.08em',
-                  cursor: formStatus === 'validating' ? 'wait' : 'pointer',
-                  alignSelf: 'flex-start',
-                  fontFamily: 'inherit',
-                }}
-              >
-                <Send size={13} />
-                <span>{formStatus === 'validating' ? 'PREPARING DISPATCH...' : 'SEND MESSAGE ↵'}</span>
-              </button>
-            </form>
-          )}
-        </div>
+        <GhostTranscript active={effectiveActive} fileBase="contact" blocks={blocks} />
       </div>
     </section>
   );
