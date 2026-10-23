@@ -4,41 +4,59 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { deskHeightForViewport } from './deskHeight';
 
 /**
- * DeskStrip (G6) — a decorative canvas "desk" band that forms the stage's
- * bottom grid row: the editor sits on a desk. Original line-art in the same
- * thin-stroke language as Karan's own WireframeHandsKeyboard — a notebook
- * with a linked-list doodle, a keyboard with wireframe hands, a mug, and a
- * potted sprout (a quiet AGRIFLOW nod).
+ * DeskStrip (§2.8) — a decorative band below the status bar: a text-label
+ * keyboard, two original hand wireframes and a small mouse outline, with
+ * live micro readouts. It replaces the Phase 8 drawn desk objects
+ * (notebook / mug / sprout): §1.4's text-label rule (G04) forbids drawn
+ * objects on the desk, so the keyboard here is plain lowercase mono TEXT
+ * — no keycap boxes, no per-key borders, nothing ever lights up.
  *
- * Pure decoration: aria-hidden, pointer-events: none, no handlers. It always
- * yields space to the buffer — the height budget below is the whole point:
+ * Keyboard: 4 DOM text rows (10px, var(--dim)), centred-left.
+ * Hands: REDRAWN in this file's canvas, not imported — the landing's
+ * WireframeHandsKeyboard is monolithic (its own drawn keycap keyboard
+ * and hands share one canvas), so importing it would duplicate a drawn
+ * keyboard. The hands here are original procedural line art in the same
+ * language (dots + connecting lines inside thin bounding boxes): 21
+ * landmarks per hand generated from a wrist + five finger chains
+ * (base point + three segments each, fanned by per-finger angle/length
+ * specs below) joined by the standard hand topology links, plus a
+ * rounded-rect mouse outline with a wheel line by the right hand.
  *
- *   width ≤ 640px (any height)  -> 0
- *   viewport height < 700px     -> 0
- *   height 700–849px            -> 84px  (6 cells)
- *   height 850–999px            -> 126px (9 cells)
- *   height ≥ 1000px, width > 640 -> 184px (cap)
+ * Readouts (DOM, 10px, var(--dim), tabular-nums):
+ *   ['hand0:u'] / ['hand1:u'] — a generated drift (see driftValue),
+ *     updated via refs at ~4Hz; never a typed constant.
+ *   ['mouse:u'] — the REAL normalised cursor (window mousemove).
  *
- * Colours come from the active theme's CSS variables on :root (--dim,
- * --chrome, --accent, --line), read at draw time; pass `themeKey` (e.g. the
- * theme name) so the strip redraws when the theme changes. The drawing is
- * static; the only motion is the mug's two-frame steam wisp, and only when
- * the user has not asked for reduced motion (G9).
+ * Drop-out rule (height first, then width):
+ *   bandHeight = 0            -> render nothing (existing budget rule)
+ *   bandHeight < 100 (84 band)-> keyboard + readouts only: the mouse
+ *     drops FIRST, then the hands (canvas draws only the desk line)
+ *   width < 560               -> mouse drops (hands remain)
+ *   otherwise                 -> hands shrink to the space left below
+ *     the keyboard (box height capped at 100px) and the mouse shows
+ *     only if it still fits right of the right hand.
  *
- * Object drop-out as width shrinks (fixed order): notebook first, then the
- * mug — keyboard + sprout are the last two standing.
+ * Pure decoration: aria-hidden, pointer-events: none, no handlers, no
+ * focus. Colours come from the theme CSS variables (--dim, --chrome,
+ * --accent, --line) read at draw time; `themeKey` forces a redraw on
+ * theme change. The canvas is one static frame per draw in ALL modes
+ * (the desk hands never animate, §1.7); under reduced motion the hand
+ * readouts render their drift value at t=0 once with no interval,
+ * while the mouse readout still updates — it is factual, not animation.
+ * The legacy `steam` prop is accepted for interface compatibility and
+ * ignored (there is no mug any more).
  */
 
 export interface DeskStripProps {
   /** Changes whenever the active theme changes; forces a redraw with the new CSS variables. */
   themeKey?: string;
   /**
-   * Explicit band height in px. When omitted, the G6 viewport budget is
+   * Explicit band height in px. When omitted, the viewport budget is
    * computed from the window size and kept live on resize. Pass this if the
    * integrator drives the height from the `--desk-h` CSS token instead.
    */
   height?: number;
-  /** Draw the mug's steam wisp (two-frame, motion-gated). Default true. */
+  /** Legacy prop, kept for interface compatibility; ignored since §2.8. */
   steam?: boolean;
   style?: CSSProperties;
 }
@@ -61,337 +79,165 @@ function readPalette(): Palette {
   };
 }
 
-function readCellSize(): { cw: number; ch: number } {
-  const cs = getComputedStyle(document.documentElement);
-  const cw = parseFloat(cs.getPropertyValue('--cell-w'));
-  const ch = parseFloat(cs.getPropertyValue('--cell-h'));
-  return { cw: Number.isFinite(cw) && cw > 0 ? cw : 7.5, ch: Number.isFinite(ch) && ch > 0 ? ch : 14 };
+/* ------------------------------------------------------------------ */
+/* Text-label keyboard (§2.8 rows, hard-coded as data).                */
+/* ------------------------------------------------------------------ */
+
+const KEY_ROWS: string[][] = [
+  ['esc', '`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '⌫'],
+  ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\'],
+  ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'", '↵'],
+  ['↑', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', '↑'],
+];
+
+/** Keyboard block height: 4 rows at 14px, starting 6px below the band top. */
+const KEYBOARD_TOP = 6;
+const KEYBOARD_H = 4 * 14;
+
+/* ------------------------------------------------------------------ */
+/* Hand geometry — procedural, deterministic.                          */
+/* 21 landmarks: 0 = wrist, then thumb / index / middle / ring /       */
+/* pinky chains of 4 (base + 3 segments along a fanned direction).     */
+/* ------------------------------------------------------------------ */
+
+interface FingerSpec {
+  base: [number, number];
+  /** Fan direction, degrees from straight up; negative leans left. */
+  angleDeg: number;
+  lengths: [number, number, number];
 }
 
-/** Widths (px) below which objects drop out, in the fixed G6 order. */
-const NOTEBOOK_MIN_WIDTH = 860;
-const MUG_MIN_WIDTH = 560;
+const FINGERS: FingerSpec[] = [
+  { base: [0.36, 0.76], angleDeg: -52, lengths: [0.14, 0.12, 0.1] }, // thumb
+  { base: [0.37, 0.56], angleDeg: -14, lengths: [0.15, 0.13, 0.11] }, // index
+  { base: [0.5, 0.53], angleDeg: 0, lengths: [0.17, 0.14, 0.12] }, // middle
+  { base: [0.63, 0.56], angleDeg: 13, lengths: [0.15, 0.13, 0.11] }, // ring
+  { base: [0.74, 0.63], angleDeg: 28, lengths: [0.12, 0.1, 0.09] }, // pinky
+];
 
-/* ------------------------------------------------------------------ */
-/* Object drawings — all original, cell-unit geometry, single weight.  */
-/* `baseline` is the shared desk baseline (~1 cell above band bottom). */
-/* ------------------------------------------------------------------ */
+/** Standard hand topology: finger chains + palm links between bases. */
+const HAND_LINKS: [number, number][] = [
+  [0, 1], [1, 2], [2, 3], [3, 4],
+  [0, 5], [5, 6], [6, 7], [7, 8],
+  [5, 9], [9, 10], [10, 11], [11, 12],
+  [9, 13], [13, 14], [14, 15], [15, 16],
+  [13, 17], [17, 18], [18, 19], [19, 20],
+  [0, 17],
+];
 
-/** A short handwriting squiggle: a deterministic sine stroke. */
-function drawSquiggle(
+function buildHandPoints(mirror: boolean): [number, number][] {
+  const points: [number, number][] = [[0.5, 0.92]]; // wrist
+  for (const finger of FINGERS) {
+    let [x, y] = finger.base;
+    points.push([x, y]);
+    let angle = (finger.angleDeg * Math.PI) / 180;
+    const bend = Math.sign(finger.angleDeg || 1) * ((2 * Math.PI) / 180);
+    for (const len of finger.lengths) {
+      x += Math.sin(angle) * len;
+      y -= Math.cos(angle) * len;
+      points.push([x, y]);
+      angle += bend;
+    }
+  }
+  return mirror ? points.map(([x, y]): [number, number] => [1 - x, y]) : points;
+}
+
+function drawHand(
+  ctx: CanvasRenderingContext2D,
+  box: { x: number; y: number; w: number; h: number },
+  mirror: boolean,
+  pal: Palette,
+): void {
+  // Thin bounding box — the only frame, in the hairline colour.
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = pal.line;
+  ctx.globalAlpha = 1;
+  ctx.strokeRect(box.x + 0.5, box.y + 0.5, box.w, box.h);
+
+  const padX = 10;
+  const padY = 6;
+  const points = buildHandPoints(mirror).map(([u, v]) => [
+    box.x + padX + u * (box.w - padX * 2),
+    box.y + padY + v * (box.h - padY * 2),
+  ]);
+
+  // Connecting lines.
+  ctx.strokeStyle = pal.dim;
+  ctx.globalAlpha = 0.65;
+  ctx.lineWidth = 0.75;
+  ctx.beginPath();
+  for (const [a, b] of HAND_LINKS) {
+    ctx.moveTo(points[a][0], points[a][1]);
+    ctx.lineTo(points[b][0], points[b][1]);
+  }
+  ctx.stroke();
+
+  // Landmark dots; fingertips get the accent.
+  points.forEach(([px, py], k) => {
+    const isTip = k > 0 && k % 4 === 0;
+    ctx.fillStyle = isTip ? pal.accent : pal.chrome;
+    ctx.globalAlpha = isTip ? 0.95 : 0.8;
+    ctx.beginPath();
+    ctx.arc(px, py, isTip ? 1.8 : 1.25, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawMouse(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  length: number,
-  seed: number,
-): void {
-  ctx.beginPath();
-  const steps = Math.max(6, Math.floor(length / 2));
-  for (let i = 0; i <= steps; i++) {
-    const px = x + (length * i) / steps;
-    const py = y + Math.sin(i * 0.9 + seed) * 0.9;
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.stroke();
-}
-
-/** One mini linked-list node (value cell + pointer cell), doodle-sized. */
-function drawDoodleNode(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
-  ctx.strokeRect(x, y, w, h);
-  const divider = x + w * 0.62;
-  ctx.beginPath();
-  ctx.moveTo(divider, y);
-  ctx.lineTo(divider, y + h);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(x + w * 0.8, y + h / 2, 1.1, 0, Math.PI * 2);
-  ctx.stroke();
-}
-
-function drawArrow(ctx: CanvasRenderingContext2D, x1: number, y: number, x2: number): void {
-  ctx.beginPath();
-  ctx.moveTo(x1, y);
-  ctx.lineTo(x2, y);
-  ctx.lineTo(x2 - 3, y - 2);
-  ctx.moveTo(x2, y);
-  ctx.lineTo(x2 - 3, y + 2);
-  ctx.stroke();
-}
-
-/** Object 1 — open notebook: handwriting on the left page, a linked-list doodle on the right. */
-function drawNotebook(
-  ctx: CanvasRenderingContext2D,
-  leftPx: number,
-  baseline: number,
-  cw: number,
-  ch: number,
+  w: number,
+  h: number,
   pal: Palette,
 ): void {
-  const pageW = 5.4 * cw;
-  const h = 3 * ch;
-  const top = baseline - h;
-
+  const r = Math.min(12, w / 2);
   ctx.lineWidth = 1;
   ctx.strokeStyle = pal.dim;
   ctx.globalAlpha = 0.85;
-  ctx.strokeRect(leftPx, top, pageW, h);
-  ctx.strokeRect(leftPx + pageW + 0.2 * cw, top, pageW, h);
-  // spine
-  ctx.globalAlpha = 0.5;
   ctx.beginPath();
-  ctx.moveTo(leftPx + pageW + 0.1 * cw, top);
-  ctx.lineTo(leftPx + pageW + 0.1 * cw, baseline);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.stroke();
-
-  // handwriting — left page
-  ctx.strokeStyle = pal.dim;
-  ctx.globalAlpha = 0.55;
-  for (let i = 0; i < 3; i++) {
-    drawSquiggle(ctx, leftPx + 0.6 * cw, top + (0.75 + i * 0.7) * ch, 4 * cw, i * 1.7);
-  }
-
-  // linked-list doodle — right page: three nodes joined by arrows
-  const pageX = leftPx + pageW + 0.2 * cw;
-  const nodeW = 1.25 * cw;
-  const nodeH = 0.85 * ch;
-  const nodeY = top + 0.55 * ch;
-  ctx.strokeStyle = pal.chrome;
-  ctx.globalAlpha = 0.9;
-  let nx = pageX + 0.35 * cw;
-  for (let i = 0; i < 3; i++) {
-    drawDoodleNode(ctx, nx, nodeY, nodeW, nodeH);
-    if (i < 2) drawArrow(ctx, nx + nodeW + 1, nodeY + nodeH / 2, nx + nodeW + 0.42 * cw);
-    nx += nodeW + 0.42 * cw;
-  }
-  ctx.strokeStyle = pal.dim;
-  ctx.globalAlpha = 0.5;
-  drawSquiggle(ctx, pageX + 0.5 * cw, top + 2.15 * ch, 3.6 * cw, 4.2);
-  ctx.globalAlpha = 1;
-}
-
-/**
- * Object 2 — keyboard + wireframe hands, drawn in a 380×150 virtual box and
- * scaled to fit the band. An original, simplified schematic in the same
- * stroke language as Karan's WireframeHandsKeyboard (thin dim strokes,
- * joint dots, lettered keys) — hands hovering over the keys.
- */
-function drawKeyboardAndHands(
-  ctx: CanvasRenderingContext2D,
-  centreX: number,
-  baseline: number,
-  scale: number,
-  pal: Palette,
-): void {
-  const VW = 380;
-  const VH = 150;
-  ctx.save();
-  ctx.translate(centreX - (VW / 2) * scale, baseline - VH * scale);
-  ctx.scale(scale, scale);
-  ctx.lineWidth = 1.1 / scale;
-
-  // keys — three lettered rows
-  const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
-  const keyW = 30;
-  const keyH = 20;
-  const gap = 6;
-  ctx.font = '11px "IBM Plex Mono", ui-monospace, monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  rows.forEach((row, r) => {
-    const rowW = row.length * (keyW + gap) - gap;
-    const startX = (VW - rowW) / 2 + r * 9;
-    const y = r * (keyH + gap);
-    for (let i = 0; i < row.length; i++) {
-      const x = startX + i * (keyW + gap);
-      ctx.strokeStyle = pal.dim;
-      ctx.globalAlpha = 0.55;
-      ctx.strokeRect(x, y, keyW, keyH);
-      ctx.fillStyle = pal.chrome;
-      ctx.globalAlpha = 0.75;
-      ctx.fillText(row[i], x + keyW / 2, y + keyH / 2 + 0.5);
-    }
-  });
-
-  // hands — palm outline + five 3-joint fingers each, joint dots like the original motif
-  const drawHand = (hx: number) => {
-    const hw = 150;
-    const palmTop = 100;
-    const palmBottom = 146;
-    ctx.strokeStyle = pal.dim;
-    ctx.globalAlpha = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(hx + 10, palmBottom);
-    ctx.lineTo(hx + 5, palmTop + 6);
-    ctx.quadraticCurveTo(hx + hw / 2, palmTop - 8, hx + hw - 5, palmTop + 6);
-    ctx.lineTo(hx + hw - 10, palmBottom);
-    ctx.stroke();
-    // thumb — one two-segment polyline on the inner side
-    ctx.beginPath();
-    ctx.moveTo(hx + 8, palmTop + 22);
-    ctx.lineTo(hx - 4, palmTop + 8);
-    ctx.lineTo(hx + 4, palmTop - 4);
-    ctx.stroke();
-
-    const spreads = [-11, -5, 0, 6, 11];
-    const lengths = [24, 36, 40, 33, 21];
-    for (let f = 0; f < 5; f++) {
-      const bx = hx + 18 + f * ((hw - 36) / 4);
-      const len = lengths[f];
-      const spread = spreads[f];
-      const jx = bx + spread * 0.35;
-      const jy = palmTop - len * 0.55;
-      const tx = bx + spread;
-      const ty = palmTop - len;
-      ctx.beginPath();
-      ctx.moveTo(bx, palmTop + 2);
-      ctx.lineTo(jx, jy);
-      ctx.lineTo(tx, ty);
-      ctx.stroke();
-      ctx.fillStyle = pal.chrome;
-      ctx.globalAlpha = 0.85;
-      ctx.beginPath();
-      ctx.arc(jx, jy, 1.8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(tx, ty, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  };
-  drawHand(28);
-  drawHand(202);
-  ctx.restore();
-  ctx.globalAlpha = 1;
-}
-
-/** Object 3 — mug, with an optional two-frame steam wisp (phase 0/1). */
-function drawMug(
-  ctx: CanvasRenderingContext2D,
-  rightPx: number,
-  baseline: number,
-  cw: number,
-  ch: number,
-  pal: Palette,
-  steamPhase: 0 | 1 | null,
-): void {
-  const w = 3.2 * cw;
-  const h = 2.4 * ch;
-  const x = rightPx - w;
-  const top = baseline - h;
-
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = pal.chrome;
-  ctx.globalAlpha = 0.9;
-  // body (slightly rounded bottom corners, drawn with quadratics)
+  // Wheel line.
   ctx.beginPath();
-  ctx.moveTo(x, top);
-  ctx.lineTo(x, top + h - 3);
-  ctx.quadraticCurveTo(x, baseline, x + 3, baseline);
-  ctx.lineTo(x + w - 3, baseline);
-  ctx.quadraticCurveTo(x + w, baseline, x + w, top + h - 3);
-  ctx.lineTo(x + w, top);
-  ctx.stroke();
-  // rim
-  ctx.globalAlpha = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(x, top);
-  ctx.lineTo(x + w, top);
-  ctx.stroke();
-  // handle
-  ctx.globalAlpha = 0.9;
-  ctx.beginPath();
-  ctx.arc(x + w + 0.42 * cw, top + h / 2, 0.55 * ch, -Math.PI / 2, Math.PI / 2);
-  ctx.stroke();
-  // saucer line
-  ctx.strokeStyle = pal.dim;
-  ctx.globalAlpha = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(x - 0.4 * cw, baseline + 2.5);
-  ctx.lineTo(x + w + 0.9 * cw, baseline + 2.5);
-  ctx.stroke();
-
-  // steam — two wavy wisps; the phase flips the curve direction (two-frame)
-  if (steamPhase !== null) {
-    ctx.strokeStyle = pal.dim;
-    ctx.globalAlpha = 0.55;
-    const dir = steamPhase === 0 ? 1 : -1;
-    [0.9, 2.1].forEach((offsetCells, i) => {
-      const sx = x + offsetCells * cw;
-      const sway = dir * (i === 0 ? 2.5 : -2.5);
-      ctx.beginPath();
-      ctx.moveTo(sx, top - 0.35 * ch);
-      ctx.quadraticCurveTo(sx + sway, top - 0.95 * ch, sx, top - 1.6 * ch);
-      ctx.stroke();
-    });
-  }
-  ctx.globalAlpha = 1;
-}
-
-/** Object 4 — potted sprout (AGRIFLOW nod). The strip's single --accent detail: the leaves. */
-function drawSprout(
-  ctx: CanvasRenderingContext2D,
-  rightPx: number,
-  baseline: number,
-  cw: number,
-  ch: number,
-  pal: Palette,
-): void {
-  const cx = rightPx - 1.5 * cw;
-  const potTopW = 3 * cw;
-  const potBottomW = 2.1 * cw;
-  const potH = 1.5 * ch;
-  const potTop = baseline - potH;
-
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = pal.chrome;
-  ctx.globalAlpha = 0.9;
-  ctx.beginPath();
-  ctx.moveTo(cx - potTopW / 2, potTop);
-  ctx.lineTo(cx + potTopW / 2, potTop);
-  ctx.lineTo(cx + potBottomW / 2, baseline);
-  ctx.lineTo(cx - potBottomW / 2, baseline);
-  ctx.closePath();
-  ctx.stroke();
-  // soil line
-  ctx.strokeStyle = pal.dim;
-  ctx.globalAlpha = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(cx - potTopW / 2 + 2, potTop + 3);
-  ctx.lineTo(cx + potTopW / 2 - 2, potTop + 3);
-  ctx.stroke();
-
-  // stem
-  const stemTop = potTop - 1.25 * ch;
-  ctx.strokeStyle = pal.chrome;
-  ctx.globalAlpha = 0.9;
-  ctx.beginPath();
-  ctx.moveTo(cx, potTop);
-  ctx.quadraticCurveTo(cx + 1.5, potTop - 0.7 * ch, cx, stemTop);
-  ctx.stroke();
-
-  // two leaves — the desk's one accent detail
-  ctx.strokeStyle = pal.accent;
-  ctx.globalAlpha = 0.95;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath(); // left leaf
-  ctx.moveTo(cx, stemTop + 2);
-  ctx.quadraticCurveTo(cx - 1.5 * cw, stemTop - 0.55 * ch, cx - 1.7 * cw, stemTop - 1.15 * ch);
-  ctx.quadraticCurveTo(cx - 0.7 * cw, stemTop - 0.5 * ch, cx, stemTop + 2);
-  ctx.stroke();
-  ctx.beginPath(); // right leaf
-  ctx.moveTo(cx, stemTop + 2);
-  ctx.quadraticCurveTo(cx + 1.5 * cw, stemTop - 0.55 * ch, cx + 1.7 * cw, stemTop - 1.15 * ch);
-  ctx.quadraticCurveTo(cx + 0.7 * cw, stemTop - 0.5 * ch, cx, stemTop + 2);
+  ctx.moveTo(x + w / 2, y + 6);
+  ctx.lineTo(x + w / 2, y + 15);
   ctx.stroke();
   ctx.globalAlpha = 1;
 }
 
 /* ------------------------------------------------------------------ */
+/* Readout drift (§2.8): band ≈ 0.44–0.57, generated from real time.   */
+/* ------------------------------------------------------------------ */
 
-export const DeskStrip: FC<DeskStripProps> = ({ themeKey, height, steam = true, style }) => {
+const HAND_PHASES = [0, 2.1];
+
+function driftValue(t: number, phase: number): number {
+  return 0.505 + 0.045 * Math.sin(t * 0.00031 + phase) + 0.02 * Math.sin(t * 0.0017 + phase * 2);
+}
+
+/* ------------------------------------------------------------------ */
+
+const MOUSE_MIN_WIDTH = 560;
+const HANDS_MIN_HEIGHT = 100;
+const HAND_BOX_MAX_H = 100;
+
+export const DeskStrip: FC<DeskStripProps> = ({ themeKey, height, style }) => {
   const reducedMotion = usePrefersReducedMotion();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const hand0Ref = useRef<HTMLSpanElement | null>(null);
+  const hand1Ref = useRef<HTMLSpanElement | null>(null);
+  const mouseRef = useRef<HTMLSpanElement | null>(null);
 
   const [autoHeight, setAutoHeight] = useState<number>(() =>
     typeof window === 'undefined' ? 0 : deskHeightForViewport(window.innerWidth, window.innerHeight),
@@ -407,17 +253,15 @@ export const DeskStrip: FC<DeskStripProps> = ({ themeKey, height, steam = true, 
   }, [height]);
 
   const bandHeight = height ?? autoHeight;
-  const steamEnabled = steam && !reducedMotion;
 
+  /* Canvas: hands + mouse. One static frame per draw (resize / theme /
+   * height change) — no rAF loop in any motion mode. */
   useEffect(() => {
     const wrap = wrapRef.current;
     const canvas = canvasRef.current;
     if (!wrap || !canvas || bandHeight <= 0) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    let steamPhase: 0 | 1 = 0;
-    let intervalId: number | undefined;
 
     const draw = () => {
       const w = wrap.clientWidth;
@@ -430,10 +274,8 @@ export const DeskStrip: FC<DeskStripProps> = ({ themeKey, height, steam = true, 
       ctx.clearRect(0, 0, w, h);
 
       const pal = readPalette();
-      const { cw, ch } = readCellSize();
-      const baseline = h - ch;
 
-      // desk line — a hairline across the top edge of the band
+      // Desk line — a hairline across the top edge of the band.
       ctx.lineWidth = 1;
       ctx.strokeStyle = pal.line;
       ctx.globalAlpha = 1;
@@ -442,42 +284,87 @@ export const DeskStrip: FC<DeskStripProps> = ({ themeKey, height, steam = true, 
       ctx.lineTo(w, 0.5);
       ctx.stroke();
 
-      const showNotebook = w >= NOTEBOOK_MIN_WIDTH;
-      const showMug = w >= MUG_MIN_WIDTH;
+      // Drop-out: small band -> keyboard + readouts only.
+      if (h < HANDS_MIN_HEIGHT) return;
 
-      if (showNotebook) drawNotebook(ctx, 4 * cw, baseline, cw, ch, pal);
+      // Hands overlap the keyboard's lower edge and fill what is left.
+      const handsTop = KEYBOARD_TOP + KEYBOARD_H - 14;
+      const availH = h - handsTop - 8;
+      if (availH < 30) return;
+      const boxH = Math.min(availH, HAND_BOX_MAX_H);
+      const boxY = handsTop + (availH - boxH) / 2;
 
-      // keyboard + hands, centred-left (recentres when the notebook drops out)
-      const heightScale = (baseline - 4) / 150;
-      const widthScale = (w * 0.66) / 380;
-      const scale = Math.max(0.28, Math.min(heightScale, widthScale, 1.1));
-      drawKeyboardAndHands(ctx, showNotebook ? w * 0.47 : w * 0.5, baseline, scale, pal);
+      const gap = 18;
+      const totalW = Math.min(w * 0.56, 480);
+      const boxW = (totalW - gap) / 2;
+      const startX = Math.max(8, (w - totalW) / 2 - 30);
 
-      if (showMug) {
-        drawMug(ctx, w - 6 * cw, baseline, cw, ch, pal, steamEnabled ? steamPhase : null);
+      drawHand(ctx, { x: startX, y: boxY, w: boxW, h: boxH }, false, pal);
+      drawHand(ctx, { x: startX + boxW + gap, y: boxY, w: boxW, h: boxH }, true, pal);
+
+      // Mouse drops first: narrow widths and any overflow lose it.
+      if (w >= MOUSE_MIN_WIDTH) {
+        const mouseW = 30;
+        const mouseH = 46;
+        const mouseX = startX + totalW + 20;
+        if (mouseX + mouseW <= w - 12) {
+          drawMouse(ctx, mouseX, boxY + (boxH - mouseH) / 2, mouseW, mouseH, pal);
+        }
       }
-      drawSprout(ctx, w - 2 * cw, baseline, cw, ch, pal);
     };
 
     draw();
     const observer = new ResizeObserver(draw);
     observer.observe(wrap);
+    return () => observer.disconnect();
+  }, [bandHeight, themeKey]);
 
-    // Two-frame steam: alternate the wisp phase on a slow tick. Skipped
-    // entirely under reduced motion — the desk is then one static frame.
-    if (steamEnabled) {
-      intervalId = window.setInterval(() => {
-        if (document.hidden) return;
-        steamPhase = steamPhase === 0 ? 1 : 0;
-        draw();
-      }, 700);
-    }
-
-    return () => {
-      observer.disconnect();
-      if (intervalId !== undefined) window.clearInterval(intervalId);
+  /* Hand readouts: drift at ~4Hz via refs. Reduced motion renders the
+   * t=0 value once (the initial JSX text) and starts no interval. */
+  useEffect(() => {
+    if (reducedMotion || bandHeight <= 0) return;
+    const update = () => {
+      const t = Date.now();
+      if (hand0Ref.current) hand0Ref.current.textContent = driftValue(t, HAND_PHASES[0]).toFixed(6);
+      if (hand1Ref.current) hand1Ref.current.textContent = driftValue(t, HAND_PHASES[1]).toFixed(6);
     };
-  }, [bandHeight, themeKey, steamEnabled]);
+    update();
+    const id = window.setInterval(update, 250);
+    return () => window.clearInterval(id);
+  }, [reducedMotion, bandHeight]);
+
+  /* Mouse readout: the real normalised cursor. Kept under reduced
+   * motion — it is factual, not animation. */
+  useEffect(() => {
+    if (bandHeight <= 0) return;
+    const onMove = (e: MouseEvent) => {
+      if (!mouseRef.current) return;
+      const x = e.clientX / Math.max(1, window.innerWidth);
+      const y = e.clientY / Math.max(1, window.innerHeight);
+      mouseRef.current.textContent = `${x.toFixed(3)} / ${y.toFixed(3)}`;
+    };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => window.removeEventListener('mousemove', onMove);
+  }, [bandHeight]);
+
+  const readoutStyle: CSSProperties = {
+    fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+    fontSize: '10px',
+    lineHeight: 1.5,
+    color: 'var(--dim)',
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap',
+  };
+
+  if (bandHeight <= 0) {
+    return (
+      <div
+        ref={wrapRef}
+        aria-hidden="true"
+        style={{ position: 'relative', height: 0, pointerEvents: 'none', overflow: 'hidden', ...style }}
+      />
+    );
+  }
 
   return (
     <div
@@ -491,12 +378,66 @@ export const DeskStrip: FC<DeskStripProps> = ({ themeKey, height, steam = true, 
         ...style,
       }}
     >
-      {bandHeight > 0 && (
-        <canvas
-          ref={canvasRef}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
-        />
-      )}
+      <canvas
+        ref={canvasRef}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }}
+      />
+
+      {/* Text-label keyboard — plain DOM text, no keycap boxes. */}
+      <div
+        style={{
+          position: 'absolute',
+          top: KEYBOARD_TOP,
+          left: '50%',
+          transform: 'translateX(-54%)',
+          textAlign: 'center',
+          fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+          fontSize: '10px',
+          lineHeight: '14px',
+          color: 'var(--dim)',
+        }}
+      >
+        {KEY_ROWS.map((row, r) => (
+          <div key={r} style={{ whiteSpace: 'nowrap', letterSpacing: '0.08em' }}>
+            {row.map((key, k) => (
+              <span
+                key={k}
+                style={{
+                  display: 'inline-block',
+                  minWidth: key.length > 1 ? '22px' : '13px',
+                  textAlign: 'center',
+                }}
+              >
+                {key}
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Readouts near the hands, at the strip's absolute corners. */}
+      <div style={{ ...readoutStyle, position: 'absolute', left: '10px', bottom: '6px' }}>
+        {"['hand0:u'] "}
+        <span ref={hand0Ref}>{driftValue(0, HAND_PHASES[0]).toFixed(6)}</span>
+      </div>
+      <div
+        style={{
+          ...readoutStyle,
+          position: 'absolute',
+          right: '10px',
+          bottom: '6px',
+          textAlign: 'right',
+        }}
+      >
+        <div>
+          {"['hand1:u'] "}
+          <span ref={hand1Ref}>{driftValue(0, HAND_PHASES[1]).toFixed(6)}</span>
+        </div>
+        <div>
+          {"['mouse:u'] "}
+          <span ref={mouseRef}>0.000 / 0.000</span>
+        </div>
+      </div>
     </div>
   );
 };
