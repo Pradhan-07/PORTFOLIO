@@ -1,15 +1,22 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { Theme } from '../types';
 import type { WallDataState } from '../hooks/useWallData';
 import { PROFILE } from '../data/profile';
+import { THEMES } from '../data/themes';
 import { CODE_WALL_SNIPPETS } from '../data/codeSnippets';
 import { CodeTickerPanel } from './hancore/CodeTickerPanel';
+import { ColorschemePicker } from './hancore/ColorschemePicker';
+import { WireframeHandsKeyboard } from './hancore/WireframeHandsKeyboard';
 import { useWheelStepper, WHEEL_COOLDOWN_MS } from '../hooks/useWheelStepper';
 
 interface LandingScreenProps {
   theme: Theme;
   onEnter: () => void;
+  /** Kept for App compatibility; the :theme control now opens the
+   *  :colorscheme picker instead of cycling, so this is unused here. */
   onToggleTheme: () => void;
+  /** Apply a theme by index (picker selection) — App owns + persists it. */
+  onSelectTheme: (index: number) => void;
   isLeaving: boolean;
   /** G12 wall data (real repo files) — drives the sources nav + status line. */
   wall: WallDataState;
@@ -34,46 +41,36 @@ const LANG_LABELS: Record<string, string> = {
 export const LandingScreen: React.FC<LandingScreenProps> = ({
   theme,
   onEnter,
-  onToggleTheme,
+  onSelectTheme,
   isLeaving,
   wall,
   wallOffset,
   onWallOffsetChange,
 }) => {
+  // :colorscheme picker (§2.1) — opened by the :theme button / T key.
+  // `pickerKey` remounts the picker on every open so its query and
+  // highlight initialise fresh from props.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerKey, setPickerKey] = useState(0);
+  const openPicker = useCallback(() => {
+    setPickerKey((k) => k + 1);
+    setPickerOpen(true);
+  }, []);
+  const activeThemeIndex = Math.max(
+    0,
+    THEMES.findIndex((t) => t.name === theme.name)
+  );
+
   // Wall position model (SCROLL-SPEC §4.5 + G12): the wall data is one
   // flat list of lines; the offset picks where the visible grid starts.
-  // The status line's file/line readout is derived from the same offset,
-  // so it always names what is actually on the wall — real state, never
-  // decoration, and never an invented path when the fallback snippets
-  // are in use.
+  // (The demo panel owns its own vim status line now — §2.1 — derived
+  // from the demo's file/cursor state, not from this background offset.)
   const wallFiles = wall.status === 'ready' && wall.data ? wall.data.files : null;
   const totalLines = wallFiles
     ? wallFiles.reduce((sum, f) => sum + f.tokens.length, 0)
     : CODE_WALL_SNIPPETS.length;
   const safeTotal = Math.max(totalLines, 1);
   const currentOffset = ((wallOffset % safeTotal) + safeTotal) % safeTotal;
-
-  let currentLabel = '';
-  let currentLine = currentOffset + 1;
-  if (wallFiles) {
-    let acc = 0;
-    for (const f of wallFiles) {
-      if (currentOffset < acc + f.tokens.length) {
-        currentLabel = `${f.repo}/${f.path}`;
-        currentLine = currentOffset - acc + 1;
-        break;
-      }
-      acc += f.tokens.length;
-    }
-    if (!currentLabel && wallFiles.length > 0) {
-      const last = wallFiles[wallFiles.length - 1];
-      currentLabel = `${last.repo}/${last.path}`;
-      currentLine = last.tokens.length;
-    }
-  } else {
-    const snippet = CODE_WALL_SNIPPETS[currentOffset % CODE_WALL_SNIPPETS.length];
-    currentLabel = `snippet · ${snippet.lang}`;
-  }
 
   const advanceWall = useCallback(
     (steps: number) => {
@@ -127,12 +124,15 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // While the :colorscheme picker is open it owns the keyboard
+      // (filter input, ↑/↓, Enter, Esc) — this handler stands down.
+      if (pickerOpen) return;
       if (e.key === 'Enter') {
         e.preventDefault();
         onEnter();
       } else if (e.key === 't' || e.key === 'T') {
         if (!e.metaKey && !e.ctrlKey) {
-          onToggleTheme();
+          openPicker();
         }
       } else if (!e.metaKey && !e.ctrlKey && !e.altKey) {
         // Wall navigation keys (§4.5): arrows / j / k step, PageUp/PageDown jump.
@@ -153,7 +153,7 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onEnter, onToggleTheme, advanceWall]);
+  }, [onEnter, openPicker, advanceWall, pickerOpen]);
 
   return (
     <div
@@ -173,7 +173,9 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
         color: 'var(--fg)',
         zIndex: 5,
         fontFamily: '"IBM Plex Mono", monospace',
-        transition: 'opacity 300ms ease, filter 300ms ease',
+        // §2.2 phase A: the landing dims over the first 0.8s of the
+        // enter transition (the .is-leaving class supplies the target).
+        transition: 'opacity 800ms ease, filter 800ms ease',
       }}
     >
       {/* Exactly one H1 on the landing, screen-reader only (Round 1, §1.4):
@@ -256,11 +258,12 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
         </nav>
       </header>
 
-      {/* CENTER VIEWPORT: borderless floating code (Frames 03, 04).
-          Phase 5 (visual parity): the keyboard + wireframe-hands diagram
-          no longer sits on the landing — that motif lives in the editor's
-          desk strip (G6), which draws its own keyboard + hands. The
-          landing centre is the code ticker only, floating frameless. */}
+      {/* CENTER VIEWPORT — Phase 9 (§2.1): the staged Neovim demo panel
+          manages its own width (640px single pane / 815px split) and
+          renders the vim status line + command-line row directly under
+          the pane(s); the keyboard + hand-landmark artwork sits below
+          that — same original WireframeHandsKeyboard component, fed the
+          live theme colours. */}
       <main
         style={{
           flex: 1,
@@ -277,98 +280,113 @@ export const LandingScreen: React.FC<LandingScreenProps> = ({
           padding: '10px 0',
         }}
       >
-        <CodeTickerPanel />
+        <div style={{ width: '100%' }}>
+          <CodeTickerPanel wallFiles={wallFiles} />
+        </div>
+
+        {/* Keyboard diagram flanked by two hand-landmark wireframes —
+            Karan's own canvas artwork, decorative over the wall. */}
+        <div style={{ marginTop: '18px' }} aria-hidden="true">
+          <WireframeHandsKeyboard themeFg={theme.fg} themeAccent={theme.accent} />
+        </div>
       </main>
 
-      {/* FRAME 06 & 07 — BOTTOM BAR: LOWER LEFT TAGLINE & THEME/ENTER CONTROL */}
+      {/* BOTTOM ROW — Phase 8: tagline left / :theme centre / enter
+          right, three true zones (grid 1fr auto 1fr). */}
       <footer
         className="frame-bottom"
         style={{
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: '1fr auto 1fr',
           alignItems: 'center',
-          justifyContent: 'space-between',
           width: '100%',
           fontSize: '11px',
           color: 'var(--dim)',
           zIndex: 10,
-          flexWrap: 'wrap',
           gap: '12px',
         }}
       >
-        {/* FRAME 06 — LOWER LEFT TAGLINE + LIVE WALL STATUS */}
-        <div className="landing-status-line" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Decorative mono note — hidden from assistive tech (Round 1, §1.5). */}
-          <span aria-hidden="true" style={{ color: 'var(--dim)', letterSpacing: '0.04em' }}>
-            // building with curiosity.
-          </span>
-          {/* Vim-style status readout: the file currently on the wall and
-              the line the visible grid starts at — derived from the real
-              wall offset, updated by wheel / keys / swipe (§4.5). */}
-          <span style={{ color: 'var(--chrome)', fontSize: '10.5px', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
-            NORMAL · {currentLabel} · {currentLine}:1
-          </span>
-        </div>
+        {/* LEFT — the tagline note. Decorative — hidden from assistive
+            tech (Round 1, §1.5). Karan's own wording, unchanged. */}
+        <span aria-hidden="true" style={{ color: 'var(--dim)', letterSpacing: '0.04em', justifySelf: 'start' }}>
+          // building with curiosity.
+        </span>
 
-        {/* FRAME 07 — THEME AND ENTER CONTROL */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Theme switcher — Phase 5: a tiny borderless text control
-              (the 44px min-height stays: touch target rule from G10). */}
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            className="theme-key-btn"
-            title="Switch theme palette (or press T)"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'none',
-              border: 'none',
-              padding: '4px 6px',
-              minHeight: '44px',
-              color: 'var(--dim)',
-              fontFamily: '"IBM Plex Mono", monospace',
-              fontSize: '10.5px',
-              cursor: 'pointer',
-              transition: 'color 180ms ease',
-            }}
-          >
-            <span style={{ color: 'var(--accent)' }}>⌁</span>
-            <span>theme [{theme.label}]</span>
-          </button>
+        {/* CENTRE — the :theme control (§2.1: opens the :colorscheme
+            picker; the label shows the current theme). Phase 5: a tiny
+            borderless text control (the 44px min-height stays: touch
+            target rule). */}
+        <button
+          type="button"
+          onClick={openPicker}
+          className="theme-key-btn"
+          title="Switch theme palette (or press T)"
+          style={{
+            justifySelf: 'center',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'none',
+            border: 'none',
+            padding: '4px 6px',
+            minHeight: '44px',
+            color: 'var(--dim)',
+            fontFamily: '"IBM Plex Mono", monospace',
+            fontSize: '10.5px',
+            cursor: 'pointer',
+            transition: 'color 180ms ease',
+          }}
+        >
+          <span style={{ color: 'var(--accent)' }}>:</span>
+          <span>theme [{theme.label}]</span>
+        </button>
 
-          {/* Enter Button — Phase 5: a small OUTLINED pill (transparent
-              fill, hairline ring, pill radius) instead of the solid block.
-              Gate behaviour is untouched: click, Enter key, the App-level
-              timer fallback and Esc all work exactly as in Phase 4. */}
-          <button
-            type="button"
-            onClick={onEnter}
-            className="enter-btn"
-            aria-label="Enter portfolio"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 18px',
-              minHeight: '44px',
-              background: 'transparent',
-              color: 'var(--fg)',
-              border: '1px solid color-mix(in srgb, var(--fg) 45%, transparent)',
-              borderRadius: '999px',
-              fontFamily: '"IBM Plex Mono", monospace',
-              fontSize: '11.5px',
-              fontWeight: 500,
-              letterSpacing: '0.08em',
-              cursor: 'pointer',
-              transition: 'border-color 180ms ease, color 180ms ease',
-            }}
-          >
-            <span>enter</span>
-            <span style={{ fontSize: '13px', lineHeight: 1 }}>↵</span>
-          </button>
-        </div>
+        {/* RIGHT — Enter. Phase 5: a small OUTLINED pill (transparent
+            fill, hairline ring, pill radius) instead of the solid block.
+            Gate behaviour is untouched: click, Enter key, the App-level
+            timer fallback and Esc all work exactly as in Phase 4. */}
+        <button
+          type="button"
+          onClick={onEnter}
+          className="enter-btn"
+          aria-label="Enter portfolio"
+          style={{
+            justifySelf: 'end',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 18px',
+            minHeight: '44px',
+            background: 'transparent',
+            color: 'var(--fg)',
+            border: '1px solid color-mix(in srgb, var(--fg) 45%, transparent)',
+            borderRadius: '999px',
+            fontFamily: '"IBM Plex Mono", monospace',
+            fontSize: '11.5px',
+            fontWeight: 500,
+            letterSpacing: '0.08em',
+            cursor: 'pointer',
+            transition: 'border-color 180ms ease, color 180ms ease',
+          }}
+        >
+          <span>enter</span>
+          <span style={{ fontSize: '13px', lineHeight: 1 }}>↵</span>
+        </button>
       </footer>
+
+      {/* :colorscheme picker (§2.1) — remounted per open via key so its
+          filter/highlight state starts fresh; selection applies through
+          App's theme state and persists to localStorage there. */}
+      {pickerOpen && (
+        <ColorschemePicker
+          key={pickerKey}
+          open={pickerOpen}
+          themes={THEMES}
+          activeIndex={activeThemeIndex}
+          onSelect={onSelectTheme}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 };
