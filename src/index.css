@@ -24,15 +24,15 @@
      These tokens govern the whole stage (frame, buffer, bar, desk) so the
      site has a single visual physics. Never set them from themes/App. --- */
   --wide: 1008px;          /* max content measure inside the buffer */
-  --bar-h: 46px;           /* bottom-bar height (stage grid row + bar) */
+  --measure: 47ch;         /* Phase 9 (§1.1): transcript text measure ≈370px */
+  --eye-w: 190px;          /* Phase 9 (§1.1): eye column at the panel's right */
+  --bar-h: 58px;           /* Phase 9 (§1.1/§2.7): bottom-bar height — two-line host block (was 46px) */
   --desk-h: 0px;           /* desk band — height bands land with G6/G10 */
   --frame-x: 64px;         /* frame inset — stepped down by the G10 bands */
   --feather: 14px;         /* soft-edge falloff = 1 cell */
   --radius: 2px;           /* all editor chrome (9px only for mobile sheets) */
   --ring: 0 0 0 1px var(--line); /* the only elevation in chrome */
-  --tree-w: 210px;         /* file-tree sidebar width — stepped by G10 bands */
-  --gutter-w: 52px;        /* buffer line-gutter width (body padding matches) */
-  --gutter-top: 6px;       /* gutter/guide-grid shared top offset */
+  --tree-w: 225px;         /* file-tree sidebar width — stepped by G10 bands (Phase 9 §1.1: rail zone ≈225px) */
   --z-creature: 5;         /* Bit's overlay layer (buffer < creature < chrome) */
   /* Spacing scale, pinned (CSS-TOKEN-MAP Risk R1): names follow the
      PHASE4-SPECS mapping-table attestations — --sp-2 = 14px (inside cards),
@@ -201,15 +201,9 @@ a {
     border-color: color-mix(in srgb, var(--accent) 35%, transparent) !important;
   }
 
-  .editor-file-button:not([aria-current="true"]):hover {
-    color: var(--fg);
-  }
-
-  /* Phase 7: arc-stack cards ease toward straight under the pointer
-     (the active card already sits at 0deg, so this is a no-op there). */
-  .editor-file-button:hover {
-    transform: translateX(var(--arc-x, 0px)) rotate(calc(var(--arc-rot, 0deg) * 0.3));
-  }
+  /* Phase 9 (§2.5): hover on a rail card has NO feedback — no brighten,
+     no straighten, no tooltip. The Phase 7/8 hover-relax rules that
+     lived here are removed entirely. */
 }
 
 /* Touch targets: interactive chrome never drops below 44px tall where
@@ -253,9 +247,39 @@ a {
 }
 
 /* Editor workspace: sidebar width is a token so the G10 bands can step
-   it (168 / 182 / 196 / 210px) — media queries cannot reach inline styles. */
+   it (168 / 182 / 196 / 210px) — media queries cannot reach inline styles.
+   Phase 9 (§1.1): a third column is the eye zone (~190px, top-aligned);
+   below ~1150px it collapses and the panel takes the width. */
 .editor-workspace {
-  grid-template-columns: var(--tree-w) minmax(0, 1fr);
+  grid-template-columns: var(--tree-w) minmax(0, 1fr) var(--eye-w);
+}
+
+.eye-zone {
+  min-width: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 1150px) {
+  .editor-workspace {
+    grid-template-columns: var(--tree-w) minmax(0, 1fr);
+  }
+  .eye-zone {
+    display: none;
+  }
+}
+
+/* Phase 9 (§2.5): the rail drum is the desktop navigation; at ≤640px
+   the tabline disclosure sheet carries the legacy flow list instead. */
+@media (min-width: 641px) {
+  .rail-sheet-list {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .rail-drum {
+    display: none !important;
+  }
 }
 
 /* Cockpit graph (About buffer header strip): Phase 5 slimmed it from
@@ -272,49 +296,46 @@ a {
 
 /* --- Phase 2: editor stage / file buffer --- */
 
-/* Line gutter: an overlay column clipped to the content height, rows
-   snapped exactly to the --cell-h character token. */
-.file-gutter {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: var(--gutter-w);
-  overflow: hidden;
-  border-right: 1px solid color-mix(in srgb, var(--fg) 8%, transparent);
-  padding-top: var(--gutter-top);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.file-gutter-line {
-  height: var(--cell-h);
-  line-height: var(--cell-h);
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 9.5px;
-  color: var(--dim);
-  text-align: right;
-  padding-right: 10px;
-  opacity: 0.6;
-}
-
 /* Phase 7: the file tree is an arc stack of tilted cards. The tilt is
    carried in custom properties set per card (EditorFileNav.arcFor) so
    this rule, the hover rule above, and the reduced-motion block below
-   are the only places transforms are decided. */
+   are the only places transforms are decided. Phase 8 strengthened the
+   tilts to a 9–16° scatter along the vine — the mechanism is unchanged. */
 .editor-file-button {
   transform: translateX(var(--arc-x, 0px)) rotate(var(--arc-rot, 0deg));
 }
 
-/* Buffer body: content sits right of the gutter, on a faint horizontal
-   guide grid with the same --cell-h rhythm. */
+/* Phase 9 (§2.5): the arc drum (.rail-drum) is desktop-only; the legacy
+   sheet list (.rail-sheet-list) renders only in the ≤640 tabline band,
+   and the rail date line hides there with the hint. */
+.rail-sheet-list {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .rail-drum {
+    display: none;
+  }
+
+  .rail-sheet-list {
+    display: flex;
+  }
+
+  .rail-date-line {
+    display: none;
+  }
+}
+
+/* Buffer body — Phase 8: the line-number gutter is gone (the buffer is
+   a terminal transcript now), so the body spans the full pane width on
+   the same faint horizontal guide grid with the --cell-h rhythm. The
+   sections' own .section-container padding provides the side inset. */
 .file-buffer-body {
-  padding-left: var(--gutter-w);
   background-image: linear-gradient(to bottom,
       color-mix(in srgb, var(--fg) 2.5%, transparent) 1px,
       transparent 1px);
   background-size: 100% var(--cell-h);
-  background-position: 0 var(--gutter-top);
+  background-position: 0 0;
 }
 
 .file-buffer-scroll:focus-visible {
@@ -336,16 +357,9 @@ a {
    absorbed into the About buffer in G5, so .cockpit-grid /
    .left-tiles-column / .right-cluster-column no longer exist in the
    DOM. The old ≤760 horizontal-tabline stack is likewise replaced by
-   the ≤640 tabline disclosure in the G10 matrix below; only the gutter
-   step survives from that block. */
-@media (max-width: 760px) {
-
-  /* Gutter narrows with the stage — the token keeps the gutter column
-     and the body padding-left from ever drifting apart. */
-  :root {
-    --gutter-w: 36px;
-  }
-}
+   the ≤640 tabline disclosure in the G10 matrix below. (Phase 8: the
+   ≤760 block's last survivor, the gutter width step, went with the
+   gutter itself.) */
 
 @media (max-width: 640px) {
 
@@ -470,7 +484,6 @@ a {
 @media (max-width: 380px) {
   :root {
     --frame-x: 12px;
-    --gutter-w: 30px;
   }
 }
 
@@ -504,9 +517,27 @@ a {
   .bar-legacy {
     display: none !important;
   }
+
+  /* Phase 8/9: the bar's per-section stat columns (.bar-stats —
+     Phase 9's successor to the Phase 8 context readout) are a
+     wide-band citizen like the legacy echoes — below 900px they hide
+     first under width pressure (§2.7); the host block, creature
+     telemetry and command line keep the bar truthful on their own. */
+  .bar-readout-context,
+  .bar-stats {
+    display: none !important;
+  }
 }
 
 @media (max-width: 640px) {
+  /* Phase 9 (§2.7): after the stat columns (≤900px), the host block's
+     line-2 key legend is the next thing to go under width pressure.
+     The pager readout, creature telemetry and command input never
+     hide. */
+  .bar-legend {
+    display: none !important;
+  }
+
   /* Note A: the strip returns as a horizontally scrollable zone. */
   .bar-contrib-strip {
     display: flex !important;
@@ -648,9 +679,11 @@ a {
     opacity: 1 !important;
   }
 
-  /* Phase 7: under reduced motion the arc stack renders flat — the
-     cards keep their stack order and overlap, only the tilt goes. */
-  .editor-file-button {
+  /* Phase 9: under reduced motion the rail renders flat. This flatten
+     rule is scoped to the legacy sheet list — the drum handles reduced
+     motion in JS (spring off, cards upright, steps instant) and its
+     per-frame transforms must never be flattened by CSS. */
+  .editor-file-list .editor-file-button {
     transform: none !important;
   }
 }
