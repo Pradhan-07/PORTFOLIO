@@ -7,8 +7,27 @@ import { DashboardPortfolio } from './components/hancore/DashboardPortfolio';
 import { RadialEclipseTransition } from './components/hancore/RadialEclipseTransition';
 import { usePrefersReducedMotion } from './hooks/usePrefersReducedMotion';
 import { useWallData } from './hooks/useWallData';
+import { CreatureBusProvider } from './fx/CreatureBusProvider';
+import type { EditorFileId } from './types';
 
 const THEME_STORAGE_KEY = 'karan-portfolio-theme';
+
+/** Phase 9 (§2.9): section hashes — a valid one deep-links into the editor. */
+const SECTION_HASHES: readonly string[] = [
+  'about',
+  'certifications',
+  'projects',
+  'stack',
+  'journey',
+  'leetcode',
+  'themes',
+  'contact',
+];
+
+const fileFromHash = (): EditorFileId | null => {
+  const h = window.location.hash.replace(/^#/, '');
+  return SECTION_HASHES.includes(h) ? (h as EditorFileId) : null;
+};
 
 const readStoredThemeIndex = (): number => {
   try {
@@ -23,7 +42,11 @@ const readStoredThemeIndex = (): number => {
 export const App: React.FC = () => {
   const reducedMotion = usePrefersReducedMotion();
   const [themeIndex, setThemeIndex] = useState<number>(readStoredThemeIndex);
-  const [screen, setScreen] = useState<'landing' | 'portfolio'>('landing');
+  // §2.9 deep link: a valid section hash skips the landing entirely.
+  const [initialFile] = useState<EditorFileId | null>(() =>
+    typeof window === 'undefined' ? null : fileFromHash()
+  );
+  const [screen, setScreen] = useState<'landing' | 'portfolio'>(initialFile ? 'portfolio' : 'landing');
   // G12 code wall: real repo files from /data/wall.json (null while
   // loading or if the file is unavailable — CanvasWall then falls back
   // to the built-in snippets). The wall navigation offset lives here
@@ -61,22 +84,22 @@ export const App: React.FC = () => {
     applyThemeVariables(currentTheme);
   }, [currentTheme, applyThemeVariables]);
 
-  // The document never scrolls in this two-act app (SCROLL-SPEC §4.4):
-  // App owns the lock for BOTH screens, for the app's whole lifetime —
-  // previously only the editor locked it, so a short viewport could
-  // scroll the landing's overflow into view.
+  // Document scroll lock (SCROLL-SPEC §4.4, amended by Phase 9 §2.8):
+  // the LANDING never scrolls (a short viewport must not reveal its
+  // overflow), but the PORTFOLIO page scrolls between the sticky stage
+  // and the desk below the fold — so the lock applies on the landing
+  // only and is released while the editor is mounted.
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
-    return () => {
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
-    };
-  }, []);
+    if (screen === 'landing') {
+      html.style.overflow = 'hidden';
+      body.style.overflow = 'hidden';
+    } else {
+      html.style.overflow = '';
+      body.style.overflow = '';
+    }
+  }, [screen]);
 
   // Persist the chosen theme so it is restored on the next visit.
   useEffect(() => {
@@ -100,7 +123,12 @@ export const App: React.FC = () => {
   // Trigger Part 2: Radial Eclipse Transition
   // Reduced motion (G9): no cinematic sequence — go straight to the portfolio.
   const handleStartEnterTransition = () => {
-    if (isTransitioning) return; // a second Enter mid-gate must not restart it
+    // §2.2: a second Enter/click while the gate is running SKIPS it —
+    // jump straight to the transition's end state.
+    if (isTransitioning) {
+      handleTransitionComplete();
+      return;
+    }
     if (reducedMotion) {
       handleTransitionComplete();
       return;
@@ -152,18 +180,22 @@ export const App: React.FC = () => {
           theme={currentTheme}
           onEnter={handleStartEnterTransition}
           onToggleTheme={handleToggleTheme}
+          onSelectTheme={handleSelectTheme}
           isLeaving={isTransitioning}
           wall={wall}
           wallOffset={wallOffset}
           onWallOffsetChange={setWallOffset}
         />
       ) : (
-        <DashboardPortfolio
-          theme={currentTheme}
-          onBackToIntro={handleBackToLanding}
-          onToggleTheme={handleToggleTheme}
-          onSelectTheme={handleSelectTheme}
-        />
+        <CreatureBusProvider>
+          <DashboardPortfolio
+            theme={currentTheme}
+            onBackToIntro={handleBackToLanding}
+            onToggleTheme={handleToggleTheme}
+            onSelectTheme={handleSelectTheme}
+            initialFile={initialFile ?? undefined}
+          />
+        </CreatureBusProvider>
       )}
 
       {/* Part 2: Signature Radial Eclipse Expanding Burst Transition */}
