@@ -34,7 +34,7 @@ interface MonthsFile {
 const BIO_TEXT =
   'Second-year B.Tech Computer Science Engineering student focused on strengthening programming fundamentals, algorithmic problem solving in C++, and exploring intelligent systems and modern web technologies.';
 
-const SCRAMBLE_GLYPHS = '▓▒░#%@/\\|<>+=~';
+const SCRAMBLE_GLYPHS = '#%@/\\|<>+=~';
 
 /**
  * The whoami bio with its ghost-glitch overlay (§3.1.2): the clean
