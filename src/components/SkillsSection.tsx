@@ -91,7 +91,7 @@ const SITE_ROWS: Array<{ name: string; file: string }> = [
 
 /**
  * SkillsSection (DESIGN-SPEC §3.4) — stack.ts as a ghost transcript:
- * `stack --languages` (the exact 16-glyph repos chart), `stack --tools`
+ * `stack --languages` (the exact 16-cell repos chart), `stack --tools`
  * (derived counts), `stack --ai-tools` (conditional — no data today),
  * `stack --site`, `node calendar.mjs <year>` (the contribution
  * heatmap), and finally the kept detail pane: the tech rows list with
@@ -249,8 +249,11 @@ nothing to commit, working tree clean`,
           return (
             <div
               key={lang.name}
+              tabIndex={0}
               onMouseEnter={() => setHoverLang(lang.name)}
               onMouseLeave={() => setHoverLang(null)}
+              onFocus={() => setHoverLang(lang.name)}
+              onBlur={() => setHoverLang(null)}
               style={{
                 display: 'flex',
                 gap: '12px',
@@ -263,12 +266,35 @@ nothing to commit, working tree clean`,
               <span style={{ color: 'var(--fg)', minWidth: '96px', display: 'inline-block', flexShrink: 0 }}>
                 {lang.name}
               </span>
+              {/* The bar is 16 real cells, not █/░ glyph text: IBM Plex
+                  Mono ships neither U+2588 nor U+2591 in any Google
+                  Fonts subset, so glyph bars painted only via implicit
+                  per-glyph fallback to an unnamed local font — and the
+                  old aria-hidden wrapper dropped the bar from the
+                  accessibility tree entirely ('HTML' read as followed
+                  directly by its count). Solid cells (the same idiom
+                  as the contribution heatmap) paint identically in
+                  every environment; role="img" + label keeps the bar
+                  present to assistive tech. Hover/focus fills all 16. */}
               <span
-                aria-hidden="true"
-                style={{ letterSpacing: 0, lineHeight: 1, whiteSpace: 'pre', flexShrink: 0 }}
+                role="img"
+                aria-label={`${lang.name}: ${lang.repos} ${lang.repos === 1 ? 'repo' : 'repos'} — ${filled} of ${CHART_CELLS} cells`}
+                style={{ display: 'inline-flex', gap: '1px', alignSelf: 'center', flexShrink: 0, lineHeight: 0 }}
               >
-                <span style={{ color: 'var(--num)' }}>{'█'.repeat(filled)}</span>
-                <span style={{ color: 'var(--dim)' }}>{'░'.repeat(CHART_CELLS - filled)}</span>
+                {Array.from({ length: CHART_CELLS }, (_, cell) => (
+                  <span
+                    key={cell}
+                    style={{
+                      display: 'inline-block',
+                      width: 'calc(1ch - 1px)',
+                      height: '11px',
+                      background:
+                        cell < filled
+                          ? 'var(--num)'
+                          : 'color-mix(in srgb, var(--dim) 30%, transparent)',
+                    }}
+                  />
+                ))}
               </span>
               <span style={{ color: 'var(--fg)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                 {lang.repos}
