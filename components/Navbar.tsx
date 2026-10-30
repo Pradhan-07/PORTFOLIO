@@ -1,31 +1,35 @@
 "use client";
 
-import React, { useEffect, useState, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, LayoutGroup } from "framer-motion";
-import { Sun, Moon } from "lucide-react";
+import { motion } from "framer-motion";
+import { Sun, Moon, FileText } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 
 interface NavItem {
   name: string;
   href: string;
-  sectionId?: string;
 }
 
 const navItems: NavItem[] = [
-  { name: "index", href: "/", sectionId: "hero" },
-  { name: "work", href: "/work", sectionId: "work" },
-  { name: "writing", href: "/writing", sectionId: "writing" },
-  { name: "resume", href: "/resume", sectionId: "resume" },
-  { name: "about", href: "/about", sectionId: "about" },
+  { name: "index", href: "/" },
+  { name: "work", href: "/work" },
+  { name: "writing", href: "/writing" },
+  { name: "resume", href: "/resume" },
+  { name: "about", href: "/about" },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
-  const [scrolled, setScrolled] = useState(false);
   const [homeSection, setHomeSection] = useState<string>("index");
+
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const activeSection =
     pathname !== "/"
@@ -40,26 +44,11 @@ export function Navbar() {
         : "index"
       : homeSection;
 
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 40);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // IntersectionObserver for tracking active section on the home page
+  // IntersectionObserver for tracking active section on home page
   useEffect(() => {
     if (pathname !== "/") return;
 
-    const sections = ["hero", "work", "writing", "about"]
+    const sections = ["hero", "work", "resume", "writing", "about"]
       .map((id) => document.getElementById(id))
       .filter(Boolean) as HTMLElement[];
 
@@ -74,7 +63,7 @@ export function Navbar() {
           }
         });
       },
-      { threshold: 0.25, rootMargin: "-80px 0px -40% 0px" }
+      { threshold: 0.2, rootMargin: "-80px 0px -40% 0px" }
     );
 
     sections.forEach((s) => observer.observe(s));
@@ -83,7 +72,7 @@ export function Navbar() {
 
   return (
     <>
-      {/* Skip to Content for Accessibility */}
+      {/* Accessibility: Skip to Content */}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-neutral-900 focus:text-neutral-100 focus:border focus:border-neutral-700 focus:rounded-md focus:text-xs focus:font-mono"
@@ -91,90 +80,86 @@ export function Navbar() {
         Skip to content →
       </a>
 
-      {/* Floating Notch Navbar Centered at Top */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-3 sm:pt-4 px-4 pointer-events-none">
-        <LayoutGroup id="notchNav">
-          <motion.nav
-            layout
-            initial={{ y: -24, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{
-              type: "spring",
-              stiffness: 400,
-              damping: 30,
-            }}
-            className={`pointer-events-auto flex items-center liquid-glass rounded-full shadow-sm transition-all duration-300 ${
-              scrolled
-                ? "py-1.5 px-3 sm:px-4 gap-2 sm:gap-4 shadow-black/20"
-                : "py-2 px-4 sm:px-6 gap-3 sm:gap-6 shadow-black/5"
-            }`}
-            style={{
-              WebkitBackdropFilter: "blur(16px)",
-              backdropFilter: "blur(16px)",
-            }}
-            aria-label="Primary Navigation"
+      {/* Notch Navbar sticking to TOP EDGE of the viewport like a tab */}
+      <header
+        id="notch-navbar"
+        className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none"
+      >
+        <motion.nav
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-auto flex items-center px-4 sm:px-6 py-2.5 gap-2.5 sm:gap-4 rounded-b-2xl rounded-t-none bg-black text-[#ededed] dark:bg-[#161616] dark:text-[#ededed] border-x border-b border-transparent dark:border-neutral-800 shadow-xl transition-all"
+          aria-label="Notch Navigation"
+        >
+          {/* Logo Mark */}
+          <Link
+            href="/"
+            className="font-mono text-xs font-extrabold tracking-wider px-1 text-white hover:text-neutral-300 transition-colors"
           >
-            {/* Logo / Monogram */}
-            <Link
-              href="/"
-              className="font-mono text-xs font-bold tracking-wider px-2 py-0.5 rounded text-neutral-800 dark:text-neutral-200 hover:text-black dark:hover:text-white transition-colors"
-            >
-              KP<span className="opacity-40">.07</span>
-            </Link>
+            KP
+          </Link>
 
-            <div className="h-3 w-px bg-neutral-300 dark:bg-neutral-800" />
+          <div className="h-3 w-px bg-neutral-800 dark:bg-neutral-700" />
 
-            {/* Nav items */}
-            <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-xs lowercase">
-              {navItems.map((item) => {
-                const isActive =
-                  pathname === "/"
-                    ? activeSection === item.name
-                    : pathname.startsWith(item.href) && item.href !== "/";
+          {/* Links */}
+          <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-xs lowercase">
+            {navItems.map((item) => {
+              const isActive =
+                item.href === "/"
+                  ? activeSection === "index"
+                  : activeSection === item.name;
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`relative px-2.5 py-1 rounded-full transition-colors duration-200 ${
-                      isActive
-                        ? "text-neutral-950 dark:text-white font-medium"
-                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
-                    }`}
-                  >
-                    {isActive && (
-                      <motion.span
-                        layoutId="activeNotchPill"
-                        className="absolute inset-0 rounded-full bg-neutral-200/90 dark:bg-neutral-800/90 -z-10 shadow-xs"
-                        transition={{
-                          type: "spring",
-                          stiffness: 450,
-                          damping: 32,
-                        }}
-                      />
-                    )}
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </div>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative px-2 sm:px-2.5 py-1 rounded-full transition-all duration-150 ${
+                    isActive
+                      ? "text-black dark:text-neutral-950 font-bold"
+                      : "text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="notchNavbarActiveIndicator"
+                      className="absolute inset-0 rounded-full bg-white dark:bg-[#ededed] -z-10 shadow-xs"
+                      transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                    />
+                  )}
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
 
-            <div className="h-3 w-px bg-neutral-300 dark:bg-neutral-800" />
+          <div className="h-3 w-px bg-neutral-800 dark:bg-neutral-700" />
 
-            {/* Dark / Light Mode Switcher */}
-            <button
-              onClick={toggleTheme}
-              aria-label="Toggle dark/light theme"
-              className="p-1.5 rounded-full text-neutral-600 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-white transition-colors"
-            >
-              {mounted && theme === "light" ? (
-                <Moon className="w-3.5 h-3.5" />
-              ) : (
-                <Sun className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </motion.nav>
-        </LayoutGroup>
+          {/* llms.txt link with tiny file icon */}
+          <Link
+            href="/llms.txt"
+            title="Plain text site summary for LLMs"
+            className="inline-flex items-center gap-1 font-mono text-[11px] text-neutral-400 hover:text-white transition-colors px-1"
+          >
+            <FileText className="w-3 h-3 opacity-70" />
+            <span className="hidden sm:inline">llms.txt</span>
+          </Link>
+
+          <div className="h-3 w-px bg-neutral-800 dark:bg-neutral-700" />
+
+          {/* Dark / Light Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            className="p-1 rounded-full text-neutral-400 hover:text-white transition-colors"
+          >
+            {mounted && theme === "light" ? (
+              <Moon className="w-3.5 h-3.5" />
+            ) : (
+              <Sun className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </motion.nav>
       </header>
     </>
   );

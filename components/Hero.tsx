@@ -1,172 +1,233 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
-import { ArrowUpRight, ChevronDown } from "lucide-react";
-import { StippleEffect } from "./StippleEffect";
-import { VerletLanyard } from "./VerletLanyard";
-import { GithubContributions } from "./GithubContributions";
-
-const socialLinks = [
-  { name: "GitHub", href: "https://github.com/Pradhan-07" },
-  { name: "LinkedIn", href: "https://www.linkedin.com/in/karan-kumar-pradhan-510062396/" },
-  { name: "X", href: "https://x.com/pradhankar65796" },
-  { name: "Instagram", href: "https://www.instagram.com/pradhan___07" },
-  { name: "Email", href: "mailto:pradhankaran058@gmail.com" },
-];
-
-const statChips = ["C++ · DSA", "Web dev", "Building in public"];
-
-// Words for H1 animation with 60ms stagger
-const h1Words = [
-  "Hi,",
-  "I'm",
-  "Karan.",
-  "I'm",
-  "learning",
-  "to",
-  "build",
-  "things",
-  "that",
-  "work.",
-];
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { VerletRope, DEFAULT_PHYSICS_CONFIG, VerletPoint } from "@/lib/verlet";
+import { Lanyard } from "./hero/Lanyard";
+import { Badge } from "./hero/Badge";
+import { useTheme } from "../components/ThemeProvider";
+import { ChevronDown } from "lucide-react";
 
 export function Hero() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  // Physics Rope Instance
+  const ropeRef = useRef<VerletRope>(new VerletRope(DEFAULT_PHYSICS_CONFIG));
+
+  // Visual state driven by animation loop
+  const [ropePoints, setRopePoints] = useState<VerletPoint[]>([]);
+  const [badgeState, setBadgeState] = useState({
+    x: 0,
+    y: 0,
+    angleDeg: 0,
+    stretchRatio: 1,
+  });
+
+  // Drag interaction state
+  const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragTargetRef = useRef({ x: 0, y: 0 });
+  const startPointerPos = useRef({ x: 0, y: 0 });
+  const startPointerTime = useRef(0);
+
+  // 3D Flip state
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  // Anchor point (bottom-center of the notch navbar)
+  const [anchor, setAnchor] = useState({ x: 0, y: 44 });
+
+  // Initialize and handle resize
+  const setupRope = useCallback((width: number) => {
+    const anchorX = width / 2;
+    const anchorY = 44; // Bottom of the top tab notch
+    setAnchor({ x: anchorX, y: anchorY });
+
+    // Intro drop-in: start rope compressed upwards by ~140px so it drops in with gravity
+    ropeRef.current.init(anchorX, anchorY, 140);
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleResize = () => {
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      setupRope(rect.width);
+    };
+
+    handleResize();
+
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(container);
+
+    let animationId: number;
+    let isVisible = true;
+
+    // Pause physics loop when offscreen or tab hidden
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        isVisible = entries[0].isIntersecting;
+      },
+      { threshold: 0.05 }
+    );
+    intersectionObserver.observe(container);
+
+    const handleVisibility = () => {
+      isVisible = !document.hidden;
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    // Main 60fps render loop
+    const render = (time: number) => {
+      if (!isVisible) {
+        animationId = requestAnimationFrame(render);
+        return;
+      }
+
+      // Update Verlet physics with fixed timestep accumulator (1/60s)
+      ropeRef.current.update(
+        time,
+        isDraggingRef.current,
+        dragTargetRef.current,
+        true // allow stretching during drag
+      );
+
+      // Extract points and badge transform
+      const points = ropeRef.current.points;
+      const transform = ropeRef.current.getBadgeTransform();
+
+      setRopePoints([...points]);
+      setBadgeState({
+        x: transform.x,
+        y: transform.y,
+        angleDeg: transform.angleDeg,
+        stretchRatio: transform.stretchRatio,
+      });
+
+      animationId = requestAnimationFrame(render);
+    };
+
+    animationId = requestAnimationFrame(render);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [setupRope]);
+
+  // Pointer event handlers for Badge drag & click-to-flip
+  const handlePointerDown = (e: React.PointerEvent) => {
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    startPointerPos.current = { x: e.clientX, y: e.clientY };
+    startPointerTime.current = Date.now();
+
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      dragTargetRef.current = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+      // touch-action none applied only while dragging so page scrolling works on mobile
+      containerRef.current.style.touchAction = "none";
+    }
+
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    dragTargetRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (isDraggingRef.current) {
+      const elapsed = Date.now() - startPointerTime.current;
+      const dist = Math.hypot(
+        e.clientX - startPointerPos.current.x,
+        e.clientY - startPointerPos.current.y
+      );
+
+      // Distinguish click from drag: if moved < 6px and released under 320ms, toggle flip!
+      if (dist < 6 && elapsed < 320) {
+        setIsFlipped((prev) => !prev);
+      }
+    }
+
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    if (containerRef.current) {
+      containerRef.current.style.touchAction = "auto";
+    }
+
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignored
+    }
+  };
+
   return (
     <section
       id="hero"
-      className="relative min-h-[92dvh] pt-28 sm:pt-36 pb-14 flex flex-col justify-between overflow-hidden"
+      className="relative w-full min-h-[92dvh] sm:min-h-[96dvh] pt-12 pb-16 flex flex-col justify-between overflow-x-hidden select-none"
     >
-      {/* Background Portrait Stipple Effect (~4000 dots with text-dimming) */}
-      <StippleEffect />
+      {/* Background Speckles / Subtle Grain */}
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 opacity-70"
+        style={{
+          backgroundImage: isDark
+            ? `radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)`
+            : `radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px)`,
+          backgroundSize: "24px 24px",
+        }}
+      />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          {/* Left Text Column (7 cols) */}
-          <div className="lg:col-span-7 flex flex-col gap-6 z-10">
-            {/* Small Upper Mono Label */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45 }}
-              className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-full text-xs font-mono border border-[var(--border)] bg-[var(--card)]/80 backdrop-blur-sm text-neutral-600 dark:text-neutral-400"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Karan Kumar Pradhan · CSE @ VIT-AP</span>
-            </motion.div>
+      {/* Physics Canvas & Lanyard Container */}
+      <div
+        ref={containerRef}
+        className="relative w-full h-[580px] sm:h-[620px] md:h-[660px] flex items-center justify-center overflow-visible"
+      >
+        {/* Lanyard Fabric Strap with repeated text & silver clasp */}
+        <Lanyard
+          points={ropePoints}
+          anchorX={anchor.x}
+          anchorY={anchor.y}
+          stretchRatio={badgeState.stretchRatio}
+          isDark={isDark}
+        />
 
-            {/* H1 Heading: Words fade-up with 60ms stagger */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[var(--foreground)] leading-[1.08]">
-              {h1Words.map((word, i) => (
-                <motion.span
-                  key={i}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.4,
-                    delay: 0.2 + i * 0.06, // 200-700ms sequence with 60ms stagger
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                  className={`inline-block mr-2.5 ${
-                    i >= 3 ? "text-neutral-500 dark:text-neutral-400 font-normal" : ""
-                  }`}
-                >
-                  {word}
-                </motion.span>
-              ))}
-            </h1>
-
-            {/* Short Paragraph Bio */}
-            <motion.p
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-              className="text-base sm:text-lg text-neutral-700 dark:text-neutral-300 leading-relaxed max-w-xl"
-            >
-              2nd-year Computer Science Engineering student at VIT-AP University. Currently
-              grinding DSA in C++, exploring modern web development, and shipping code in public.
-            </motion.p>
-
-            {/* Mono Chips */}
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-              className="flex flex-wrap gap-2 pt-1"
-            >
-              {statChips.map((chip) => (
-                <span
-                  key={chip}
-                  className="px-2.5 py-1 text-xs font-mono rounded-md border border-[var(--border)] bg-[var(--card)]/90 text-neutral-700 dark:text-neutral-300 shadow-2xs"
-                >
-                  {chip}
-                </span>
-              ))}
-            </motion.div>
-
-            {/* "Find me" Row with ↗ Arrows */}
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.7 }}
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 text-xs font-mono"
-            >
-              <span className="text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-                find me //
-              </span>
-              {socialLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  target={link.name === "Email" ? "_self" : "_blank"}
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-0.5 text-neutral-800 dark:text-neutral-200 hover:text-black dark:hover:text-white underline underline-offset-4 decoration-neutral-300 dark:decoration-neutral-700 hover:decoration-black dark:hover:decoration-white transition-colors"
-                >
-                  <span>{link.name}</span>
-                  <ArrowUpRight className="w-3 h-3 opacity-60" />
-                </a>
-              ))}
-            </motion.div>
-
-            {/* GitHub Contributions Heatmap (52 weeks with 8ms stagger) */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="pt-2 max-w-xl"
-            >
-              <GithubContributions />
-            </motion.div>
-          </div>
-
-          {/* Right Column: Interactive Verlet Lanyard ID Badge (5 cols) */}
-          <motion.div
-            initial={{ opacity: 0, y: -40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.8,
-              delay: 0.6, // Badge drops from top and swings at 600ms
-              ease: [0.22, 1, 0.36, 1],
-            }}
-            className="lg:col-span-5 flex justify-center lg:justify-end relative"
-          >
-            <div className="w-full max-w-[360px]">
-              <VerletLanyard />
-            </div>
-          </motion.div>
-        </div>
+        {/* The Landscape ID Badge (Front & Back) */}
+        {badgeState.x > 0 && (
+          <Badge
+            x={badgeState.x}
+            y={badgeState.y}
+            angleDeg={badgeState.angleDeg}
+            isDragging={isDragging}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            isFlipped={isFlipped}
+            onToggleFlip={() => setIsFlipped((prev) => !prev)}
+            isDark={isDark}
+          />
+        )}
       </div>
 
-      {/* Bottom Microcopy */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 1.0 }}
-        className="w-full text-center pt-8 pb-1 text-xs font-mono text-neutral-500 dark:text-neutral-400 flex items-center justify-center gap-1.5"
-      >
+      {/* Hero Bottom Hint */}
+      <div className="w-full text-center pt-4 pb-2 text-xs font-mono text-neutral-500 dark:text-neutral-400 flex items-center justify-center gap-1.5 pointer-events-none">
         <span>scroll. the badge will survive.</span>
         <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
-      </motion.div>
+      </div>
     </section>
   );
 }

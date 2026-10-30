@@ -10,26 +10,28 @@
 }
 
 :root {
-  --background: #fafafa;
+  --background: #f4f2ec;
   --foreground: #111111;
+  --speck-color: rgba(0, 0, 0, 0.04);
   --muted: #666666;
   --muted-subtle: #888888;
-  --border: #e5e5e5;
+  --border: #e3ded5;
   --card: #ffffff;
-  --card-border: #e5e5e5;
-  --card-subtle: #f2f2f2;
-  --badge-bg: #f0f0f0;
+  --card-border: #e3ded5;
+  --card-subtle: #eeebe3;
+  --badge-bg: #eae6de;
   --stipple-dot: #111111;
-  --heatmap-0: #ececec;
-  --heatmap-1: #c8c8c8;
-  --heatmap-2: #8e8e8e;
-  --heatmap-3: #525252;
+  --heatmap-0: #e5e1d8;
+  --heatmap-1: #c8c3b8;
+  --heatmap-2: #8e8a80;
+  --heatmap-3: #52504a;
   --heatmap-4: #111111;
 }
 
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --speck-color: rgba(255, 255, 255, 0.05);
   --muted: #888888;
   --muted-subtle: #555555;
   --border: #222222;
@@ -57,6 +59,8 @@ body {
   overflow-x: hidden;
   min-height: 100dvh;
   transition: background-color 200ms ease, color 200ms ease;
+  background-image: radial-gradient(var(--speck-color) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 /* Liquid glass notch with Safari support */

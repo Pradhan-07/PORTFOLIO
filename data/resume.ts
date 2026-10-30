@@ -117,3 +117,4 @@ export const resumeData: ResumeData = {
     leetcodeStartDate: "Aug 2026",
   },
 };
+
