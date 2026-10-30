@@ -27,10 +27,15 @@ export function HomeStatsTiles() {
       </div>
 
       {/* 2. Live LeetCode */}
-      <div className="p-4 rounded-xl border border-[var(--border)] bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors relative overflow-hidden group">
+      <a
+        href={`https://leetcode.com/u/${leetcode.username}/`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="p-4 rounded-xl border border-[var(--border)] bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors relative overflow-hidden group block cursor-pointer"
+      >
         <div className="flex items-center justify-between mb-1">
-          <span className="font-mono text-[10px] uppercase text-neutral-400">
-            LEETCODE SOLVED
+          <span className="font-mono text-[10px] uppercase text-neutral-400 group-hover:text-neutral-200 transition-colors">
+            LEETCODE SOLVED ↗
           </span>
           <span
             className="inline-flex items-center gap-1 font-mono text-[9px] text-emerald-500 dark:text-emerald-400"
@@ -41,22 +46,30 @@ export function HomeStatsTiles() {
                 isSyncing ? "animate-ping" : "animate-pulse"
               }`}
             />
-            LIVE
+            LIVE SYNC
           </span>
         </div>
         <div className="text-2xl sm:text-3xl font-mono font-bold text-[var(--foreground)]">
           <CountUp end={leetcode.totalSolved} duration={1200} />
+          <span className="text-sm font-normal text-neutral-500 ml-1.5 font-sans">
+            problems
+          </span>
         </div>
         <span className="font-mono text-[10px] text-neutral-500 mt-1 block">
           E: {leetcode.easySolved} · M: {leetcode.mediumSolved} · H: {leetcode.hardSolved}
         </span>
-      </div>
+      </a>
 
-      {/* 3. GitHub & DSA Repository */}
-      <div className="p-4 rounded-xl border border-[var(--border)] bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors">
+      {/* 3. GitHub Repository Contributions */}
+      <a
+        href={`https://github.com/${github.username}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="p-4 rounded-xl border border-[var(--border)] bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors block group cursor-pointer"
+      >
         <div className="flex items-center justify-between mb-1">
-          <span className="font-mono text-[10px] uppercase text-neutral-400">
-            GITHUB CONTRIBUTIONS
+          <span className="font-mono text-[10px] uppercase text-neutral-400 group-hover:text-neutral-200 transition-colors">
+            GITHUB CONTRIBUTIONS ↗
           </span>
           <span
             className="inline-flex items-center gap-1 font-mono text-[9px] text-emerald-500 dark:text-emerald-400"
@@ -67,16 +80,20 @@ export function HomeStatsTiles() {
                 isSyncing ? "animate-ping" : "animate-pulse"
               }`}
             />
-            {github.currentStreak}d streak
+            LIVE SYNC
           </span>
         </div>
         <div className="text-2xl sm:text-3xl font-mono font-bold text-[var(--foreground)]">
           <CountUp end={github.totalContributions} duration={1300} />
+          <span className="text-sm font-normal text-neutral-500 ml-1.5 font-sans">
+            contributions
+          </span>
         </div>
         <span className="font-mono text-[10px] text-neutral-500 mt-1 block">
-          69+ DSA C++ · github.com/{github.username}
+          Across GitHub repositories · {github.currentStreak}d streak
         </span>
-      </div>
+      </a>
     </div>
   );
 }
+

@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowUp } from "lucide-react";
-import { FooterEmberLines } from "@/components/FooterEmberLines";
 
 export function Footer() {
   const scrollToTop = () => {
@@ -13,12 +12,11 @@ export function Footer() {
   return (
     <footer
       id="footer"
-      className="w-full bg-[#000000] text-neutral-400 rounded-t-[24px] sm:rounded-t-[32px] pt-12 pb-8 px-4 sm:px-8 mt-24 relative overflow-hidden selection:bg-neutral-800"
-      data-cursor="ember"
+      className="w-full bg-[#000000] text-neutral-400 rounded-t-[24px] sm:rounded-t-[32px] pt-10 pb-8 px-4 sm:px-8 mt-24 relative overflow-hidden selection:bg-neutral-800 border-t border-neutral-900"
     >
-      <div className="max-w-6xl mx-auto flex flex-col justify-between min-h-[380px] sm:min-h-[440px] gap-8">
+      <div className="max-w-6xl mx-auto flex flex-col justify-between gap-6 sm:gap-8">
         {/* Top Row: Socials & Navigation */}
-        <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs sm:text-[13px] border-b border-neutral-900 pb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs sm:text-[13px] border-b border-neutral-900/80 pb-6">
           {/* Socials */}
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             <a
@@ -85,13 +83,8 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Center: Giant PRADHAN ember-lines canvas word */}
-        <div className="w-full my-auto py-2 sm:py-4">
-          <FooterEmberLines />
-        </div>
-
         {/* Bottom Row: Copyright & Up We Go */}
-        <div className="flex items-center justify-between font-mono text-xs text-neutral-600 sm:text-neutral-500 pt-6 border-t border-neutral-900">
+        <div className="flex items-center justify-between font-mono text-xs text-neutral-500">
           <div>
             <span>© 2026 Karan Kumar Pradhan</span>
           </div>
