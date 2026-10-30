@@ -14,6 +14,7 @@ import { StatsStrip } from "@/components/StatsStrip";
 import { Timeline } from "@/components/Timeline";
 import { StackStrip } from "@/components/StackStrip";
 import { OpenToWorkCTA } from "@/components/OpenToWorkCTA";
+import { TypewriterText } from "@/components/TypewriterText";
 
 // Map URL slugs to FilterCategory
 function categoryToSlug(cat: FilterCategory): string {
@@ -66,7 +67,7 @@ export function WorkPageClient() {
       {/* 1. Header Section */}
       <div className="mb-10 sm:mb-12">
         <span className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-          [ ARCHIVE // ALL PROJECTS ]
+          <TypewriterText text="[ ARCHIVE // ALL PROJECTS ]" duration={400} />
         </span>
         <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-neutral-950 dark:text-neutral-50 mt-2 mb-3">
           Work & Experiments

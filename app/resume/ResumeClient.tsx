@@ -128,17 +128,18 @@ export function ResumeClient() {
 
           {/* Action Row */}
           <div className="flex flex-wrap items-center gap-2.5 font-mono text-xs">
-            {/* Download PDF button */}
+            {/* Download PDF button with progress-style hover fill */}
             <a
               href={resumeData.pdfUrl}
               download="Karan-Kumar-Pradhan-Resume.pdf"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-950 font-medium hover:bg-neutral-800 dark:hover:bg-white transition-all shadow-xs"
+              className="relative overflow-hidden inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-950 font-medium active:scale-[0.98] transition-all shadow-xs group cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download PDF</span>
-              <span>↓</span>
+              <span className="absolute inset-0 bg-neutral-700/60 dark:bg-neutral-300/60 -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
+              <Download className="w-3.5 h-3.5 relative z-10 group-hover:translate-y-0.5 transition-transform" />
+              <span className="relative z-10">Download PDF</span>
+              <span className="relative z-10 group-hover:translate-y-0.5 transition-transform">↓</span>
             </a>
 
             {/* Copy Email button */}

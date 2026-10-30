@@ -28,11 +28,15 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
   const rightBorderRef = useRef<SVGPathElement | null>(null);
   const rightGuideRef = useRef<SVGPathElement | null>(null);
 
+  const leftTextPathRef = useRef<SVGTextPathElement | null>(null);
+  const rightTextPathRef = useRef<SVGTextPathElement | null>(null);
+
   const middleClaspRef = useRef<SVGGElement | null>(null);
   const bottomClaspRef = useRef<SVGGElement | null>(null);
+  const shadowFilterRef = useRef<SVGFEDropShadowElement | null>(null);
 
-  const strapWidth = 14;
-  const notchOffset = 18; // 36px spread at the top notch
+  const baseStrapWidth = 14;
+  const notchOffset = 18; // 36px spread at the top tab notch
 
   useImperativeHandle(
     ref,
@@ -51,6 +55,7 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
           rightD += `L ${p.x + spread} ${p.y} `;
         }
 
+        // 1. Update paths
         if (leftPathRef.current) leftPathRef.current.setAttribute("d", leftD);
         if (leftBorderRef.current) leftBorderRef.current.setAttribute("d", leftD);
         if (leftGuideRef.current) leftGuideRef.current.setAttribute("d", leftD);
@@ -59,16 +64,34 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         if (rightBorderRef.current) rightBorderRef.current.setAttribute("d", rightD);
         if (rightGuideRef.current) rightGuideRef.current.setAttribute("d", rightD);
 
+        // 2. Strap thinning on stretch (8-10% narrower at max 2.2x stretch)
+        const currentWidth = (baseStrapWidth * (1 - (stretchRatio - 1) * 0.08)).toFixed(2);
+        if (leftPathRef.current) leftPathRef.current.setAttribute("stroke-width", currentWidth);
+        if (rightPathRef.current) rightPathRef.current.setAttribute("stroke-width", currentWidth);
+
+        // 3. Dynamic text stretching along strap
+        const baseLength = 175;
+        const stretchedTextLen = (baseLength * stretchRatio).toFixed(1);
+        if (leftTextPathRef.current) {
+          leftTextPathRef.current.setAttribute("textLength", `${stretchedTextLen}`);
+        }
+        if (rightTextPathRef.current) {
+          rightTextPathRef.current.setAttribute("textLength", `${stretchedTextLen}`);
+        }
+
+        // 4. Middle silver clasp visibility & position
         const mid = points[Math.floor(points.length / 2)];
         if (middleClaspRef.current && mid) {
           middleClaspRef.current.setAttribute(
             "transform",
             `translate(${mid.x}, ${mid.y})`
           );
-          const claspOpacity = Math.max(0, Math.min(1, (stretchRatio - 1.12) / 0.28));
+          // Fades in smoothly as stretch exceeds 1.06
+          const claspOpacity = Math.max(0, Math.min(1, (stretchRatio - 1.06) / 0.32));
           middleClaspRef.current.setAttribute("opacity", claspOpacity.toFixed(2));
         }
 
+        // 5. Swivel clip at bottom badge pivot
         const clip = points[points.length - 1];
         if (bottomClaspRef.current && clip) {
           bottomClaspRef.current.setAttribute(
@@ -76,18 +99,24 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
             `translate(${clip.x}, ${clip.y})`
           );
         }
+
+        // 6. Dynamic shadow growth
+        if (shadowFilterRef.current) {
+          const stdDev = (2 + (stretchRatio - 1) * 3).toFixed(1);
+          shadowFilterRef.current.setAttribute("stdDeviation", stdDev);
+        }
       },
     }),
-    [notchOffset]
+    [baseStrapWidth, notchOffset]
   );
 
   // Repeated micro-text along strap
   const strapText =
     "KARAN KUMAR PRADHAN · VIT-AP · B.TECH CSE · KARAN KUMAR PRADHAN · VIT-AP · B.TECH CSE ·";
 
-  const strapColor = isDark ? "#222222" : "#111111";
-  const strapBorderColor = isDark ? "#333333" : "#333333";
-  const textColor = isDark ? "rgba(160, 160, 160, 0.75)" : "rgba(220, 220, 220, 0.85)";
+  const strapColor = isDark ? "#18181b" : "#111111";
+  const strapBorderColor = isDark ? "#27272a" : "#2a2a2a";
+  const textColor = isDark ? "rgba(190, 190, 190, 0.85)" : "rgba(245, 245, 245, 0.95)";
 
   return (
     <svg
@@ -97,7 +126,7 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
       <defs>
         {/* Silver metallic gradient for metal clip and clasp ring */}
         <linearGradient id="silverClipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#f5f5f5" />
+          <stop offset="0%" stopColor="#ffffff" />
           <stop offset="35%" stopColor="#cccccc" />
           <stop offset="65%" stopColor="#777777" />
           <stop offset="100%" stopColor="#aaaaaa" />
@@ -109,12 +138,18 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
           <stop offset="100%" stopColor="#dddddd" />
         </linearGradient>
 
-        {/* Filter for subtle strap drop-shadow */}
-        <filter id="strapShadow" x="-10%" y="-10%" width="120%" height="120%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity={isDark ? "0.4" : "0.15"} />
+        {/* Filter for subtle strap drop-shadow with dynamic stretch response */}
+        <filter id="strapShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow
+            ref={shadowFilterRef}
+            dx="0"
+            dy="2"
+            stdDeviation="2"
+            floodOpacity={isDark ? "0.45" : "0.22"}
+          />
         </filter>
 
-        {/* Hidden guide paths for text along the strap */}
+        {/* Guide paths for text along the strap */}
         <path ref={leftGuideRef} id="leftTextPath" fill="none" />
         <path ref={rightGuideRef} id="rightTextPath" fill="none" />
       </defs>
@@ -124,7 +159,7 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         ref={leftPathRef}
         fill="none"
         stroke={strapColor}
-        strokeWidth={strapWidth}
+        strokeWidth={baseStrapWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
         filter="url(#strapShadow)"
@@ -133,9 +168,9 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         ref={leftBorderRef}
         fill="none"
         stroke={strapBorderColor}
-        strokeWidth={strapWidth}
+        strokeWidth={baseStrapWidth}
         strokeDasharray="2 4"
-        opacity="0.3"
+        opacity="0.35"
       />
 
       {/* 2. RIGHT FABRIC STRAP */}
@@ -143,7 +178,7 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         ref={rightPathRef}
         fill="none"
         stroke={strapColor}
-        strokeWidth={strapWidth}
+        strokeWidth={baseStrapWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
         filter="url(#strapShadow)"
@@ -152,12 +187,12 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         ref={rightBorderRef}
         fill="none"
         stroke={strapBorderColor}
-        strokeWidth={strapWidth}
+        strokeWidth={baseStrapWidth}
         strokeDasharray="2 4"
-        opacity="0.3"
+        opacity="0.35"
       />
 
-      {/* 3. REPEATED PRINTED MONO TEXT ON STRAPS */}
+      {/* 3. REPEATED PRINTED MONO TEXT ON STRAPS (Elastic stretching enabled) */}
       <text
         fill={textColor}
         fontSize="6.5"
@@ -165,7 +200,12 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         letterSpacing="1px"
         fontWeight="600"
       >
-        <textPath href="#leftTextPath" startOffset="5%">
+        <textPath
+          ref={leftTextPathRef}
+          href="#leftTextPath"
+          startOffset="4%"
+          lengthAdjust="spacing"
+        >
           {strapText}
         </textPath>
       </text>
@@ -177,12 +217,17 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         letterSpacing="1px"
         fontWeight="600"
       >
-        <textPath href="#rightTextPath" startOffset="8%">
+        <textPath
+          ref={rightTextPathRef}
+          href="#rightTextPath"
+          startOffset="6%"
+          lengthAdjust="spacing"
+        >
           {strapText}
         </textPath>
       </text>
 
-      {/* 4. SILVER ADJUSTMENT CLASP (Appears in the middle when pulled & stretched) */}
+      {/* 4. SILVER ADJUSTMENT CLASP (Reveals when pulled & stretched) */}
       <g
         ref={middleClaspRef}
         opacity={0}

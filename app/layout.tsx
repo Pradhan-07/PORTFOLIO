@@ -8,11 +8,13 @@ import { Footer } from "@/components/Footer";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -64,6 +66,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#f4f2ec" media="(prefers-color-scheme: light)" />
         {/* Blocking inline script to eliminate flash of wrong theme */}
         <script
           dangerouslySetInnerHTML={{
@@ -73,19 +77,21 @@ export default function RootLayout({
                   var stored = localStorage.getItem('kp-theme');
                   var theme = stored;
                   if (!theme || theme === 'system') {
-                    // Dark is default, but respect explicit system preference
                     var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
                     theme = prefersLight ? 'light' : 'dark';
                   }
                   if (theme === 'light') {
                     document.documentElement.classList.remove('dark');
                     document.documentElement.classList.add('light');
+                    document.documentElement.style.colorScheme = 'light';
                   } else {
                     document.documentElement.classList.add('dark');
                     document.documentElement.classList.remove('light');
+                    document.documentElement.style.colorScheme = 'dark';
                   }
                 } catch (e) {
                   document.documentElement.classList.add('dark');
+                  document.documentElement.style.colorScheme = 'dark';
                 }
               })();
             `,

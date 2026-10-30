@@ -9,6 +9,7 @@ export interface StatsData {
     hard: number;
   };
   streakFallbackDays: number;
+  totalContributionsFallback: number;
   asOf: string;
   githubUsername: string;
   leetcodeUsername: string;
@@ -29,6 +30,7 @@ export const stats: StatsData = {
     hard: 2,
   },
   streakFallbackDays: 21, // 21-day streak record (13 Sep – 3 Oct 2026)
+  totalContributionsFallback: 142,
   asOf: "Oct 2026",
   githubUsername: "Pradhan-07",
   leetcodeUsername: "pradhan_07",

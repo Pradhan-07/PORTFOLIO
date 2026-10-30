@@ -1,35 +1,16 @@
 /**
  * ============================================================================
- * VERLET INTEGRATION PHYSICS ENGINE FOR LANYARD & BADGE
+ * HIGH-FIDELITY VERLET INTEGRATION ENGINE FOR LANYARD & WEIGHTED ID BADGE
  * ============================================================================
  *
- * HOW VERLET INTEGRATION WORKS (BEGINNER'S GUIDE):
- * -----------------------------------------------
- * Standard game physics updates velocity: v = v + a*dt; x = x + v*dt.
- * In Verlet Integration, we never store velocity explicitly! Instead,
- * velocity is inferred from the displacement between the current position
- * and the previous frame's position:
- *
- *    implicit_velocity = (current_position - old_position) * damping
- *    new_position = current_position + implicit_velocity + acceleration * dt^2
- *    old_position = current_position
- *
- * DISTANCE CONSTRAINTS & STRAP STRETCHING:
- * ----------------------------------------
- * When two points are connected by a strap segment of rest length L:
- * 1. We measure the current distance: dist = sqrt(dx^2 + dy^2).
- * 2. If dist != L, we calculate the error: diff = (L - dist) / dist.
- * 3. We push both points toward or away from each other along the connecting line.
- * 4. To allow realistic strap stretching during an intentional drag, we apply a
- *    stiffness factor. When pulled hard by the user, the strap can stretch up
- *    to 2x its rest length, revealing the silver adjustment clasp ring!
- *
- * FIXED TIMESTEP ACCUMULATOR:
- * ---------------------------
- * Different displays run at 60Hz, 90Hz, 120Hz, or 144Hz.
- * To ensure the lanyard swings with the EXACT SAME speed and gravity on every device,
- * we accumulate elapsed frame time in an accumulator variable, and advance physics
- * in deterministic slices of fixedDt = 1/60th of a second.
+ * SPECIFICATION COMPLIANCE:
+ * 1. Fixed timestep 1/60s with fractional sub-frame accumulator.
+ * 2. 8 constraint relaxation iterations with mass-weighted distribution (heavy badge).
+ * 3. Soft spring grab with 120ms progressive stiffness ramp & 0.2 lerp filtering.
+ * 4. Dual damping: 0.985 linear rope damping + 0.92 separate angular damping.
+ * 5. Velocity clamping (max step velocity 28px, release flick velocity 12px).
+ * 6. Non-linear elastic strap elongation up to 2.2x rest length.
+ * 7. Simulation sleep threshold to eliminate micro-jitter and idle CPU load.
  * ============================================================================
  */
 
@@ -39,6 +20,7 @@ export interface VerletPoint {
   oldX: number;
   oldY: number;
   isPinned: boolean;
+  invMass: number; // 1.0 for strap points, ~0.28 for heavy badge
 }
 
 export interface VerletStick {
@@ -50,27 +32,46 @@ export interface VerletStick {
 export interface PhysicsConfig {
   gravity: number;
   damping: number;
+  angularDamping: number;
   constraintIterations: number;
   segmentCount: number;
   restSegmentLength: number;
+  maxStretchRatio: number;
 }
 
 export const DEFAULT_PHYSICS_CONFIG: PhysicsConfig = {
-  gravity: 0.58,
-  damping: 0.982,
-  constraintIterations: 7,
+  gravity: 0.62,
+  damping: 0.985,
+  angularDamping: 0.92,
+  constraintIterations: 8,
   segmentCount: 10,
   restSegmentLength: 16,
+  maxStretchRatio: 2.2,
 };
 
 export class VerletRope {
   points: VerletPoint[] = [];
   sticks: VerletStick[] = [];
   config: PhysicsConfig;
+
   totalRestLength: number = 0;
   accumulator: number = 0;
   lastTime: number = 0;
   idleTime: number = 0;
+
+  // Soft spring grab tracking
+  isDragging: boolean = false;
+  dragElapsed: number = 0;
+  filteredTarget: { x: number; y: number } = { x: 0, y: 0 };
+  lastRawTarget: { x: number; y: number } = { x: 0, y: 0 };
+
+  // Angular smoothing & settling
+  currentAngleDeg: number = 0;
+  targetAngleDeg: number = 0;
+
+  // Energy & Sleep management
+  isSleeping: boolean = false;
+  sleepFrames: number = 0;
 
   constructor(config: PhysicsConfig = DEFAULT_PHYSICS_CONFIG) {
     this.config = config;
@@ -86,14 +87,17 @@ export class VerletRope {
     const segLen = this.config.restSegmentLength;
 
     for (let i = 0; i <= count; i++) {
-      // Start higher if dropOffset is given (for intro drop-in animation)
-      const y = anchorY + (i * segLen) - dropOffset;
+      const y = anchorY + i * segLen - dropOffset;
+      const isBadgePoint = i === count;
+
       this.points.push({
         x: anchorX,
         y: y,
-        oldX: anchorX + (Math.sin(i * 0.5) * 4), // slight initial angle for natural swing
-        oldY: y - (dropOffset > 0 ? 12 : 0),
+        oldX: anchorX,
+        oldY: y - (dropOffset > 0 ? 8 : 0),
         isPinned: i === 0,
+        // Heavy badge: 3.5x mass of normal strap points
+        invMass: i === 0 ? 0 : isBadgePoint ? 0.28 : 1.0,
       });
     }
 
@@ -107,45 +111,123 @@ export class VerletRope {
 
     this.totalRestLength = count * segLen;
     this.lastTime = performance.now();
+    this.isSleeping = false;
+    this.sleepFrames = 0;
+    this.currentAngleDeg = 0;
+    this.targetAngleDeg = 0;
+  }
+
+  wakeUp() {
+    this.isSleeping = false;
+    this.sleepFrames = 0;
   }
 
   /**
    * Advances the simulation by a fixed delta time slice (1/60s).
    */
-  step(isDraggingBadge: boolean, dragTarget?: { x: number; y: number }, stretchFactor: number = 1.0) {
-    const { gravity, damping, constraintIterations } = this.config;
+  step(isDraggingBadge: boolean, rawTarget?: { x: number; y: number }) {
+    const { gravity, damping, constraintIterations, maxStretchRatio } = this.config;
     this.idleTime += 0.018;
 
-    // 1. Verlet position update with gravity and subtle idle micro-sway
+    const badgeIndex = this.points.length - 1;
+    const badgePoint = this.points[badgeIndex];
+
+    // Handle Grab State Transitions
+    if (isDraggingBadge && rawTarget) {
+      this.wakeUp();
+
+      if (!this.isDragging) {
+        // Just started dragging: initialize filtered target
+        this.isDragging = true;
+        this.dragElapsed = 0;
+        this.filteredTarget = { x: badgePoint.x, y: badgePoint.y };
+      }
+
+      this.dragElapsed += 1 / 60;
+
+      // Low-pass filter target position (0.2 factor removes mouse jitter)
+      this.filteredTarget.x += (rawTarget.x - this.filteredTarget.x) * 0.2;
+      this.filteredTarget.y += (rawTarget.y - this.filteredTarget.y) * 0.2;
+
+      // Spring ramp: 0 to 1 over 120ms for smooth pickup
+      const springStiffness = Math.min(1.0, this.dragElapsed / 0.12);
+
+      // Apply soft spring force to badge point
+      const springForceX = (this.filteredTarget.x - badgePoint.x) * (0.36 * springStiffness);
+      const springForceY = (this.filteredTarget.y - badgePoint.y) * (0.36 * springStiffness);
+
+      badgePoint.x += springForceX;
+      badgePoint.y += springForceY;
+    } else {
+      if (this.isDragging) {
+        // Just released: clamp flick release velocity to prevent launching
+        const maxReleaseVel = 12;
+        const vx = badgePoint.x - badgePoint.oldX;
+        const vy = badgePoint.y - badgePoint.oldY;
+
+        badgePoint.oldX = badgePoint.x - Math.max(-maxReleaseVel, Math.min(maxReleaseVel, vx));
+        badgePoint.oldY = badgePoint.y - Math.max(-maxReleaseVel, Math.min(maxReleaseVel, vy));
+
+        this.isDragging = false;
+        this.dragElapsed = 0;
+      }
+    }
+
+    // 1. Verlet position update with velocity clamping & subtle idle sway
+    let totalKineticEnergy = 0;
+
     for (let i = 0; i < this.points.length; i++) {
       const p = this.points[i];
       if (p.isPinned) continue;
 
-      // If user is actively dragging the badge, clamp the badge attachment point
-      if (isDraggingBadge && dragTarget && i === this.points.length - 1) {
-        p.x = dragTarget.x;
-        p.y = dragTarget.y;
-        p.oldX = dragTarget.x;
-        p.oldY = dragTarget.y;
-        continue;
-      }
+      let vx = (p.x - p.oldX) * damping;
+      let vy = (p.y - p.oldY) * damping + gravity;
 
-      // Calculate velocity implicitly from previous displacement
-      const vx = (p.x - p.oldX) * damping;
-      const vy = (p.y - p.oldY) * damping + gravity;
+      // Clamp max step velocity to 28px
+      const maxVel = 28;
+      vx = Math.max(-maxVel, Math.min(maxVel, vx));
+      vy = Math.max(-maxVel, Math.min(maxVel, vy));
 
       p.oldX = p.x;
       p.oldY = p.y;
 
-      // Add gentle idle micro-sway so the badge never feels lifeless or frozen
-      const swayForce = Math.sin(this.idleTime + i * 0.4) * 0.04;
+      // Tiny natural idle sway (< 0.6 degrees) when settled
+      const idleSway = !this.isDragging ? Math.sin(this.idleTime + i * 0.35) * 0.025 : 0;
 
-      p.x += vx + swayForce;
+      p.x += vx + idleSway;
       p.y += vy;
+
+      totalKineticEnergy += vx * vx + vy * vy;
     }
 
-    // 2. Distance constraint relaxation
-    // When dragged far, we allow the rope to stretch up to 2x rest length
+    // Check Sleep Condition when at rest
+    if (!this.isDragging && totalKineticEnergy < 0.008) {
+      this.sleepFrames++;
+      if (this.sleepFrames > 60) {
+        this.isSleeping = true;
+        return;
+      }
+    } else {
+      this.sleepFrames = 0;
+    }
+
+    // Measure current total length to compute dynamic stretch factor
+    let currentLength = 0;
+    for (let i = 0; i < this.points.length - 1; i++) {
+      currentLength += Math.hypot(
+        this.points[i + 1].x - this.points[i].x,
+        this.points[i + 1].y - this.points[i].y
+      );
+    }
+
+    const currentStretch = this.totalRestLength > 0 ? currentLength / this.totalRestLength : 1;
+    const clampedStretch = Math.min(maxStretchRatio, Math.max(1.0, currentStretch));
+
+    // Non-linear elastic resistance: the further it stretches, the more resistance
+    const excessStretch = clampedStretch - 1.0;
+    const elasticStiffness = 1.0 - Math.pow(excessStretch / 1.2, 1.6) * 0.45;
+
+    // 2. Mass-weighted Distance Constraint Relaxation
     for (let iter = 0; iter < constraintIterations; iter++) {
       for (let s = 0; s < this.sticks.length; s++) {
         const stick = this.sticks[s];
@@ -154,23 +236,24 @@ export class VerletRope {
 
         const dx = p1.x - p0.x;
         const dy = p1.y - p0.y;
-        const currentDist = Math.hypot(dx, dy) || 0.0001;
+        const dist = Math.hypot(dx, dy) || 0.0001;
 
-        // Dynamic target length based on drag stretch
-        const targetLen = stick.restLength * stretchFactor;
-        const diff = (targetLen - currentDist) / currentDist;
+        const targetLen = stick.restLength * (this.isDragging ? clampedStretch : 1.0);
+        const diff = (targetLen - dist) / dist;
 
-        // Half-and-half relaxation push
-        const offsetX = dx * diff * 0.5;
-        const offsetY = dy * diff * 0.5;
+        const totalInvMass = p0.invMass + p1.invMass;
+        if (totalInvMass === 0) continue;
+
+        const ratio0 = (p0.invMass / totalInvMass) * elasticStiffness;
+        const ratio1 = (p1.invMass / totalInvMass) * elasticStiffness;
 
         if (!p0.isPinned) {
-          p0.x -= offsetX;
-          p0.y -= offsetY;
+          p0.x -= dx * diff * ratio0;
+          p0.y -= dy * diff * ratio0;
         }
         if (!p1.isPinned) {
-          p1.x += offsetX;
-          p1.y += offsetY;
+          p1.x += dx * diff * ratio1;
+          p1.y += dy * diff * ratio1;
         }
       }
     }
@@ -182,8 +265,7 @@ export class VerletRope {
   update(
     currentTime: number,
     isDraggingBadge: boolean,
-    dragTarget?: { x: number; y: number },
-    allowStretch: boolean = false
+    rawTarget?: { x: number; y: number }
   ) {
     if (this.lastTime === 0) {
       this.lastTime = currentTime;
@@ -193,36 +275,36 @@ export class VerletRope {
     let deltaTime = (currentTime - this.lastTime) / 1000;
     this.lastTime = currentTime;
 
-    // Clamp max delta to prevent physics explosion after tab switch
-    if (deltaTime > 0.1) deltaTime = 0.1;
+    // Clamp delta time to avoid large physics steps on tab focus
+    if (deltaTime > 0.08) deltaTime = 0.08;
 
-    // Calculate current rope stretch
-    let currentLength = 0;
-    for (let i = 0; i < this.points.length - 1; i++) {
-      currentLength += Math.hypot(
-        this.points[i + 1].x - this.points[i].x,
-        this.points[i + 1].y - this.points[i].y
-      );
+    if (isDraggingBadge) {
+      this.wakeUp();
     }
 
-    let stretchFactor = 1.0;
-    if (allowStretch && isDraggingBadge && this.totalRestLength > 0) {
-      stretchFactor = Math.min(2.0, Math.max(1.0, currentLength / this.totalRestLength));
+    if (this.isSleeping) {
+      return;
     }
 
     const fixedDt = 1 / 60;
     this.accumulator += deltaTime;
 
     while (this.accumulator >= fixedDt) {
-      this.step(isDraggingBadge, dragTarget, stretchFactor);
+      this.step(isDraggingBadge, rawTarget);
       this.accumulator -= fixedDt;
     }
   }
 
   /**
-   * Returns the badge attachment point (last rope point) and its tilt angle.
+   * Returns smoothed badge attachment coordinates, tilt angle, and stretch ratio.
    */
-  getBadgeTransform(): { x: number; y: number; angleRad: number; angleDeg: number; stretchRatio: number } {
+  getBadgeTransform(): {
+    x: number;
+    y: number;
+    angleRad: number;
+    angleDeg: number;
+    stretchRatio: number;
+  } {
     if (this.points.length < 2) {
       return { x: 0, y: 0, angleRad: 0, angleDeg: 0, stretchRatio: 1 };
     }
@@ -233,14 +315,18 @@ export class VerletRope {
     const dx = last.x - prev.x;
     const dy = last.y - prev.y;
 
-    // Rotation is the angle of the last segment relative to vertical (downwards)
-    const angleRad = Math.atan2(dx, dy);
-    // Clamp tilt angle to max ~22 degrees so the badge remains elegantly balanced
-    const maxAngle = (22 * Math.PI) / 180;
-    const clampedRad = Math.max(-maxAngle, Math.min(maxAngle, angleRad));
-    const angleDeg = (clampedRad * 180) / Math.PI;
+    // Angle of the lowest segment relative to vertical
+    const rawAngleRad = Math.atan2(dx, dy);
 
-    // Compute total length to determine if clasp ring is visible
+    // Clamp badge tilt to +-25 degrees as required in specification
+    const maxAngleRad = (25 * Math.PI) / 180;
+    const clampedRad = Math.max(-maxAngleRad, Math.min(maxAngleRad, rawAngleRad));
+    const targetDeg = (clampedRad * 180) / Math.PI;
+
+    // Angular Damping: smooth rotation over time so it settles cleanly in 2-3 sways
+    this.currentAngleDeg += (targetDeg - this.currentAngleDeg) * (1 - this.config.angularDamping);
+
+    // Compute current total stretch ratio
     let totalLen = 0;
     for (let i = 0; i < this.points.length - 1; i++) {
       totalLen += Math.hypot(
@@ -248,15 +334,16 @@ export class VerletRope {
         this.points[i + 1].y - this.points[i].y
       );
     }
-    const stretchRatio = this.totalRestLength > 0 ? totalLen / this.totalRestLength : 1;
+
+    const rawStretch = this.totalRestLength > 0 ? totalLen / this.totalRestLength : 1;
+    const stretchRatio = Math.min(this.config.maxStretchRatio, Math.max(1.0, rawStretch));
 
     return {
       x: last.x,
       y: last.y,
-      angleRad: clampedRad,
-      angleDeg,
+      angleRad: (this.currentAngleDeg * Math.PI) / 180,
+      angleDeg: this.currentAngleDeg,
       stretchRatio,
     };
   }
 }
-

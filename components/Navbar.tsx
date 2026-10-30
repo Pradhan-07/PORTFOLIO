@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Sun, Moon, FileText } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 
@@ -23,6 +23,8 @@ export function Navbar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const [homeSection, setHomeSection] = useState<string>("index");
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -40,6 +42,16 @@ export function Navbar() {
         ? "about"
         : "index"
       : homeSection;
+
+  // Track window scroll for notch morphing animation
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 40);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // IntersectionObserver for tracking active section on home page
   useEffect(() => {
@@ -67,6 +79,50 @@ export function Navbar() {
     return () => observer.disconnect();
   }, [pathname]);
 
+  // View Transitions API circular reveal handler
+  const handleThemeToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const doc = document as unknown as {
+      startViewTransition?: (cb: () => void) => { ready: Promise<void> };
+    };
+
+    if (
+      !doc.startViewTransition ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      toggleTheme();
+      return;
+    }
+
+    const x = e.clientX;
+    const y = e.clientY;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = doc.startViewTransition(() => {
+      toggleTheme();
+    });
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+          ],
+        },
+        {
+          duration: 400,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          pseudoElement: "::view-transition-new(root)",
+        }
+      );
+    });
+  };
+
+  const isDarkMode = mounted ? theme === "dark" : true;
+
   return (
     <>
       {/* Accessibility: Skip to Content */}
@@ -77,16 +133,21 @@ export function Navbar() {
         Skip to content →
       </a>
 
-      {/* Notch Navbar sticking to TOP EDGE of the viewport like a tab */}
+      {/* Floating Notch Navbar Header */}
       <header
         id="notch-navbar"
-        className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none"
+        className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none transition-all duration-300"
       >
         <motion.nav
+          layout
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="pointer-events-auto flex items-center px-4 sm:px-6 py-2.5 gap-2.5 sm:gap-4 rounded-b-2xl rounded-t-none bg-black text-[#ededed] dark:bg-[#161616] dark:text-[#ededed] border-x border-b border-transparent dark:border-neutral-800 shadow-xl transition-all"
+          className={`pointer-events-auto flex items-center transition-all duration-300 ${
+            isScrolled
+              ? "mt-2.5 px-3.5 sm:px-5 py-1.5 gap-2 sm:gap-3 rounded-full backdrop-blur-xl bg-black/90 text-[#ededed] dark:bg-[#161616]/90 dark:text-[#ededed] border border-neutral-800 shadow-2xl"
+              : "mt-0 px-4 sm:px-6 py-2.5 gap-2.5 sm:gap-4 rounded-b-2xl rounded-t-none bg-black text-[#ededed] dark:bg-[#161616] dark:text-[#ededed] border-x border-b border-transparent dark:border-neutral-800 shadow-xl"
+          }`}
           aria-label="Notch Navigation"
         >
           {/* Logo Mark */}
@@ -99,8 +160,11 @@ export function Navbar() {
 
           <div className="h-3 w-px bg-neutral-800 dark:bg-neutral-700" />
 
-          {/* Links */}
-          <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-xs lowercase">
+          {/* Nav Links */}
+          <div
+            className="flex items-center gap-1 sm:gap-1.5 font-mono text-xs lowercase"
+            onMouseLeave={() => setHoveredItem(null)}
+          >
             {navItems.map((item) => {
               const isActive =
                 item.href === "/"
@@ -111,12 +175,14 @@ export function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative px-2 sm:px-2.5 py-1 rounded-full transition-all duration-150 ${
+                  onMouseEnter={() => setHoveredItem(item.name)}
+                  className={`relative px-2 sm:px-2.5 py-1 rounded-full transition-colors duration-150 ${
                     isActive
                       ? "text-black dark:text-neutral-950 font-bold"
                       : "text-neutral-400 hover:text-white"
                   }`}
                 >
+                  {/* Sliding Active Indicator */}
                   {isActive && (
                     <motion.span
                       layoutId="notchNavbarActiveIndicator"
@@ -124,6 +190,16 @@ export function Navbar() {
                       transition={{ type: "spring", stiffness: 450, damping: 32 }}
                     />
                   )}
+
+                  {/* Soft Hover Pill */}
+                  {!isActive && hoveredItem === item.name && (
+                    <motion.span
+                      layoutId="navHoverPill"
+                      className="absolute inset-0 rounded-full bg-white/10 dark:bg-white/10 -z-10"
+                      transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                    />
+                  )}
+
                   {item.name}
                 </Link>
               );
@@ -132,7 +208,7 @@ export function Navbar() {
 
           <div className="h-3 w-px bg-neutral-800 dark:bg-neutral-700" />
 
-          {/* llms.txt link with tiny file icon */}
+          {/* llms.txt link */}
           <Link
             href="/llms.txt"
             title="Plain text site summary for LLMs"
@@ -144,17 +220,35 @@ export function Navbar() {
 
           <div className="h-3 w-px bg-neutral-800 dark:bg-neutral-700" />
 
-          {/* Dark / Light Theme Toggle */}
+          {/* Dark / Light Theme Toggle with 250ms Icon Morph & Circular Reveal */}
           <button
-            onClick={toggleTheme}
+            onClick={handleThemeToggle}
             aria-label="Toggle theme"
-            className="p-1 rounded-full text-neutral-400 hover:text-white transition-colors"
+            className="p-1 rounded-full text-neutral-400 hover:text-white transition-colors relative cursor-pointer"
           >
-            {mounted && theme === "light" ? (
-              <Moon className="w-3.5 h-3.5" />
-            ) : (
-              <Sun className="w-3.5 h-3.5" />
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              {!isDarkMode ? (
+                <motion.div
+                  key="moon"
+                  initial={{ rotate: -90, scale: 0.7, opacity: 0 }}
+                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                  exit={{ rotate: 90, scale: 0.7, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <Moon className="w-3.5 h-3.5" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="sun"
+                  initial={{ rotate: 90, scale: 0.7, opacity: 0 }}
+                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                  exit={{ rotate: -90, scale: 0.7, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <Sun className="w-3.5 h-3.5" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </button>
         </motion.nav>
       </header>

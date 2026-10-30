@@ -20,6 +20,7 @@ export function Hero() {
 
   // Anchor point in refs to avoid state re-renders
   const anchorRef = useRef({ x: 0, y: 44 });
+  const lastWidthRef = useRef(0);
 
   // Drag interaction state
   const isDraggingRef = useRef(false);
@@ -50,14 +51,17 @@ export function Hero() {
     });
   }, []);
 
-  // Initialize and handle resize
-  const setupRope = useCallback((width: number) => {
+  // Initialize and handle resize (guarded against micro-resizes)
+  const setupRope = useCallback((width: number, isInitial: boolean = false) => {
     const anchorX = width / 2;
     const anchorY = 44; // Bottom of the top tab notch
     anchorRef.current = { x: anchorX, y: anchorY };
 
-    // Intro drop-in: start rope compressed upwards by ~100px so it drops in with gravity
-    ropeRef.current.init(anchorX, anchorY, 100);
+    if (isInitial || Math.abs(width - lastWidthRef.current) > 3) {
+      lastWidthRef.current = width;
+      // Start rope slightly offset on initial mount so it settles smoothly
+      ropeRef.current.init(anchorX, anchorY, isInitial ? 80 : 0);
+    }
 
     const transform = ropeRef.current.getBadgeTransform();
     if (badgePhysicsRef.current) {
@@ -77,24 +81,34 @@ export function Hero() {
     const container = containerRef.current;
     if (!container) return;
 
-    const handleResize = () => {
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      setupRope(rect.width);
-    };
-
-    handleResize();
-
-    const resizeObserver = new ResizeObserver(() => handleResize());
-    resizeObserver.observe(container);
-
+    let isMounted = true;
     let animationId: number;
     let isVisible = true;
 
-    // Pause physics loop when offscreen or tab hidden
+    const rect = container.getBoundingClientRect();
+    if (rect.width > 0) {
+      setupRope(rect.width, true);
+    }
+
+    // ResizeObserver cleanly updates anchor on actual viewport changes
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!isMounted) return;
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        if (w > 0 && Math.abs(w - lastWidthRef.current) > 4) {
+          setupRope(w, false);
+        }
+      }
+    });
+    resizeObserver.observe(container);
+
+    // Pause physics loop when offscreen or tab hidden (saves CPU & removes jank)
     const intersectionObserver = new IntersectionObserver(
       (entries) => {
         isVisible = entries[0].isIntersecting;
+        if (isVisible) {
+          ropeRef.current.wakeUp();
+        }
       },
       { threshold: 0.05 }
     );
@@ -102,23 +116,26 @@ export function Hero() {
 
     const handleVisibility = () => {
       isVisible = !document.hidden;
+      if (isVisible) {
+        ropeRef.current.wakeUp();
+      }
     };
     document.addEventListener("visibilitychange", handleVisibility);
 
     // Main 60fps/120fps direct compositor render loop
-    // NO React state updates are dispatched inside render()
     const render = (time: number) => {
+      if (!isMounted) return;
+
       if (!isVisible) {
         animationId = requestAnimationFrame(render);
         return;
       }
 
-      // Update Verlet physics with fixed timestep accumulator (1/60s)
+      // Update Verlet physics with soft spring grab and fixed 1/60s accumulator
       ropeRef.current.update(
         time,
         isDraggingRef.current,
-        dragTargetRef.current,
-        true // allow stretching during drag
+        dragTargetRef.current
       );
 
       const points = ropeRef.current.points;
@@ -145,6 +162,7 @@ export function Hero() {
     animationId = requestAnimationFrame(render);
 
     return () => {
+      isMounted = false;
       cancelAnimationFrame(animationId);
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
@@ -152,7 +170,7 @@ export function Hero() {
     };
   }, [setupRope]);
 
-  // Pointer event handlers with clean drag-vs-click separation (<5px and <300ms = click)
+  // Pointer event handlers with 3px deadzone and soft spring grab
   const handlePointerDown = (e: React.PointerEvent) => {
     pointerDownPos.current = { x: e.clientX, y: e.clientY };
     pointerDownTime.current = performance.now();
@@ -173,6 +191,9 @@ export function Hero() {
     const dx = e.clientX - pointerDownPos.current.x;
     const dy = e.clientY - pointerDownPos.current.y;
     const dist = Math.hypot(dx, dy);
+
+    // Deadzone: ignore pointer movements under 3px at press time
+    if (dist < 3) return;
 
     // Engage drag mode only once movement exceeds 5px threshold
     if (!hasMovedPastThreshold.current && dist >= 5) {
@@ -250,7 +271,7 @@ export function Hero() {
       <div
         ref={containerRef}
         style={{ perspective: "1200px" }}
-        className="relative w-full h-[620px] sm:h-[660px] md:h-[700px] flex items-center justify-center overflow-visible"
+        className="relative w-full min-h-[620px] sm:min-h-[660px] md:min-h-[700px] h-[620px] sm:h-[660px] md:h-[700px] flex items-center justify-center overflow-visible"
       >
         {/* Lanyard Fabric Strap with repeated text & silver clasp */}
         <Lanyard ref={lanyardRef} isDark={isDark} />

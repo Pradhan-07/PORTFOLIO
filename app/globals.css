@@ -150,6 +150,61 @@ body {
   animation: ledGlowWave 450ms ease-out forwards;
 }
 
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease-in-out infinite;
+}
+
+@keyframes pulseOnce {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-once {
+  animation: pulseOnce 1.8s cubic-bezier(0.2, 0, 0.2, 1) 1.2s 1 normal forwards;
+}
+
+/* Theme Toggle Circular Reveal Animation (View Transitions API) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+.dark::view-transition-old(root) {
+  z-index: 9999;
+}
+
+.dark::view-transition-new(root) {
+  z-index: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-flip-pulse,
   .animate-flip-pulse-hover,
