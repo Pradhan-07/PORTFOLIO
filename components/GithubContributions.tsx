@@ -1,68 +1,20 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
-
-interface DayData {
-  date: string;
-  count: number;
-  level: number;
-}
-
-interface WeekData {
-  days: DayData[];
-}
-
-interface GitHubApiResponse {
-  username: string;
-  totalContributions: number;
-  currentStreak: number;
-  longestStreak: number;
-  weeks: WeekData[];
-  lastUpdated: string;
-  isFallback: boolean;
-}
+import { useLiveStats } from "@/context/LiveStatsContext";
 
 export function GithubContributions() {
-  const [data, setData] = useState<GitHubApiResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { github: liveGitHub } = useLiveStats();
+  const data = liveGitHub;
+  const loading = false;
   const [hoveredDay, setHoveredDay] = useState<{
     date: string;
     count: number;
     x: number;
     y: number;
   } | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadStats() {
-      try {
-        const res = await fetch("/api/github");
-        if (res.ok) {
-          const json = await res.json();
-          if (isMounted) {
-            setData(json);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch {
-        // Handled by loading fallback
-      }
-
-      if (isMounted) {
-        setLoading(false);
-      }
-    }
-
-    loadStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   return (
     <div className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 sm:p-5 shadow-xs relative transition-colors duration-200">

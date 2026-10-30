@@ -23,14 +23,14 @@ export const stats: StatsData = {
   repos: 23,
   dsaPrograms: "69+",
   dsaProgramsCount: 69,
-  leetcodeSolved: 29,
+  leetcodeSolved: 39,
   leetcodeBreakdown: {
-    easy: 12,
-    medium: 15,
+    easy: 20,
+    medium: 17,
     hard: 2,
   },
   streakFallbackDays: 21, // 21-day streak record (13 Sep – 3 Oct 2026)
-  totalContributionsFallback: 142,
+  totalContributionsFallback: 213,
   asOf: "Oct 2026",
   githubUsername: "Pradhan-07",
   leetcodeUsername: "pradhan_07",

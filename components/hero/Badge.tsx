@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { siteConfig } from "@/data/site";
 import { nowData } from "@/data/now";
-import { stats } from "@/data/stats";
+import { useLiveStats } from "@/context/LiveStatsContext";
 import {
   ArrowUpRight,
   RotateCcw,
@@ -33,12 +33,6 @@ interface GitHubDay {
   count: number;
   level: number;
   date: string;
-}
-
-interface GitHubData {
-  totalContributions: number;
-  currentStreak: number;
-  weeks: { days: GitHubDay[] }[];
 }
 
 // Generate sensible 26-week fallback data to eliminate skeleton flash or layout shift
@@ -97,37 +91,19 @@ export function Badge({
   const [sheenPos, setSheenPos] = useState({ x: 50, y: 50 });
   const [photoTilt, setPhotoTilt] = useState({ rx: 0, ry: 0 });
 
-  // GitHub Data with zero layout shift fallback
+  // Live real-time stats (synced every 60s & on focus) with zero layout shift fallback
   const fallbackWeeks = useMemo(() => generateFallbackWeeks(), []);
-  const [githubData, setGithubData] = useState<GitHubData>({
-    totalContributions: stats.totalContributionsFallback,
-    currentStreak: stats.streakFallbackDays,
-    weeks: fallbackWeeks,
-  });
+  const { github: liveGitHub, leetcode: liveLeetCode, isSyncing } = useLiveStats();
+  const githubData = useMemo(() => {
+    return {
+      totalContributions: liveGitHub.totalContributions,
+      currentStreak: liveGitHub.currentStreak,
+      weeks: liveGitHub.weeks && liveGitHub.weeks.length > 0 ? liveGitHub.weeks : fallbackWeeks,
+    };
+  }, [liveGitHub, fallbackWeeks]);
 
   // LED Grid wave animation: starts only AFTER flip completes
   const [showBackAnimation, setShowBackAnimation] = useState(false);
-
-  useEffect(() => {
-    let isCancelled = false;
-    async function loadGitHub() {
-      try {
-        const res = await fetch("/api/github");
-        if (res.ok && !isCancelled) {
-          const json = await res.json();
-          if (json && json.weeks && json.weeks.length > 0) {
-            setGithubData(json);
-          }
-        }
-      } catch {
-        // Fallback remains active
-      }
-    }
-    loadGitHub();
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
 
   // Keyboard accessibility: Enter or Space flips, Esc flips back
   const handleKeyDown = useCallback(
@@ -354,7 +330,7 @@ export function Badge({
             <div className="flex items-center justify-between gap-3 z-10 pt-2 border-t border-neutral-800/80 text-xs font-mono">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="px-2.5 py-1 rounded-full border border-neutral-700 bg-neutral-900/80 text-neutral-300 text-[10px] sm:text-xs">
-                  C++ · DSA
+                  C++ · DSA ({liveLeetCode.totalSolved} solved)
                 </span>
                 <span className="px-2.5 py-1 rounded-full border border-neutral-700 bg-neutral-900/80 text-neutral-300 text-[10px] sm:text-xs">
                   Web dev
@@ -395,8 +371,12 @@ export function Badge({
 
             {/* BACK TOP ROW */}
             <div className="flex items-center justify-between gap-3 z-10 pt-1 border-b border-neutral-800 pb-2.5">
-              <span className="font-mono text-xs sm:text-sm font-bold uppercase tracking-wider text-neutral-100">
-                FIND ME // CONNECT
+              <span className="font-mono text-xs sm:text-sm font-bold uppercase tracking-wider text-neutral-100 flex items-center gap-2">
+                <span>FIND ME // CONNECT</span>
+                <span className="inline-flex items-center gap-1 font-mono text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className={`w-1.5 h-1.5 rounded-full bg-emerald-400 ${isSyncing ? "animate-ping" : "animate-pulse"}`} />
+                  LIVE SYNC
+                </span>
               </span>
 
               <span className="font-mono text-xs text-neutral-300">
@@ -532,8 +512,24 @@ export function Badge({
                   <div className="text-xs text-neutral-300 line-clamp-1">
                     {nowData.buildingSubtitle}
                   </div>
-                  <div className="text-[11px] text-neutral-400 pt-1.5 border-t border-neutral-800">
-                    {nowData.solvingLabel} · {nowData.solvingTitle}
+                  <div className="text-[11px] text-neutral-300 pt-1.5 border-t border-neutral-800 flex flex-col gap-0.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-amber-400 font-semibold">
+                        LEETCODE: {liveLeetCode.totalSolved} SOLVED
+                      </span>
+                      <span className="text-[10px] text-neutral-400">
+                        {liveLeetCode.easySolved}E · {liveLeetCode.mediumSolved}M · {liveLeetCode.hardSolved}H
+                      </span>
+                    </div>
+                    {liveLeetCode.recentSubmissions && liveLeetCode.recentSubmissions.length > 0 ? (
+                      <div className="text-[10px] text-neutral-400 truncate">
+                        latest: {liveLeetCode.recentSubmissions[0].title} ({liveLeetCode.recentSubmissions[0].lang})
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-neutral-400 truncate">
+                        {nowData.solvingLabel} · {nowData.solvingTitle}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

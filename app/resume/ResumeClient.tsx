@@ -8,6 +8,7 @@ import {
   SkillCategory,
   CertificationData,
 } from "@/data/resume";
+import { useLiveStats } from "@/context/LiveStatsContext";
 import { Project } from "@/data/projects";
 import {
   Download,
@@ -35,7 +36,7 @@ export function ResumeClient() {
   const [copied, setCopied] = useState(false);
   const [activeSection, setActiveSection] = useState("summary");
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
-  const [liveStreak, setLiveStreak] = useState<number>(21);
+  const { github: liveGitHub, leetcode: liveLeetCode, isSyncing } = useLiveStats();
 
   const projects = getResumeProjects();
 
@@ -57,24 +58,6 @@ export function ResumeClient() {
       [id]: !prev[id],
     }));
   };
-
-  // Fetch live GitHub streak
-  useEffect(() => {
-    async function fetchStreak() {
-      try {
-        const res = await fetch("/api/github");
-        if (res.ok) {
-          const json = await res.json();
-          if (json?.currentStreak) {
-            setLiveStreak(json.currentStreak);
-          }
-        }
-      } catch {
-        // Fallback remains 21
-      }
-    }
-    fetchStreak();
-  }, []);
 
   // IntersectionObserver for Table of Contents
   useEffect(() => {
@@ -509,33 +492,45 @@ export function ResumeClient() {
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 print:text-black">
                 [ 06 // ACTIVITY & METRICS ]
               </span>
-              <span className="font-mono text-[10px] text-neutral-400 print:hidden">live telemetry</span>
+              <span className="font-mono text-[10px] text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5 print:hidden">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${
+                    isSyncing ? "animate-ping" : "animate-pulse"
+                  }`}
+                />
+                LIVE SYNC
+              </span>
             </div>
 
             <div className="space-y-3 text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 print:text-black">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500" />
-                <span>
-                  <strong>GitHub Contribution Record:</strong> {resumeData.activity.githubStreakRecord}. Total September 2026: {resumeData.activity.totalSeptContributions} contributions.
-                </span>
-              </div>
-
-              {/* Live GitHub streak from API */}
+              {/* Live GitHub streak & contributions from API */}
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>
                   <strong>Current Live Streak:</strong>{" "}
                   <span className="font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 border border-[var(--border)] font-bold">
-                    {liveStreak} days
+                    {liveGitHub.currentStreak} days
                   </span>{" "}
-                  (pulled dynamically from GitHub API).
+                  · {liveGitHub.totalContributions} total contributions in the past year (synced live from GitHub API).
+                </span>
+              </div>
+
+              {/* Live LeetCode solving from API */}
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span>
+                  <strong>LeetCode:</strong> Started competitive problem solving in {resumeData.activity.leetcodeStartDate} —{" "}
+                  <span className="font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 border border-[var(--border)] font-bold">
+                    {liveLeetCode.totalSolved} solved
+                  </span>{" "}
+                  ({liveLeetCode.easySolved} Easy, {liveLeetCode.mediumSolved} Medium, {liveLeetCode.hardSolved} Hard).
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500" />
                 <span>
-                  <strong>LeetCode:</strong> Started competitive problem solving in {resumeData.activity.leetcodeStartDate} (29 solved: 12 Easy, 15 Medium, 2 Hard).
+                  <strong>GitHub Contribution Record:</strong> {resumeData.activity.githubStreakRecord}. Total September 2026: {resumeData.activity.totalSeptContributions} contributions.
                 </span>
               </div>
             </div>

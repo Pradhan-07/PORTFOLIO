@@ -5,7 +5,7 @@ import { LetsTalk } from "@/components/LetsTalk";
 import { stats } from "@/data/stats";
 import { resumeData } from "@/data/resume";
 import { ArrowRight, Download, FileText } from "lucide-react";
-import { CountUp } from "@/components/CountUp";
+import { HomeStatsTiles } from "@/components/HomeStatsTiles";
 import { TypewriterText } from "@/components/TypewriterText";
 
 // Centralized consecutive section numbering to guarantee layout order
@@ -42,47 +42,8 @@ export default function HomePage() {
             </span>
           </div>
 
-          {/* 3 Mono Stat Tiles with Animated Count-Up */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-            <div className="p-4 rounded-xl border border-[var(--border)] bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors">
-              <span className="font-mono text-[10px] uppercase text-neutral-400 block mb-1">
-                ACADEMICS // CGPA
-              </span>
-              <div className="text-2xl sm:text-3xl font-mono font-bold text-[var(--foreground)]">
-                <CountUp end={8.1} decimals={2} duration={1100} />{" "}
-                <span className="text-sm font-normal text-neutral-500">
-                  / {stats.cgpaScale}
-                </span>
-              </div>
-              <span className="font-mono text-[10px] text-neutral-500 mt-1 block">
-                VIT-AP University · 3rd Sem
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl border border-[var(--border)] bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors">
-              <span className="font-mono text-[10px] uppercase text-neutral-400 block mb-1">
-                LEETCODE SOLVED
-              </span>
-              <div className="text-2xl sm:text-3xl font-mono font-bold text-[var(--foreground)]">
-                <CountUp end={stats.leetcodeSolved} duration={1200} />
-              </div>
-              <span className="font-mono text-[10px] text-neutral-500 mt-1 block">
-                E: {stats.leetcodeBreakdown.easy} · M: {stats.leetcodeBreakdown.medium} · H: {stats.leetcodeBreakdown.hard}
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl border border-[var(--border)] bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors">
-              <span className="font-mono text-[10px] uppercase text-neutral-400 block mb-1">
-                C++ DSA PROGRAMS
-              </span>
-              <div className="text-2xl sm:text-3xl font-mono font-bold text-[var(--foreground)]">
-                <CountUp end={69} duration={1300} suffix="+" />
-              </div>
-              <span className="font-mono text-[10px] text-neutral-500 mt-1 block">
-                DSA_CPP repository
-              </span>
-            </div>
-          </div>
+          {/* 3 Mono Stat Tiles with Animated Count-Up & Real-Time Sync */}
+          <HomeStatsTiles />
 
           {/* Summary Paragraph */}
           <p className="text-sm sm:text-base text-neutral-700 dark:text-neutral-300 leading-relaxed mb-6 max-w-3xl">
