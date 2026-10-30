@@ -1,54 +1,85 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useImperativeHandle, forwardRef } from "react";
 import { VerletPoint } from "@/lib/verlet";
 
+export interface LanyardHandle {
+  update: (
+    points: VerletPoint[],
+    anchorX: number,
+    anchorY: number,
+    stretchRatio: number
+  ) => void;
+}
+
 interface LanyardProps {
-  points: VerletPoint[];
-  anchorX: number;
-  anchorY: number;
-  stretchRatio: number;
   isDark: boolean;
 }
 
-export function Lanyard({
-  points,
-  anchorX,
-  anchorY,
-  stretchRatio,
-  isDark,
-}: LanyardProps) {
-  if (points.length < 2) return null;
+export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
+  { isDark },
+  ref
+) {
+  const leftPathRef = useRef<SVGPathElement | null>(null);
+  const leftBorderRef = useRef<SVGPathElement | null>(null);
+  const leftGuideRef = useRef<SVGPathElement | null>(null);
+
+  const rightPathRef = useRef<SVGPathElement | null>(null);
+  const rightBorderRef = useRef<SVGPathElement | null>(null);
+  const rightGuideRef = useRef<SVGPathElement | null>(null);
+
+  const middleClaspRef = useRef<SVGGElement | null>(null);
+  const bottomClaspRef = useRef<SVGGElement | null>(null);
 
   const strapWidth = 14;
   const notchOffset = 18; // 36px spread at the top notch
 
-  // Convergence point at the end of the rope (where the clip joins the badge)
-  const clipPoint = points[points.length - 1];
+  useImperativeHandle(
+    ref,
+    () => ({
+      update(points, anchorX, anchorY, stretchRatio) {
+        if (points.length < 2) return;
 
-  // Middle point for the silver clasp ring
-  const middlePoint = points[Math.floor(points.length / 2)];
+        const total = points.length - 1;
+        let leftD = `M ${anchorX - notchOffset} ${anchorY} `;
+        let rightD = `M ${anchorX + notchOffset} ${anchorY} `;
 
-  // Generate SVG path for Left Strap
-  // Starts at anchorX - notchOffset and curves down to clipPoint
-  const leftStrapPath = `M ${anchorX - notchOffset} ${anchorY} ` +
-    points.slice(1).map((p, idx) => {
-      // interpolate spread from notchOffset down to 0 at the clip
-      const t = idx / (points.length - 1);
-      const spread = notchOffset * (1 - t);
-      return `L ${p.x - spread} ${p.y}`;
-    }).join(" ");
+        for (let i = 1; i <= total; i++) {
+          const p = points[i];
+          const spread = notchOffset * (1 - i / total);
+          leftD += `L ${p.x - spread} ${p.y} `;
+          rightD += `L ${p.x + spread} ${p.y} `;
+        }
 
-  // Generate SVG path for Right Strap
-  const rightStrapPath = `M ${anchorX + notchOffset} ${anchorY} ` +
-    points.slice(1).map((p, idx) => {
-      const t = idx / (points.length - 1);
-      const spread = notchOffset * (1 - t);
-      return `L ${p.x + spread} ${p.y}`;
-    }).join(" ");
+        if (leftPathRef.current) leftPathRef.current.setAttribute("d", leftD);
+        if (leftBorderRef.current) leftBorderRef.current.setAttribute("d", leftD);
+        if (leftGuideRef.current) leftGuideRef.current.setAttribute("d", leftD);
 
-  // Silver clasp visibility: reveals when strap stretches during a long pull (> 1.15x)
-  const claspOpacity = Math.max(0, Math.min(1, (stretchRatio - 1.12) / 0.28));
+        if (rightPathRef.current) rightPathRef.current.setAttribute("d", rightD);
+        if (rightBorderRef.current) rightBorderRef.current.setAttribute("d", rightD);
+        if (rightGuideRef.current) rightGuideRef.current.setAttribute("d", rightD);
+
+        const mid = points[Math.floor(points.length / 2)];
+        if (middleClaspRef.current && mid) {
+          middleClaspRef.current.setAttribute(
+            "transform",
+            `translate(${mid.x}, ${mid.y})`
+          );
+          const claspOpacity = Math.max(0, Math.min(1, (stretchRatio - 1.12) / 0.28));
+          middleClaspRef.current.setAttribute("opacity", claspOpacity.toFixed(2));
+        }
+
+        const clip = points[points.length - 1];
+        if (bottomClaspRef.current && clip) {
+          bottomClaspRef.current.setAttribute(
+            "transform",
+            `translate(${clip.x}, ${clip.y})`
+          );
+        }
+      },
+    }),
+    [notchOffset]
+  );
 
   // Repeated micro-text along strap
   const strapText =
@@ -84,13 +115,13 @@ export function Lanyard({
         </filter>
 
         {/* Hidden guide paths for text along the strap */}
-        <path id="leftTextPath" d={leftStrapPath} fill="none" />
-        <path id="rightTextPath" d={rightStrapPath} fill="none" />
+        <path ref={leftGuideRef} id="leftTextPath" fill="none" />
+        <path ref={rightGuideRef} id="rightTextPath" fill="none" />
       </defs>
 
       {/* 1. LEFT FABRIC STRAP */}
       <path
-        d={leftStrapPath}
+        ref={leftPathRef}
         fill="none"
         stroke={strapColor}
         strokeWidth={strapWidth}
@@ -99,7 +130,7 @@ export function Lanyard({
         filter="url(#strapShadow)"
       />
       <path
-        d={leftStrapPath}
+        ref={leftBorderRef}
         fill="none"
         stroke={strapBorderColor}
         strokeWidth={strapWidth}
@@ -109,7 +140,7 @@ export function Lanyard({
 
       {/* 2. RIGHT FABRIC STRAP */}
       <path
-        d={rightStrapPath}
+        ref={rightPathRef}
         fill="none"
         stroke={strapColor}
         strokeWidth={strapWidth}
@@ -118,7 +149,7 @@ export function Lanyard({
         filter="url(#strapShadow)"
       />
       <path
-        d={rightStrapPath}
+        ref={rightBorderRef}
         fill="none"
         stroke={strapBorderColor}
         strokeWidth={strapWidth}
@@ -152,30 +183,28 @@ export function Lanyard({
       </text>
 
       {/* 4. SILVER ADJUSTMENT CLASP (Appears in the middle when pulled & stretched) */}
-      {middlePoint && (
-        <g
-          transform={`translate(${middlePoint.x}, ${middlePoint.y})`}
-          opacity={claspOpacity}
-          style={{ transition: "opacity 120ms ease-out" }}
-        >
-          {/* Silver metallic clasp buckle */}
-          <rect
-            x="-14"
-            y="-6"
-            width="28"
-            height="12"
-            rx="3"
-            fill="url(#silverClipGrad)"
-            stroke="#555"
-            strokeWidth="0.8"
-          />
-          <rect x="-8" y="-3" width="16" height="6" rx="1.5" fill={isDark ? "#111" : "#222"} />
-          <circle cx="0" cy="0" r="1.5" fill="#e5e5e5" />
-        </g>
-      )}
+      <g
+        ref={middleClaspRef}
+        opacity={0}
+        style={{ transition: "opacity 120ms ease-out" }}
+      >
+        {/* Silver metallic clasp buckle */}
+        <rect
+          x="-14"
+          y="-6"
+          width="28"
+          height="12"
+          rx="3"
+          fill="url(#silverClipGrad)"
+          stroke="#555"
+          strokeWidth="0.8"
+        />
+        <rect x="-8" y="-3" width="16" height="6" rx="1.5" fill={isDark ? "#111" : "#222"} />
+        <circle cx="0" cy="0" r="1.5" fill="#e5e5e5" />
+      </g>
 
       {/* 5. SILVER SWIVEL CLASP & RING AT BADGE PIVOT */}
-      <g transform={`translate(${clipPoint.x}, ${clipPoint.y})`}>
+      <g ref={bottomClaspRef}>
         {/* Metal Swivel Body */}
         <rect
           x="-5"
@@ -204,5 +233,4 @@ export function Lanyard({
       </g>
     </svg>
   );
-}
-
+});

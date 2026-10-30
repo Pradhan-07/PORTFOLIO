@@ -98,6 +98,66 @@ body {
   }
 }
 
+/* Badge Flip Scale Pulse Keyframes */
+@keyframes flipScalePulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes flipScalePulseHover {
+  0% {
+    transform: scale(1.03);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes ledGlowWave {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.22);
+    filter: brightness(1.4);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.animate-flip-pulse {
+  animation: flipScalePulse 550ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-flip-pulse-hover {
+  animation: flipScalePulseHover 550ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-led-wave {
+  animation: ledGlowWave 450ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-flip-pulse,
+  .animate-flip-pulse-hover,
+  .animate-led-wave {
+    animation: none !important;
+  }
+}
+
 /* Print Styles for 1-Page Clean Resume */
 @media print {
   body {

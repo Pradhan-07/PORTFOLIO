@@ -56,11 +56,11 @@ export interface PhysicsConfig {
 }
 
 export const DEFAULT_PHYSICS_CONFIG: PhysicsConfig = {
-  gravity: 0.55,
-  damping: 0.985,
+  gravity: 0.58,
+  damping: 0.982,
   constraintIterations: 7,
-  segmentCount: 12, // 12 points as requested
-  restSegmentLength: 22,
+  segmentCount: 10,
+  restSegmentLength: 16,
 };
 
 export class VerletRope {
