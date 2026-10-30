@@ -15,7 +15,7 @@ interface LetsTalkProps {
   sectionLabel?: string;
 }
 
-export function LetsTalk({ sectionLabel = "[ 03 // LET'S TALK ]" }: LetsTalkProps) {
+export function LetsTalk({ sectionLabel = "[ 02 // LET'S TALK ]" }: LetsTalkProps) {
   return (
     <section
       id="contact"

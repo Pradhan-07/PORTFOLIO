@@ -1,24 +1,18 @@
 import React from "react";
 import Link from "next/link";
 import { Hero } from "@/components/Hero";
-import { ProjectCard } from "@/components/ProjectCard";
 import { LetsTalk } from "@/components/LetsTalk";
-import { getSortedProjects } from "@/data/projects";
 import { stats } from "@/data/stats";
 import { resumeData } from "@/data/resume";
 import { ArrowRight, Download, FileText } from "lucide-react";
 
 // Centralized consecutive section numbering to guarantee layout order
 const SECTION_LABELS = {
-  work: "[ 01 // WORK ]",
-  resume: "[ 02 // RESUME ]",
-  talk: "[ 03 // LET'S TALK ]",
+  resume: "[ 01 // RESUME ]",
+  talk: "[ 02 // LET'S TALK ]",
 } as const;
 
 export default function HomePage() {
-  const allProjects = getSortedProjects();
-  const featuredProjects = allProjects.slice(0, 4); // Top 4 featured projects
-
   return (
     <div className="w-full">
       {/* HERO BADGE EXPERIENCE */}
@@ -26,52 +20,11 @@ export default function HomePage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* =============================================================== */}
-        {/* 1. THINGS I'VE BUILT SECTION                                    */}
-        {/* =============================================================== */}
-        <section id="work" className="w-full my-16 sm:my-20 scroll-mt-24 sm:scroll-mt-28">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 pb-4 border-b border-[var(--border)]">
-            <div>
-              <span className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                {SECTION_LABELS.work}
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--foreground)] mt-2">
-                Things I&apos;ve built
-              </h2>
-            </div>
-
-            <Link
-              href="/work"
-              className="inline-flex items-center gap-1.5 font-mono text-xs text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors group"
-            >
-              <span>view all projects</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
-
-          {/* Grid of Top 4 Project Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {featuredProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </div>
-
-          <div className="text-center mt-10">
-            <Link
-              href="/work"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] font-mono text-xs text-neutral-800 dark:text-neutral-200 hover:border-neutral-400 dark:hover:border-neutral-700 hover:text-black dark:hover:text-white transition-all shadow-xs group"
-            >
-              <span>see all {allProjects.length} projects &amp; experiments</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </div>
-        </section>
-
-        {/* =============================================================== */}
-        {/* 2. RESUME TEASER SECTION                                        */}
+        {/* 1. RESUME TEASER SECTION                                        */}
         {/* =============================================================== */}
         <section
           id="resume"
-          className="w-full my-16 sm:my-20 p-6 sm:p-8 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xs scroll-mt-24 sm:scroll-mt-28"
+          className="w-full mt-6 sm:mt-10 mb-16 sm:mb-20 p-6 sm:p-8 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xs scroll-mt-24 sm:scroll-mt-28"
         >
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 pb-4 border-b border-[var(--border)]">
             <div>
@@ -157,7 +110,7 @@ export default function HomePage() {
         </section>
 
         {/* =============================================================== */}
-        {/* 3. LET'S TALK SECTION                                           */}
+        {/* 2. LET'S TALK SECTION                                           */}
         {/* =============================================================== */}
         <LetsTalk sectionLabel={SECTION_LABELS.talk} />
       </div>

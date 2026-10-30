@@ -45,7 +45,7 @@ export function Navbar() {
   useEffect(() => {
     if (pathname !== "/") return;
 
-    const sections = ["hero", "work", "resume", "contact"]
+    const sections = ["hero", "resume", "contact"]
       .map((id) => document.getElementById(id))
       .filter(Boolean) as HTMLElement[];
 
