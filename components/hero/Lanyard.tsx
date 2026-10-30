@@ -35,8 +35,9 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
   const bottomClaspRef = useRef<SVGGElement | null>(null);
   const shadowFilterRef = useRef<SVGFEDropShadowElement | null>(null);
 
-  const baseStrapWidth = 14;
-  const notchOffset = 18; // 36px spread at the top tab notch
+  // 2x wider strap (about 28 to 34px at desktop width)
+  const baseStrapWidth = 30;
+  const notchOffset = 26; // V-shape spread from notch navbar
 
   useImperativeHandle(
     ref,
@@ -64,13 +65,16 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         if (rightBorderRef.current) rightBorderRef.current.setAttribute("d", rightD);
         if (rightGuideRef.current) rightGuideRef.current.setAttribute("d", rightD);
 
-        // 2. Strap thinning on stretch (8-10% narrower at max 2.2x stretch)
-        const currentWidth = (baseStrapWidth * (1 - (stretchRatio - 1) * 0.08)).toFixed(2);
+        // 2. Strap thinning on stretch (8-10% narrower at maximum stretch)
+        const currentWidth = (baseStrapWidth * (1 - (stretchRatio - 1) * 0.09)).toFixed(2);
+        const borderWidth = (Number(currentWidth) + 1.2).toFixed(2);
         if (leftPathRef.current) leftPathRef.current.setAttribute("stroke-width", currentWidth);
         if (rightPathRef.current) rightPathRef.current.setAttribute("stroke-width", currentWidth);
+        if (leftBorderRef.current) leftBorderRef.current.setAttribute("stroke-width", borderWidth);
+        if (rightBorderRef.current) rightBorderRef.current.setAttribute("stroke-width", borderWidth);
 
         // 3. Dynamic text stretching along strap
-        const baseLength = 175;
+        const baseLength = 195;
         const stretchedTextLen = (baseLength * stretchRatio).toFixed(1);
         if (leftTextPathRef.current) {
           leftTextPathRef.current.setAttribute("textLength", `${stretchedTextLen}`);
@@ -102,7 +106,7 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
 
         // 6. Dynamic shadow growth
         if (shadowFilterRef.current) {
-          const stdDev = (2 + (stretchRatio - 1) * 3).toFixed(1);
+          const stdDev = (2.5 + (stretchRatio - 1) * 3).toFixed(1);
           shadowFilterRef.current.setAttribute("stdDeviation", stdDev);
         }
       },
@@ -110,13 +114,15 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
     [baseStrapWidth, notchOffset]
   );
 
-  // Repeated micro-text along strap
+  // Repeated micro-text along strap (legible at rest)
   const strapText =
     "KARAN KUMAR PRADHAN · VIT-AP · B.TECH CSE · KARAN KUMAR PRADHAN · VIT-AP · B.TECH CSE ·";
 
-  const strapColor = isDark ? "#18181b" : "#111111";
-  const strapBorderColor = isDark ? "#27272a" : "#2a2a2a";
-  const textColor = isDark ? "rgba(190, 190, 190, 0.85)" : "rgba(245, 245, 245, 0.95)";
+  // Dark theme: strap color #262626 with a 1px lighter edge highlight and brighter printed text
+  // Light theme: black strap with white text
+  const strapColor = isDark ? "#262626" : "#000000";
+  const strapEdgeHighlight = isDark ? "#3c3c3c" : "#1a1a1a";
+  const textColor = isDark ? "#f5f5f5" : "#ffffff";
 
   return (
     <svg
@@ -154,7 +160,16 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         <path ref={rightGuideRef} id="rightTextPath" fill="none" />
       </defs>
 
-      {/* 1. LEFT FABRIC STRAP */}
+      {/* 1. LEFT FABRIC STRAP WITH 1PX EDGE HIGHLIGHT */}
+      <path
+        ref={leftBorderRef}
+        fill="none"
+        stroke={strapEdgeHighlight}
+        strokeWidth={baseStrapWidth + 1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        filter="url(#strapShadow)"
+      />
       <path
         ref={leftPathRef}
         fill="none"
@@ -162,18 +177,18 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         strokeWidth={baseStrapWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
-        filter="url(#strapShadow)"
-      />
-      <path
-        ref={leftBorderRef}
-        fill="none"
-        stroke={strapBorderColor}
-        strokeWidth={baseStrapWidth}
-        strokeDasharray="2 4"
-        opacity="0.35"
       />
 
-      {/* 2. RIGHT FABRIC STRAP */}
+      {/* 2. RIGHT FABRIC STRAP WITH 1PX EDGE HIGHLIGHT */}
+      <path
+        ref={rightBorderRef}
+        fill="none"
+        stroke={strapEdgeHighlight}
+        strokeWidth={baseStrapWidth + 1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        filter="url(#strapShadow)"
+      />
       <path
         ref={rightPathRef}
         fill="none"
@@ -181,29 +196,21 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         strokeWidth={baseStrapWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
-        filter="url(#strapShadow)"
-      />
-      <path
-        ref={rightBorderRef}
-        fill="none"
-        stroke={strapBorderColor}
-        strokeWidth={baseStrapWidth}
-        strokeDasharray="2 4"
-        opacity="0.35"
       />
 
-      {/* 3. REPEATED PRINTED MONO TEXT ON STRAPS (Elastic stretching enabled) */}
+      {/* 3. REPEATED PRINTED MONO TEXT ON STRAPS (Legible 9.5px, elastic stretching enabled) */}
       <text
         fill={textColor}
-        fontSize="6.5"
+        fontSize="9.5"
         fontFamily="var(--font-geist-mono), monospace"
-        letterSpacing="1px"
+        letterSpacing="0.12em"
         fontWeight="600"
+        dominantBaseline="central"
       >
         <textPath
           ref={leftTextPathRef}
           href="#leftTextPath"
-          startOffset="4%"
+          startOffset="3%"
           lengthAdjust="spacing"
         >
           {strapText}
@@ -212,15 +219,16 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
 
       <text
         fill={textColor}
-        fontSize="6.5"
+        fontSize="9.5"
         fontFamily="var(--font-geist-mono), monospace"
-        letterSpacing="1px"
+        letterSpacing="0.12em"
         fontWeight="600"
+        dominantBaseline="central"
       >
         <textPath
           ref={rightTextPathRef}
           href="#rightTextPath"
-          startOffset="6%"
+          startOffset="5%"
           lengthAdjust="spacing"
         >
           {strapText}
@@ -233,48 +241,48 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         opacity={0}
         style={{ transition: "opacity 120ms ease-out" }}
       >
-        {/* Silver metallic clasp buckle */}
+        {/* Crisp silver metallic clasp buckle */}
         <rect
-          x="-14"
-          y="-6"
-          width="28"
-          height="12"
-          rx="3"
+          x="-17"
+          y="-8"
+          width="34"
+          height="16"
+          rx="3.5"
           fill="url(#silverClipGrad)"
-          stroke="#555"
-          strokeWidth="0.8"
+          stroke="#444444"
+          strokeWidth="1"
         />
-        <rect x="-8" y="-3" width="16" height="6" rx="1.5" fill={isDark ? "#111" : "#222"} />
-        <circle cx="0" cy="0" r="1.5" fill="#e5e5e5" />
+        <rect x="-10" y="-4" width="20" height="8" rx="2" fill={isDark ? "#1a1a1a" : "#222222"} />
+        <circle cx="0" cy="0" r="2" fill="#ffffff" />
       </g>
 
-      {/* 5. SILVER SWIVEL CLASP & RING AT BADGE PIVOT */}
+      {/* 5. SILVER SWIVEL CLASP & RING AT BADGE PIVOT (Larger & Crisp) */}
       <g ref={bottomClaspRef}>
         {/* Metal Swivel Body */}
         <rect
-          x="-5"
-          y="-14"
-          width="10"
-          height="14"
-          rx="2.5"
+          x="-7"
+          y="-18"
+          width="14"
+          height="18"
+          rx="3"
           fill="url(#silverClipGrad)"
-          stroke="#555555"
-          strokeWidth="0.8"
+          stroke="#444444"
+          strokeWidth="1"
         />
         {/* Swivel Pivot Line */}
-        <line x1="-4" y1="-7" x2="4" y2="-7" stroke="#333333" strokeWidth="0.8" />
+        <line x1="-5" y1="-9" x2="5" y2="-9" stroke="#222222" strokeWidth="1" />
 
         {/* Ring Connecting to Badge Cutout */}
         <ellipse
           cx="0"
-          cy="4"
-          rx="6"
-          ry="7"
+          cy="5"
+          rx="8"
+          ry="9"
           fill="none"
           stroke="url(#silverRingGrad)"
-          strokeWidth="2.5"
+          strokeWidth="3"
         />
-        <circle cx="0" cy="11" r="2" fill="#555555" />
+        <circle cx="0" cy="14" r="2.5" fill="#444444" />
       </g>
     </svg>
   );

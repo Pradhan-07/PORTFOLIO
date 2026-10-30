@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowUp } from "lucide-react";
+import { FooterEmberLines } from "@/components/FooterEmberLines";
 
 export function Footer() {
   const scrollToTop = () => {
@@ -14,7 +15,7 @@ export function Footer() {
       id="footer"
       className="w-full bg-[#000000] text-neutral-400 rounded-t-[24px] sm:rounded-t-[32px] pt-10 pb-8 px-4 sm:px-8 mt-24 relative overflow-hidden selection:bg-neutral-800 border-t border-neutral-900"
     >
-      <div className="max-w-6xl mx-auto flex flex-col justify-between gap-6 sm:gap-8">
+      <div className="max-w-6xl mx-auto flex flex-col justify-between min-h-[380px] sm:min-h-[420px] gap-6 sm:gap-8">
         {/* Top Row: Socials & Navigation */}
         <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs sm:text-[13px] border-b border-neutral-900/80 pb-6">
           {/* Socials */}
@@ -24,7 +25,6 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition-colors"
-              data-cursor="link"
             >
               github ↗
             </a>
@@ -33,7 +33,6 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition-colors"
-              data-cursor="link"
             >
               x ↗
             </a>
@@ -42,7 +41,6 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition-colors"
-              data-cursor="link"
             >
               linkedin ↗
             </a>
@@ -51,14 +49,12 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition-colors"
-              data-cursor="link"
             >
               instagram ↗
             </a>
             <a
               href="mailto:pradhankaran058@gmail.com"
               className="hover:text-white transition-colors"
-              data-cursor="link"
             >
               email ↗
             </a>
@@ -69,22 +65,25 @@ export function Footer() {
             <Link
               href="/resume"
               className="hover:text-white transition-colors"
-              data-cursor="link"
             >
               resume ↗
             </Link>
             <Link
               href="/work"
               className="hover:text-white transition-colors"
-              data-cursor="link"
             >
               work ↗
             </Link>
           </div>
         </div>
 
+        {/* Center: Giant PRADHAN word made of vertical gradient lines with drifting embers */}
+        <div className="w-full my-auto py-2 sm:py-4">
+          <FooterEmberLines />
+        </div>
+
         {/* Bottom Row: Copyright & Up We Go */}
-        <div className="flex items-center justify-between font-mono text-xs text-neutral-500">
+        <div className="flex items-center justify-between font-mono text-xs text-neutral-500 pt-4 border-t border-neutral-900/60">
           <div>
             <span>© 2026 Karan Kumar Pradhan</span>
           </div>
@@ -92,7 +91,6 @@ export function Footer() {
           <button
             onClick={scrollToTop}
             className="inline-flex items-center gap-1.5 text-neutral-500 hover:text-white transition-colors group cursor-pointer"
-            data-cursor="link"
             aria-label="Scroll to top"
           >
             <span>up we go</span>

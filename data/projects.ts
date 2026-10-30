@@ -1,3 +1,5 @@
+import { stats } from "./stats";
+
 export type ProjectCategory = "Web" | "DSA" | "AI / CV" | "IoT";
 
 export interface Project {
@@ -167,7 +169,7 @@ export const rawProjects: Project[] = [
     status: "completed",
     category: "DSA",
     shortDescription:
-      "My LeetCode solutions in C++, organised by problem and topic. 29 solved so far (Easy 12, Medium 15, Hard 2).",
+      `My LeetCode solutions in C++, organised by problem and topic. ${stats.leetcodeSolved} solved so far (Easy ${stats.leetcodeBreakdown.easy}, Medium ${stats.leetcodeBreakdown.medium}, Hard ${stats.leetcodeBreakdown.hard}).`,
     tags: ["C++", "DSA", "Competitive Programming"],
     codeUrl: "https://github.com/Pradhan-07/leetcode_question_answer",
     profileUrl: "https://leetcode.com/u/pradhan_07/",

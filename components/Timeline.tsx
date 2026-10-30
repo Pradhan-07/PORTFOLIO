@@ -66,7 +66,7 @@ export function Timeline({ limit, showHeading = true }: TimelineProps) {
               {/* Timeline Dot (Node) */}
               <div className="absolute left-0 md:left-[184px] top-1.5 md:top-2 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-neutral-950 bg-neutral-900 dark:bg-neutral-100 shadow-sm z-10 flex items-center justify-center">
                 {item.isNow && (
-                  <span className="absolute -inset-1 rounded-full bg-emerald-500/50 animate-ping" />
+                  <span className="absolute -inset-1 rounded-full status-dot-pulse opacity-40 animate-ping" />
                 )}
               </div>
 
@@ -74,7 +74,7 @@ export function Timeline({ limit, showHeading = true }: TimelineProps) {
               <div className="md:w-[160px] md:text-right shrink-0">
                 <span className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold tracking-tight text-neutral-500 dark:text-neutral-400">
                   {item.isNow && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full status-dot-indicator animate-pulse" />
                   )}
                   {item.date}
                 </span>

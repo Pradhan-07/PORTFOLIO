@@ -218,29 +218,27 @@ export function Badge({
             transition: "transform 550ms cubic-bezier(0.4, 0, 0.2, 1)",
             willChange: "transform",
           }}
-          className={`relative w-[92vw] sm:w-[84vw] md:w-[70vw] lg:w-[clamp(560px,52vw,840px)] aspect-[1.47/1] min-h-[380px] sm:min-h-[440px] md:min-h-[460px] lg:min-h-[480px] rounded-[18px] outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-500 ${
-            isDragging ? "cursor-grabbing" : "cursor-grab"
-          }`}
+          className="relative w-[92vw] sm:w-[84vw] md:w-[70vw] lg:w-[clamp(560px,52vw,840px)] aspect-[1.47/1] min-h-[380px] sm:min-h-[440px] md:min-h-[460px] lg:min-h-[480px] rounded-[18px] outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-500"
         >
           {/* =============================================================== */}
           {/* BADGE FRONT SIDE                                                */}
           {/* =============================================================== */}
           <div
             ref={badgeCardRef}
-            data-cursor="flip"
             style={{
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
               transform: "rotateY(0deg) translateZ(1px)",
               pointerEvents: isFlipped ? "none" : "auto",
             }}
-            className={`absolute inset-0 rounded-[18px] bg-[#0b0b0c] text-[#ededed] p-6 sm:p-8 flex flex-col justify-between overflow-hidden border ${
-              isDark ? "border-neutral-800" : "border-neutral-900/40 shadow-black/25"
+            className={`absolute inset-0 rounded-[18px] p-6 sm:p-8 flex flex-col justify-between overflow-hidden transition-colors ${
+              isDark
+                ? "bg-[#141416] text-[#ededed] border border-[rgba(255,255,255,0.12)] shadow-[0_20px_50px_rgba(0,0,0,0.7),0_0_24px_rgba(255,255,255,0.03)]"
+                : "bg-[#141416] text-[#ededed] border border-neutral-900/40 shadow-2xl shadow-black/25"
             }`}
           >
             {/* Top Slot Hole Cutout for Lanyard Clip */}
             <div
-              data-cursor="drag"
               className="absolute top-2.5 left-1/2 -translate-x-1/2 w-8 h-2 rounded-full bg-neutral-900 border border-neutral-800"
             />
 
@@ -270,7 +268,7 @@ export function Badge({
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full status-dot-pulse animate-pulse" />
                 <span className="font-mono text-[10px] text-neutral-400 uppercase tracking-wider">
                   student // active
                 </span>
@@ -354,18 +352,20 @@ export function Badge({
           {/* BADGE BACK SIDE (AFTER FLIP)                                    */}
           {/* =============================================================== */}
           <div
-            data-cursor="flip"
             style={{
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
               transform: "rotateY(180deg) translateZ(1px)",
               pointerEvents: isFlipped ? "auto" : "none",
             }}
-            className="absolute inset-0 rounded-[18px] bg-[#0c0c0e] text-[#ededed] border border-neutral-800 p-6 sm:p-8 flex flex-col justify-between overflow-hidden shadow-2xl"
+            className={`absolute inset-0 rounded-[18px] p-6 sm:p-8 flex flex-col justify-between overflow-hidden transition-colors ${
+              isDark
+                ? "bg-[#141416] text-[#ededed] border border-[rgba(255,255,255,0.12)] shadow-[0_20px_50px_rgba(0,0,0,0.7),0_0_24px_rgba(255,255,255,0.03)]"
+                : "bg-[#141416] text-[#ededed] border border-neutral-900/40 shadow-2xl shadow-black/25"
+            }`}
           >
             {/* Top Slot Hole Cutout */}
             <div
-              data-cursor="drag"
               className="absolute top-2.5 left-1/2 -translate-x-1/2 w-8 h-2 rounded-full bg-neutral-900 border border-neutral-800"
             />
 
@@ -373,8 +373,8 @@ export function Badge({
             <div className="flex items-center justify-between gap-3 z-10 pt-1 border-b border-neutral-800 pb-2.5">
               <span className="font-mono text-xs sm:text-sm font-bold uppercase tracking-wider text-neutral-100 flex items-center gap-2">
                 <span>FIND ME // CONNECT</span>
-                <span className="inline-flex items-center gap-1 font-mono text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <span className={`w-1.5 h-1.5 rounded-full bg-emerald-400 ${isSyncing ? "animate-ping" : "animate-pulse"}`} />
+                <span className="inline-flex items-center gap-1 font-mono text-[9px] px-1.5 py-0.5 rounded status-pill-badge border">
+                  <span className={`w-1.5 h-1.5 rounded-full status-dot-indicator ${isSyncing ? "animate-ping" : "animate-pulse"}`} />
                   LIVE SYNC
                 </span>
               </span>

@@ -267,12 +267,22 @@ export function Hero() {
         }}
       />
 
+      {/* Faint radial spotlight behind badge for crisp edge contrast in dark and light themes */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] sm:w-[920px] h-[480px] sm:h-[600px] rounded-full -z-10 blur-3xl pointer-events-none"
+        style={{
+          background: isDark
+            ? "radial-gradient(ellipse at center, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.015) 50%, transparent 75%)"
+            : "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.03) 0%, transparent 65%)",
+        }}
+        aria-hidden="true"
+      />
+
       {/* Physics Canvas & Lanyard Container with PERSPECTIVE on the parent wrapper */}
       <div
         ref={containerRef}
-        data-cursor="drag"
         style={{ perspective: "1200px" }}
-        className="relative w-full min-h-[620px] sm:min-h-[660px] md:min-h-[700px] h-[620px] sm:h-[660px] md:h-[700px] flex items-center justify-center overflow-visible"
+        className="relative w-full min-h-[620px] sm:min-h-[660px] md:min-h-[700px] h-[620px] sm:h-[660px] md:h-[700px] flex items-center justify-center overflow-visible pointer-events-none"
       >
         {/* Lanyard Fabric Strap with repeated text & silver clasp */}
         <Lanyard ref={lanyardRef} isDark={isDark} />

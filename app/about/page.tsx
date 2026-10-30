@@ -1,5 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
+import { stats } from "@/data/stats";
 import { AboutClient } from "./AboutClient";
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 const skills = [
   { name: "C++", category: "Systems & DSA", level: "Primary Language" },
-  { name: "DSA", category: "Core CS", level: "69+ Programs & 29 LeetCode" },
+  { name: "DSA", category: "Core CS", level: `${stats.dsaProgramsCount}+ Programs & ${stats.leetcodeSolved} LeetCode` },
   { name: "TypeScript / JS", category: "Web Development", level: "Full Stack" },
   { name: "React / Next.js", category: "Web Frameworks", level: "Modern App Router" },
   { name: "Tailwind CSS", category: "Styling & UI", level: "Design Systems" },

@@ -1,7 +1,10 @@
+// SINGLE SOURCE OF TRUTH FOR ALL NUMERICAL STATS ACROSS THE PORTFOLIO
+// Used by Home tiles, teaser paragraphs, Resume page, and metadata.
 export interface StatsData {
   repos: number;
   dsaPrograms: string;
   dsaProgramsCount: number;
+  // TODO: Karan, please verify your exact LeetCode solved count below (currently set to 39: 20 Easy, 17 Medium, 2 Hard based on pradhan_07 live telemetry). CGPA is confirmed at 8.10.
   leetcodeSolved: number;
   leetcodeBreakdown: {
     easy: number;
@@ -23,6 +26,7 @@ export const stats: StatsData = {
   repos: 23,
   dsaPrograms: "69+",
   dsaProgramsCount: 69,
+  // TODO: Fill or confirm your LeetCode solved count (live sync pulls dynamically when active):
   leetcodeSolved: 39,
   leetcodeBreakdown: {
     easy: 20,

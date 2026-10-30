@@ -9,7 +9,7 @@ export function OpenToWorkCTA() {
     <div className="w-full my-12 p-6 sm:p-8 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-[#121212]/50 backdrop-blur-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-2 font-mono text-xs text-neutral-800 dark:text-neutral-200">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="w-2 h-2 rounded-full status-dot-pulse animate-pulse" />
           <span className="font-semibold">open to internships and collaborations</span>
         </div>
         <p className="text-sm text-neutral-600 dark:text-neutral-400 max-w-lg">

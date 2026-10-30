@@ -38,11 +38,11 @@ export function HomeStatsTiles() {
             LEETCODE SOLVED ↗
           </span>
           <span
-            className="inline-flex items-center gap-1 font-mono text-[9px] text-emerald-500 dark:text-emerald-400"
+            className="inline-flex items-center gap-1 font-mono text-[9px] text-neutral-500 dark:text-neutral-400"
             title="Real-time live sync every 60 seconds and on tab focus"
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 ${
+              className={`w-1.5 h-1.5 rounded-full status-dot-indicator ${
                 isSyncing ? "animate-ping" : "animate-pulse"
               }`}
             />
@@ -72,11 +72,11 @@ export function HomeStatsTiles() {
             GITHUB CONTRIBUTIONS ↗
           </span>
           <span
-            className="inline-flex items-center gap-1 font-mono text-[9px] text-emerald-500 dark:text-emerald-400"
+            className="inline-flex items-center gap-1 font-mono text-[9px] text-neutral-500 dark:text-neutral-400"
             title="Real-time live sync from GitHub API"
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 ${
+              className={`w-1.5 h-1.5 rounded-full status-dot-indicator ${
                 isSyncing ? "animate-ping" : "animate-pulse"
               }`}
             />

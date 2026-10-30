@@ -132,8 +132,8 @@ export function ResumeClient() {
             >
               {copied ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-500" />
-                  <span className="text-emerald-600 dark:text-emerald-400">copied ✓</span>
+                  <Check className="w-3.5 h-3.5 text-neutral-900 dark:text-neutral-100" />
+                  <span className="text-neutral-900 dark:text-neutral-100 font-medium">copied ✓</span>
                 </>
               ) : (
                 <>
@@ -492,9 +492,9 @@ export function ResumeClient() {
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 print:text-black">
                 [ 06 // ACTIVITY & METRICS ]
               </span>
-              <span className="font-mono text-[10px] text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5 print:hidden">
+              <span className="font-mono text-[10px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 print:hidden">
                 <span
-                  className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${
+                  className={`w-1.5 h-1.5 rounded-full status-dot-indicator ${
                     isSyncing ? "animate-ping" : "animate-pulse"
                   }`}
                 />
@@ -505,7 +505,7 @@ export function ResumeClient() {
             <div className="space-y-3 text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 print:text-black">
               {/* Live GitHub streak & contributions from API */}
               <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full status-dot-pulse animate-pulse" />
                 <span>
                   <strong>Current Live Streak:</strong>{" "}
                   <span className="font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 border border-[var(--border)] font-bold">

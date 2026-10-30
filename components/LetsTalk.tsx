@@ -49,7 +49,7 @@ export function LetsTalk({ sectionLabel = "[ 02 // LET'S TALK ]" }: LetsTalkProp
 
         {/* Status Dot with Pulse */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-[var(--border)] bg-neutral-100/60 dark:bg-neutral-900/60 text-neutral-800 dark:text-neutral-200 mb-6">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="w-2 h-2 rounded-full status-dot-pulse animate-pulse" />
           <span>Open for chats &amp; internships</span>
         </div>
 

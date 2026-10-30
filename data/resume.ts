@@ -65,7 +65,7 @@ export const resumeData: ResumeData = {
   pdfUrl: "/Karan-Kumar-Pradhan-Resume.pdf",
   email: stats.email,
   summary:
-    "Second-year Computer Science student with a strong DSA foundation in C++ and hands-on experience building web apps, computer-vision tools and IoT prototypes. Hedera-certified developer. Consistent builder: 21-day GitHub contribution streak and 29 LeetCode problems solved in C++. Open to internships and collaborations.",
+    `Second-year Computer Science student with a strong DSA foundation in C++ and hands-on experience building web apps, computer-vision tools and IoT prototypes. Hedera-certified developer. Consistent builder: ${stats.streakFallbackDays}-day GitHub contribution streak and ${stats.leetcodeSolved} LeetCode problems solved in C++. Open to internships and collaborations.`,
   education: {
     institution: "VIT-AP University",
     location: "Amaravati, Andhra Pradesh",
