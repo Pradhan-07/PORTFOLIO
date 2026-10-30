@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowUp } from "lucide-react";
+import { FooterEmberLines } from "@/components/FooterEmberLines";
 
 export function Footer() {
   const scrollToTop = () => {
@@ -10,67 +11,102 @@ export function Footer() {
   };
 
   return (
-    <footer className="w-full border-t border-neutral-200 dark:border-neutral-800 py-10 mt-20 text-xs font-mono text-neutral-500 dark:text-neutral-400">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Copyright */}
-        <div className="flex items-center gap-2">
-          <span>© 2026 Karan Kumar Pradhan</span>
-          <span>·</span>
-          <span>VIT-AP University</span>
+    <footer
+      id="footer"
+      className="w-full bg-[#000000] text-neutral-400 rounded-t-[24px] sm:rounded-t-[32px] pt-12 pb-8 px-4 sm:px-8 mt-24 relative overflow-hidden selection:bg-neutral-800"
+      data-cursor="ember"
+    >
+      <div className="max-w-6xl mx-auto flex flex-col justify-between min-h-[380px] sm:min-h-[440px] gap-8">
+        {/* Top Row: Socials & Navigation */}
+        <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs sm:text-[13px] border-b border-neutral-900 pb-6">
+          {/* Socials */}
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <a
+              href="https://github.com/Pradhan-07"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+              data-cursor="link"
+            >
+              github ↗
+            </a>
+            <a
+              href="https://x.com/pradhankar65796"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+              data-cursor="link"
+            >
+              x ↗
+            </a>
+            <a
+              href="https://www.linkedin.com/in/karan-kumar-pradhan-510062396/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+              data-cursor="link"
+            >
+              linkedin ↗
+            </a>
+            <a
+              href="https://www.instagram.com/pradhan___07"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+              data-cursor="link"
+            >
+              instagram ↗
+            </a>
+            <a
+              href="mailto:pradhankaran058@gmail.com"
+              className="hover:text-white transition-colors"
+              data-cursor="link"
+            >
+              email ↗
+            </a>
+          </div>
+
+          {/* Site Navigation */}
+          <div className="flex items-center gap-4 sm:gap-6 text-neutral-500">
+            <Link
+              href="/resume"
+              className="hover:text-white transition-colors"
+              data-cursor="link"
+            >
+              resume ↗
+            </Link>
+            <Link
+              href="/work"
+              className="hover:text-white transition-colors"
+              data-cursor="link"
+            >
+              work ↗
+            </Link>
+          </div>
         </div>
 
-        {/* Links */}
-        <div className="flex items-center gap-4">
-          <a
-            href="https://github.com/Pradhan-07"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-black dark:hover:text-white transition-colors"
-          >
-            github
-          </a>
-          <a
-            href="https://linkedin.com/in/karan-kumar-pradhan-510062396/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-black dark:hover:text-white transition-colors"
-          >
-            linkedin
-          </a>
-          <a
-            href="https://leetcode.com/u/pradhan_07/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-black dark:hover:text-white transition-colors"
-          >
-            leetcode
-          </a>
-          <a
-            href="https://x.com/pradhankar65796"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-black dark:hover:text-white transition-colors"
-          >
-            x
-          </a>
-          <Link href="/resume" className="hover:text-black dark:hover:text-white transition-colors">
-            resume
-          </Link>
-          <Link href="/llms.txt" className="hover:text-black dark:hover:text-white transition-colors">
-            llms.txt
-          </Link>
+        {/* Center: Giant PRADHAN ember-lines canvas word */}
+        <div className="w-full my-auto py-2 sm:py-4">
+          <FooterEmberLines />
         </div>
 
-        {/* Up we go scroll to top */}
-        <button
-          onClick={scrollToTop}
-          className="inline-flex items-center gap-1 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors group"
-        >
-          <span>up we go</span>
-          <ArrowUp className="w-3.5 h-3.5 group-hover:-translate-y-0.5 transition-transform" />
-        </button>
+        {/* Bottom Row: Copyright & Up We Go */}
+        <div className="flex items-center justify-between font-mono text-xs text-neutral-600 sm:text-neutral-500 pt-6 border-t border-neutral-900">
+          <div>
+            <span>© 2026 Karan Kumar Pradhan</span>
+          </div>
+
+          <button
+            onClick={scrollToTop}
+            className="inline-flex items-center gap-1.5 text-neutral-500 hover:text-white transition-colors group cursor-pointer"
+            data-cursor="link"
+            aria-label="Scroll to top"
+          >
+            <span>up we go</span>
+            <ArrowUp className="w-3.5 h-3.5 group-hover:-translate-y-1 transition-transform duration-200" />
+          </button>
+        </div>
       </div>
     </footer>
   );
 }
-

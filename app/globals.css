@@ -21,6 +21,9 @@
   --card-subtle: #eeebe3;
   --badge-bg: #eae6de;
   --stipple-dot: #111111;
+  --cursor-color: #000000;
+  --cursor-border: rgba(0, 0, 0, 0.45);
+  --cursor-fill: rgba(0, 0, 0, 0.12);
   --heatmap-0: #e5e1d8;
   --heatmap-1: #c8c3b8;
   --heatmap-2: #8e8a80;
@@ -40,6 +43,9 @@
   --card-subtle: #171717;
   --badge-bg: #1c1c1c;
   --stipple-dot: #ededed;
+  --cursor-color: #ffffff;
+  --cursor-border: rgba(255, 255, 255, 0.45);
+  --cursor-fill: rgba(255, 255, 255, 0.12);
   --heatmap-0: #161616;
   --heatmap-1: #383838;
   --heatmap-2: #6b6b6b;
@@ -210,6 +216,24 @@ body {
   .animate-flip-pulse-hover,
   .animate-led-wave {
     animation: none !important;
+  }
+}
+
+/* Custom Cursor Hiding for Fine Pointer Devices */
+@media (hover: hover) and (pointer: fine) {
+  body.has-custom-cursor,
+  body.has-custom-cursor a,
+  body.has-custom-cursor button,
+  body.has-custom-cursor [role="button"],
+  body.has-custom-cursor [data-cursor] {
+    cursor: none !important;
+  }
+
+  body.has-custom-cursor input,
+  body.has-custom-cursor textarea,
+  body.has-custom-cursor select,
+  body.has-custom-cursor [contenteditable="true"] {
+    cursor: text !important;
   }
 }
 

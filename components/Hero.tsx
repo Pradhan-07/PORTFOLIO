@@ -270,6 +270,7 @@ export function Hero() {
       {/* Physics Canvas & Lanyard Container with PERSPECTIVE on the parent wrapper */}
       <div
         ref={containerRef}
+        data-cursor="drag"
         style={{ perspective: "1200px" }}
         className="relative w-full min-h-[620px] sm:min-h-[660px] md:min-h-[700px] h-[620px] sm:h-[660px] md:h-[700px] flex items-center justify-center overflow-visible"
       >

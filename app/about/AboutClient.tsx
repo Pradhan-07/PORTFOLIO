@@ -143,3 +143,4 @@ export function AboutClient({ skills }: AboutClientProps) {
     </div>
   );
 }
+

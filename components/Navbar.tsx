@@ -149,6 +149,7 @@ export function Navbar() {
               : "mt-0 px-4 sm:px-6 py-2.5 gap-2.5 sm:gap-4 rounded-b-2xl rounded-t-none bg-black text-[#ededed] dark:bg-[#161616] dark:text-[#ededed] border-x border-b border-transparent dark:border-neutral-800 shadow-xl"
           }`}
           aria-label="Notch Navigation"
+          data-cursor="nav"
         >
           {/* Logo Mark */}
           <Link
@@ -224,6 +225,7 @@ export function Navbar() {
           <button
             onClick={handleThemeToggle}
             aria-label="Toggle theme"
+            data-cursor="nav"
             className="p-1 rounded-full text-neutral-400 hover:text-white transition-colors relative cursor-pointer"
           >
             <AnimatePresence mode="wait" initial={false}>

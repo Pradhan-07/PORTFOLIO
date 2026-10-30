@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { CustomCursor } from "@/components/CustomCursor";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,6 +15,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
+  subsets: ["latin"],
+  weight: ["900"],
   display: "swap",
 });
 
@@ -62,7 +70,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} dark h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -100,6 +108,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-[100dvh] flex flex-col bg-[var(--background)] text-[var(--foreground)] transition-colors duration-200">
         <ThemeProvider>
+          <CustomCursor />
           <Navbar />
           <main id="main-content" className="flex-1">
             {children}

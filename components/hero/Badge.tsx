@@ -251,6 +251,7 @@ export function Badge({
           {/* =============================================================== */}
           <div
             ref={badgeCardRef}
+            data-cursor="flip"
             style={{
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
@@ -262,7 +263,10 @@ export function Badge({
             }`}
           >
             {/* Top Slot Hole Cutout for Lanyard Clip */}
-            <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-8 h-2 rounded-full bg-neutral-900 border border-neutral-800" />
+            <div
+              data-cursor="drag"
+              className="absolute top-2.5 left-1/2 -translate-x-1/2 w-8 h-2 rounded-full bg-neutral-900 border border-neutral-800"
+            />
 
             {/* Dynamic Light Sheen Gradients */}
             <div
@@ -374,6 +378,7 @@ export function Badge({
           {/* BADGE BACK SIDE (AFTER FLIP)                                    */}
           {/* =============================================================== */}
           <div
+            data-cursor="flip"
             style={{
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
@@ -383,7 +388,10 @@ export function Badge({
             className="absolute inset-0 rounded-[18px] bg-[#0c0c0e] text-[#ededed] border border-neutral-800 p-6 sm:p-8 flex flex-col justify-between overflow-hidden shadow-2xl"
           >
             {/* Top Slot Hole Cutout */}
-            <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-8 h-2 rounded-full bg-neutral-900 border border-neutral-800" />
+            <div
+              data-cursor="drag"
+              className="absolute top-2.5 left-1/2 -translate-x-1/2 w-8 h-2 rounded-full bg-neutral-900 border border-neutral-800"
+            />
 
             {/* BACK TOP ROW */}
             <div className="flex items-center justify-between gap-3 z-10 pt-1 border-b border-neutral-800 pb-2.5">
