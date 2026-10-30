@@ -15,7 +15,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: "index", href: "/" },
   { name: "work", href: "/work" },
-  { name: "writing", href: "/writing" },
   { name: "resume", href: "/resume" },
   { name: "about", href: "/about" },
 ];
@@ -35,8 +34,6 @@ export function Navbar() {
     pathname !== "/"
       ? pathname.startsWith("/work")
         ? "work"
-        : pathname.startsWith("/writing")
-        ? "writing"
         : pathname.startsWith("/resume")
         ? "resume"
         : pathname.startsWith("/about")
@@ -48,7 +45,7 @@ export function Navbar() {
   useEffect(() => {
     if (pathname !== "/") return;
 
-    const sections = ["hero", "work", "resume", "writing", "about"]
+    const sections = ["hero", "work", "resume", "contact"]
       .map((id) => document.getElementById(id))
       .filter(Boolean) as HTMLElement[];
 

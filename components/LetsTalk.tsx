@@ -11,18 +11,30 @@ const contactLinks = [
   { name: "Instagram", href: "https://www.instagram.com/pradhan___07" },
 ];
 
-export function LetsTalk() {
+interface LetsTalkProps {
+  sectionLabel?: string;
+}
+
+export function LetsTalk({ sectionLabel = "[ 03 // LET'S TALK ]" }: LetsTalkProps) {
   return (
-    <section className="w-full my-20 sm:my-28 p-8 sm:p-12 rounded-2xl border border-neutral-300 dark:border-neutral-800 bg-neutral-100/50 dark:bg-[#121212]/60 backdrop-blur-sm">
+    <section
+      id="contact"
+      className="w-full my-16 sm:my-24 p-8 sm:p-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xs scroll-mt-24 sm:scroll-mt-28"
+    >
       <div className="max-w-2xl">
+        {/* Consecutive Mono Section Label */}
+        <span className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-4">
+          {sectionLabel}
+        </span>
+
         {/* Status Dot */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-neutral-300 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 mb-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-[var(--border)] bg-neutral-100/60 dark:bg-neutral-900/60 text-neutral-800 dark:text-neutral-200 mb-6">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Open for chats & internships</span>
+          <span>Open for chats &amp; internships</span>
         </div>
 
         {/* Heading */}
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-neutral-950 dark:text-neutral-50 mb-4">
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[var(--foreground)] mb-4">
           Let&apos;s build something together.
         </h2>
 
@@ -61,4 +73,3 @@ export function LetsTalk() {
     </section>
   );
 }
-

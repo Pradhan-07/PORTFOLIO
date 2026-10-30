@@ -15,3 +15,4 @@ export const nowData: NowData = {
   solvingTitle: "LeetCode (C++)",
   statusDot: true,
 };
+

@@ -10,7 +10,7 @@ import {
   RotateCcw,
   FileText,
   Briefcase,
-  PenTool,
+  User,
   Mail,
   Flame,
 } from "lucide-react";
@@ -373,11 +373,11 @@ export function Badge({
                   <span>work</span>
                 </Link>
                 <Link
-                  href="/writing"
+                  href="/about"
                   className="flex items-center gap-1.5 p-1.5 rounded-lg border border-neutral-800 bg-neutral-900/60 text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
                 >
-                  <PenTool className="w-3 h-3 text-neutral-400" />
-                  <span>writing</span>
+                  <User className="w-3 h-3 text-neutral-400" />
+                  <span>about</span>
                 </Link>
                 <a
                   href={`mailto:${siteConfig.email}`}
