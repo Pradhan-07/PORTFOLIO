@@ -53,6 +53,9 @@ export function Footer() {
           >
             x
           </a>
+          <Link href="/resume" className="hover:text-black dark:hover:text-white transition-colors">
+            resume
+          </Link>
           <Link href="/llms.txt" className="hover:text-black dark:hover:text-white transition-colors">
             llms.txt
           </Link>
@@ -70,3 +73,4 @@ export function Footer() {
     </footer>
   );
 }
+

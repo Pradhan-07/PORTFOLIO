@@ -14,3 +14,4 @@ I wanted something different for this site:
 - Radical honesty: showing what is built, what is in progress, and exact GitHub commit logs without inflating titles.
 
 Being a beginner isn't something to hide behind buzzwords. Showing up every day, documenting bugs, and shipping code is the actual differentiator.
+

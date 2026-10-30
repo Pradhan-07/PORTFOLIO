@@ -16,3 +16,4 @@ Working with our 6-member Engineering Clinics group at VIT-AP University on AGRI
 3. **Power budgeting**: When sensors run outdoors, sleep modes and duty-cycled telemetry decide whether battery life is measured in days or months.
 
 Hardware programming brings C++ closer to reality.
+

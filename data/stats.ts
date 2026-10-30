@@ -14,6 +14,8 @@ export interface StatsData {
   leetcodeUsername: string;
   studentId: string;
   email: string;
+  cgpa: string;
+  cgpaScale: string;
 }
 
 export const stats: StatsData = {
@@ -32,4 +34,6 @@ export const stats: StatsData = {
   leetcodeUsername: "pradhan_07",
   studentId: "25BCE7526",
   email: "pradhankaran058@gmail.com",
+  cgpa: "8.10",
+  cgpaScale: "10",
 };

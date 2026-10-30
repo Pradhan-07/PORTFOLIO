@@ -67,3 +67,4 @@ export function getPostBySlug(slug: string): Post | null {
     return null;
   }
 }
+

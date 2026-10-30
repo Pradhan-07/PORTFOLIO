@@ -273,3 +273,4 @@ export function getCategoryCounts(items: Project[] = rawProjects): Record<Filter
 
   return counts;
 }
+

@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { name: "index", href: "/", sectionId: "hero" },
   { name: "work", href: "/work", sectionId: "work" },
   { name: "writing", href: "/writing", sectionId: "writing" },
+  { name: "resume", href: "/resume", sectionId: "resume" },
   { name: "about", href: "/about", sectionId: "about" },
 ];
 
@@ -32,6 +33,8 @@ export function Navbar() {
         ? "work"
         : pathname.startsWith("/writing")
         ? "writing"
+        : pathname.startsWith("/resume")
+        ? "resume"
         : pathname.startsWith("/about")
         ? "about"
         : "index"

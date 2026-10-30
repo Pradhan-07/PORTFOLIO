@@ -58,3 +58,4 @@ export const quickTakes: QuickTake[] = [
     tag: "dsa",
   },
 ];
+

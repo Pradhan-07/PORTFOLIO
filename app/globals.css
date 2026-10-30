@@ -93,3 +93,27 @@ body {
     animation-duration: 0.001ms !important;
   }
 }
+
+/* Print Styles for 1-Page Clean Resume */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+  header, footer, nav, canvas, aside, .print\:hidden {
+    display: none !important;
+  }
+  .resume-page-root {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+  * {
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}

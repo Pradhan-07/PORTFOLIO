@@ -9,6 +9,8 @@ export async function GET() {
 Karan Kumar Pradhan is a 2nd-year undergraduate BTech Computer Science & Engineering student at VIT-AP University (Class of 2025–2029). He focuses on Data Structures and Algorithms in C++, modern full-stack web engineering with TypeScript and Next.js, and IoT/embedded systems with ESP32.
 
 ## Key Profiles & Links
+- Resume (Web & PDF): https://karan-pradhan.vercel.app/resume
+- Direct PDF Download: https://karan-pradhan.vercel.app/Karan-Kumar-Pradhan-Resume.pdf
 - GitHub: https://github.com/Pradhan-07
 - LinkedIn: https://www.linkedin.com/in/karan-kumar-pradhan-510062396/
 - LeetCode: https://leetcode.com/u/pradhan_07/
@@ -17,6 +19,7 @@ Karan Kumar Pradhan is a 2nd-year undergraduate BTech Computer Science & Enginee
 - Email: pradhankaran058@gmail.com
 
 ## Current Verified Stats (as of ${stats.asOf})
+- Academics (CGPA): ${stats.cgpa} / ${stats.cgpaScale} (B.Tech CSE at VIT-AP University, 3rd semester)
 - Public GitHub Repositories: ${stats.repos}
 - C++ DSA Programs: ${stats.dsaPrograms}
 - LeetCode Solved: ${stats.leetcodeSolved} (Easy: ${stats.leetcodeBreakdown.easy}, Medium: ${stats.leetcodeBreakdown.medium}, Hard: ${stats.leetcodeBreakdown.hard})

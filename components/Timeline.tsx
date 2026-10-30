@@ -64,11 +64,18 @@ export function Timeline({ limit, showHeading = true }: TimelineProps) {
               className="relative flex flex-col md:flex-row items-start md:items-baseline gap-4 md:gap-12 pl-7 md:pl-0"
             >
               {/* Timeline Dot (Node) */}
-              <div className="absolute left-0 md:left-[184px] top-1.5 md:top-2 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-neutral-950 bg-neutral-900 dark:bg-neutral-100 shadow-sm z-10" />
+              <div className="absolute left-0 md:left-[184px] top-1.5 md:top-2 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-neutral-950 bg-neutral-900 dark:bg-neutral-100 shadow-sm z-10 flex items-center justify-center">
+                {item.isNow && (
+                  <span className="absolute -inset-1 rounded-full bg-emerald-500/50 animate-ping" />
+                )}
+              </div>
 
               {/* Date Column: left on desktop, top on mobile */}
               <div className="md:w-[160px] md:text-right shrink-0">
-                <span className="font-mono text-xs font-semibold tracking-tight text-neutral-500 dark:text-neutral-400">
+                <span className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold tracking-tight text-neutral-500 dark:text-neutral-400">
+                  {item.isNow && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  )}
                   {item.date}
                 </span>
               </div>
@@ -106,3 +113,4 @@ export function Timeline({ limit, showHeading = true }: TimelineProps) {
     </section>
   );
 }
+
