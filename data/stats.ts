@@ -12,6 +12,8 @@ export interface StatsData {
   asOf: string;
   githubUsername: string;
   leetcodeUsername: string;
+  studentId: string;
+  email: string;
 }
 
 export const stats: StatsData = {
@@ -28,4 +30,6 @@ export const stats: StatsData = {
   asOf: "Oct 2026",
   githubUsername: "Pradhan-07",
   leetcodeUsername: "pradhan_07",
+  studentId: "25BCE7526",
+  email: "pradhankaran058@gmail.com",
 };

@@ -1,29 +1,20 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { useTheme } from "./ThemeProvider";
 
 /**
  * ============================================================================
- * VERLET INTEGRATION ROPE & ID BADGE SIMULATION (Canvas 2D)
+ * INTERACTIVE VERLET INTEGRATION LANYARD & ID BADGE (Canvas 2D)
  * ============================================================================
  * 
- * HOW VERLET INTEGRATION WORKS FOR BEGINNERS:
- * -------------------------------------------
- * Standard Newtonian physics uses velocity: position = position + velocity * dt.
- * In Verlet integration, we don't store velocity as a separate variable!
- * Instead, velocity is implicitly calculated from the difference between the
- * CURRENT position and the PREVIOUS position:
- * 
- *    velocity = current_position - previous_position
- *    new_position = current_position + velocity * friction + acceleration (gravity)
- *    previous_position = current_position
- * 
- * Why use Verlet for ropes/cloth?
- * Because it makes "distance constraints" trivial and physically stable!
- * If point A and point B are connected by a rope segment of length L, we simply
- * calculate the distance between them, and push both points toward each other so
- * the distance equals L. Repeating this constraint check a few times creates a
- * stiff, realistic rope that never blows up or stretches out of control.
+ * PHYSICS EXPLANATION:
+ * - Verlet Integration stores only positions (current & old), giving implicit
+ *   velocity: v = (pos - oldPos) * damping.
+ * - Distance constraints keep rope segments at an exact length L by projecting
+ *   errors along the segment vector across 6 relaxation iterations.
+ * - FIXED TIMESTEP ACCUMULATOR: Advances physics in deterministic 1/60s slices
+ *   regardless of monitor refresh rate (60Hz, 120Hz, 144Hz), eliminating jitter.
  * ============================================================================
  */
 
@@ -44,50 +35,69 @@ interface Stick {
 export function VerletLanyard() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const { theme } = useTheme();
 
-  // Card flip state (0 = front, 1 = back)
+  // Card Flip State
   const [isFlipped, setIsFlipped] = useState(false);
-  const flipAngleRef = useRef(0); // in radians
+  const flipAngleRef = useRef(0);
   const targetFlipAngleRef = useRef(0);
 
-  // Physics points and sticks
+  // Physics Points & Sticks
   const pointsRef = useRef<Point[]>([]);
   const sticksRef = useRef<Stick[]>([]);
 
-  // Drag interaction state
+  // Drag State
   const isDraggingRef = useRef(false);
   const dragPointIndexRef = useRef<number | null>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
+  const startDragTimeRef = useRef(0);
+  const startDragPosRef = useRef({ x: 0, y: 0 });
 
-  // Badge dimensions
-  const cardWidth = 170;
-  const cardHeight = 250;
+  // Loaded Images
+  const colorImgRef = useRef<HTMLImageElement | null>(null);
+  const bwImgRef = useRef<HTMLImageElement | null>(null);
+
+  // Card dimensions
+  const cardWidth = 176;
+  const cardHeight = 260;
+
+  // Preload photos
+  useEffect(() => {
+    const colorImg = new Image();
+    colorImg.src = "/karan-color.png";
+    colorImg.onload = () => {
+      colorImgRef.current = colorImg;
+    };
+
+    const bwImg = new Image();
+    bwImg.src = "/karan-bw.png";
+    bwImg.onload = () => {
+      bwImgRef.current = bwImg;
+    };
+  }, []);
 
   // Initialize rope physics
   const initPhysics = useCallback((width: number) => {
-    // Anchor the lanyard near top center-right
-    const anchorX = Math.min(width - 120, Math.max(160, width * 0.72));
-    const anchorY = 0; // top edge
+    // Anchor top point slightly to the right of center
+    const anchorX = Math.min(width - 110, Math.max(140, width * 0.72));
+    const anchorY = 0;
 
-    const segmentCount = 6;
-    const segmentLength = 26;
+    const segmentCount = 10; // ~10 points as requested
+    const segmentLength = 18;
 
     const points: Point[] = [];
     const sticks: Stick[] = [];
 
-    // Create rope points hanging vertically
     for (let i = 0; i <= segmentCount; i++) {
-      const p: Point = {
-        x: anchorX + (Math.sin(i * 0.4) * 8),
+      points.push({
+        x: anchorX + Math.sin(i * 0.3) * 6,
         y: anchorY + i * segmentLength,
         oldX: anchorX,
         oldY: anchorY + i * segmentLength,
-        isPinned: i === 0, // Pin the top to the ceiling
-      };
-      points.push(p);
+        isPinned: i === 0,
+      });
     }
 
-    // Connect adjacent points with sticks of fixed rest length
     for (let i = 0; i < points.length - 1; i++) {
       sticks.push({
         p0: points[i],
@@ -110,15 +120,16 @@ export function VerletLanyard() {
 
     let animationFrameId: number;
     let dpr = window.devicePixelRatio || 1;
+    let isVisible = true;
 
-    // Handle high-DPI retina displays
+    // Handle Resize & Retina DPI
     const handleResize = () => {
       if (!container || !canvas) return;
       const rect = container.getBoundingClientRect();
       dpr = window.devicePixelRatio || 1;
 
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
       canvas.style.width = `${rect.width}px`;
       canvas.style.height = `${rect.height}px`;
 
@@ -126,24 +137,43 @@ export function VerletLanyard() {
     };
 
     handleResize();
-    window.addEventListener("resize", handleResize);
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(container);
 
-    // Physics constants
-    const gravity = 0.48; // Gravity pulling downward
-    const friction = 0.985; // Air drag/damping to eventually settle
-    const constraintIterations = 7; // Number of relaxation passes
+    // Pause animation when hero is off-screen or tab is hidden
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        isVisible = entries[0].isIntersecting;
+      },
+      { threshold: 0.05 }
+    );
+    intersectionObserver.observe(container);
 
-    // Main render and physics loop
-    const render = () => {
+    const handleVisibilityChange = () => {
+      isVisible = !document.hidden;
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // =========================================================================
+    // FIXED TIMESTEP ACCUMULATOR
+    // =========================================================================
+    const fixedDt = 1 / 60; // Exact 60fps simulation step
+    let accumulator = 0;
+    let lastTime = performance.now();
+
+    const gravity = 0.52;
+    const friction = 0.988;
+    const constraintIterations = 7;
+
+    const physicsStep = () => {
       const points = pointsRef.current;
       const sticks = sticksRef.current;
 
-      // 1. UPDATE VERLET POINTS (Physics Step)
+      // 1. Position update
       for (let i = 0; i < points.length; i++) {
         const p = points[i];
         if (p.isPinned) continue;
 
-        // If currently dragging this point with mouse/touch, clamp to cursor
         if (isDraggingRef.current && dragPointIndexRef.current === i) {
           p.x = mouseRef.current.x;
           p.y = mouseRef.current.y;
@@ -152,29 +182,26 @@ export function VerletLanyard() {
           continue;
         }
 
-        // Implicit velocity from Verlet integration
         const vx = (p.x - p.oldX) * friction;
         const vy = (p.y - p.oldY) * friction + gravity;
 
         p.oldX = p.x;
         p.oldY = p.y;
-
         p.x += vx;
         p.y += vy;
       }
 
-      // 2. ENFORCE DISTANCE CONSTRAINTS (Relaxation loop)
+      // 2. Distance constraint relaxation
       for (let iter = 0; iter < constraintIterations; iter++) {
         for (let i = 0; i < sticks.length; i++) {
           const stick = sticks[i];
           const dx = stick.p1.x - stick.p0.x;
           const dy = stick.p1.y - stick.p0.y;
-          const distance = Math.hypot(dx, dy) || 0.0001;
-          const difference = (stick.length - distance) / distance;
+          const dist = Math.hypot(dx, dy) || 0.0001;
+          const diff = (stick.length - dist) / dist;
 
-          // Push both points towards each other by half the error
-          const offsetX = dx * difference * 0.5;
-          const offsetY = dy * difference * 0.5;
+          const offsetX = dx * diff * 0.5;
+          const offsetY = dy * diff * 0.5;
 
           if (!stick.p0.isPinned) {
             stick.p0.x -= offsetX;
@@ -186,55 +213,73 @@ export function VerletLanyard() {
           }
         }
       }
+    };
 
-      // 3. SMOOTH FLIP ANGLE INTERPOLATION
+    // Render loop
+    const render = (time: number) => {
+      if (!isVisible) {
+        lastTime = time;
+        animationFrameId = requestAnimationFrame(render);
+        return;
+      }
+
+      let delta = (time - lastTime) / 1000;
+      lastTime = time;
+      if (delta > 0.1) delta = 0.1; // clamp to prevent physics explosion
+
+      accumulator += delta;
+      while (accumulator >= fixedDt) {
+        physicsStep();
+        accumulator -= fixedDt;
+      }
+
+      // Smooth 3D rotateY flip angle interpolation
       targetFlipAngleRef.current = isFlipped ? Math.PI : 0;
-      flipAngleRef.current += (targetFlipAngleRef.current - flipAngleRef.current) * 0.12;
+      flipAngleRef.current += (targetFlipAngleRef.current - flipAngleRef.current) * 0.14;
 
-      // 4. DRAWING ON CANVAS 2D
+      // Draw canvas
       ctx.save();
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
-      // Check current theme from html element
       const isDark = document.documentElement.classList.contains("dark");
+      const points = pointsRef.current;
 
       if (points.length >= 2) {
-        // DRAW LANYARD RIBBON (Double strap)
+        // DRAW LANYARD STRAP
         ctx.beginPath();
         ctx.moveTo(points[0].x - 3, points[0].y);
         for (let i = 1; i < points.length; i++) {
-          ctx.lineTo(points[i].x - 2, points[i].y);
+          ctx.lineTo(points[i].x - 2.5, points[i].y);
         }
         for (let i = points.length - 1; i >= 0; i--) {
-          ctx.lineTo(points[i].x + 2, points[i].y);
+          ctx.lineTo(points[i].x + 2.5, points[i].y);
         }
         ctx.closePath();
 
-        // Monochromatic lanyard ribbon gradient
-        const ribbonGrad = ctx.createLinearGradient(
+        const strapGrad = ctx.createLinearGradient(
           points[0].x,
           points[0].y,
           points[points.length - 1].x,
           points[points.length - 1].y
         );
         if (isDark) {
-          ribbonGrad.addColorStop(0, "#262626");
-          ribbonGrad.addColorStop(0.5, "#404040");
-          ribbonGrad.addColorStop(1, "#171717");
+          strapGrad.addColorStop(0, "#2a2a2a");
+          strapGrad.addColorStop(0.5, "#444444");
+          strapGrad.addColorStop(1, "#1c1c1c");
         } else {
-          ribbonGrad.addColorStop(0, "#d4d4d4");
-          ribbonGrad.addColorStop(0.5, "#a3a3a3");
-          ribbonGrad.addColorStop(1, "#737373");
+          strapGrad.addColorStop(0, "#d8d8d8");
+          strapGrad.addColorStop(0.5, "#aaaaaa");
+          strapGrad.addColorStop(1, "#888888");
         }
-        ctx.fillStyle = ribbonGrad;
+        ctx.fillStyle = strapGrad;
         ctx.fill();
 
-        ctx.strokeStyle = isDark ? "#525252" : "#999999";
-        ctx.lineWidth = 0.7;
+        ctx.strokeStyle = isDark ? "#555555" : "#999999";
+        ctx.lineWidth = 0.6;
         ctx.stroke();
 
-        // DRAW BADGE CLIP & CLASP
+        // BADGE MOUNT & SWIVEL CLASP
         const lastP = points[points.length - 1];
         const prevP = points[points.length - 2];
         const angle = Math.atan2(lastP.y - prevP.y, lastP.x - prevP.x) - Math.PI / 2;
@@ -243,57 +288,49 @@ export function VerletLanyard() {
         ctx.translate(lastP.x, lastP.y);
         ctx.rotate(angle);
 
-        // Metal clasp ring
+        // Clasp Ring
         ctx.fillStyle = isDark ? "#888888" : "#444444";
         ctx.beginPath();
-        ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Metal swivel connector
-        ctx.fillStyle = isDark ? "#333333" : "#cccccc";
-        ctx.fillRect(-3, 2, 6, 9);
+        // Metal Hook
+        ctx.fillStyle = isDark ? "#383838" : "#cccccc";
+        ctx.fillRect(-3, 2, 6, 8);
         ctx.strokeStyle = isDark ? "#666666" : "#888888";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-3, 2, 6, 9);
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(-3, 2, 6, 8);
 
-        // 5. DRAW ID BADGE CARD (Supports 3D Card Flip on X-axis via scaleX)
+        // DRAW 3D ROTATING BADGE CARD
         const scaleX = Math.cos(flipAngleRef.current);
         const isBackFacing = Math.abs(flipAngleRef.current) > Math.PI / 2;
 
         ctx.translate(0, 14);
         ctx.scale(scaleX, 1);
 
-        // Outer badge drop shadow
-        ctx.shadowColor = isDark ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.18)";
+        // Card Shadow
+        ctx.shadowColor = isDark ? "rgba(0,0,0,0.75)" : "rgba(0,0,0,0.18)";
         ctx.shadowBlur = 18;
         ctx.shadowOffsetY = 10;
 
-        // Card body rounded rectangle
         const x = -cardWidth / 2;
         const y = 0;
         const radius = 10;
 
         ctx.beginPath();
         ctx.roundRect(x, y, cardWidth, cardHeight, radius);
-
-        // Card background
-        if (isDark) {
-          ctx.fillStyle = "#121212";
-        } else {
-          ctx.fillStyle = "#ffffff";
-        }
+        ctx.fillStyle = isDark ? "#121212" : "#ffffff";
         ctx.fill();
 
-        // Reset shadow for crisp inner elements
         ctx.shadowColor = "transparent";
 
-        // Card border (crisp 1px monochrome)
-        ctx.strokeStyle = isDark ? "#2a2a2a" : "#e0e0e0";
+        // Card Border
+        ctx.strokeStyle = isDark ? "#282828" : "#e0e0e0";
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Clip slot cutout at top of card
-        ctx.fillStyle = isDark ? "#0a0a0a" : "#f0f0f0";
+        // Lanyard Cutout Slot
+        ctx.fillStyle = isDark ? "#0a0a0a" : "#fafafa";
         ctx.beginPath();
         ctx.roundRect(-14, 6, 28, 5, 2.5);
         ctx.fill();
@@ -302,187 +339,172 @@ export function VerletLanyard() {
 
         if (!isBackFacing) {
           // ================= FRONT SIDE =================
-          // Subtle top header banner
-          ctx.fillStyle = isDark ? "#1a1a1a" : "#f5f5f5";
+          // Header Ribbon
+          ctx.fillStyle = isDark ? "#1a1a1a" : "#f4f4f4";
           ctx.beginPath();
-          ctx.roundRect(x + 1, y + 16, cardWidth - 2, 34, [0, 0, 0, 0]);
+          ctx.roundRect(x + 1, y + 16, cardWidth - 2, 32, [0, 0, 0, 0]);
           ctx.fill();
 
-          // Header Text: University
-          ctx.font = "600 8.5px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#a3a3a3" : "#525252";
+          ctx.font = "700 8.5px var(--font-geist-mono), monospace";
+          ctx.fillStyle = isDark ? "#a3a3a3" : "#444444";
           ctx.textAlign = "center";
           ctx.fillText("VIT-AP UNIVERSITY", 0, y + 29);
 
           ctx.font = "500 7px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#737373" : "#737373";
-          ctx.fillText("SCHOOL OF COMPUTER SCIENCE", 0, y + 41);
+          ctx.fillStyle = isDark ? "#737373" : "#777777";
+          ctx.fillText("SCHOOL OF COMPUTER SCIENCE", 0, y + 40);
 
-          // Student Photo Box / Monogram Badge
-          const photoY = y + 58;
-          ctx.fillStyle = isDark ? "#0c0c0c" : "#fafafa";
+          // Photo Box
+          const photoY = y + 54;
+          const photoW = 72;
+          const photoH = 80;
+
+          ctx.save();
           ctx.beginPath();
-          ctx.roundRect(-30, photoY, 60, 68, 6);
-          ctx.fill();
-          ctx.strokeStyle = isDark ? "#282828" : "#e5e5e5";
+          ctx.roundRect(-photoW / 2, photoY, photoW, photoH, 6);
+          ctx.clip();
+
+          if (colorImgRef.current && colorImgRef.current.complete) {
+            ctx.drawImage(colorImgRef.current, -photoW / 2, photoY, photoW, photoH);
+          } else {
+            ctx.fillStyle = isDark ? "#222" : "#eee";
+            ctx.fillRect(-photoW / 2, photoY, photoW, photoH);
+            ctx.font = "700 18px var(--font-geist-sans)";
+            ctx.fillStyle = isDark ? "#fff" : "#000";
+            ctx.fillText("KP", 0, photoY + 45);
+          }
+          ctx.restore();
+
+          // Photo Box Border
+          ctx.strokeStyle = isDark ? "#333333" : "#e0e0e0";
           ctx.lineWidth = 1;
-          ctx.stroke();
+          ctx.strokeRect(-photoW / 2, photoY, photoW, photoH);
 
-          // Monogram inside photo box
-          ctx.font = "700 20px var(--font-geist-sans), sans-serif";
-          ctx.fillStyle = isDark ? "#ededed" : "#171717";
-          ctx.textAlign = "center";
-          ctx.fillText("KP", 0, photoY + 38);
-
-          // Mini status tag under photo
-          ctx.font = "600 6.5px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#888888" : "#666666";
-          ctx.fillText("STUDENT // 2ND YR", 0, photoY + 54);
-
-          // Student Name
+          // Name
           ctx.font = "700 11px var(--font-geist-sans), sans-serif";
           ctx.fillStyle = isDark ? "#ffffff" : "#0a0a0a";
-          ctx.fillText("KARAN KUMAR PRADHAN", 0, y + 144);
+          ctx.fillText("KARAN KUMAR PRADHAN", 0, y + 152);
 
           // Program Subtitle
-          ctx.font = "500 8px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#999999" : "#666666";
-          ctx.fillText("B.Tech CSE · 2025–29", 0, y + 158);
+          ctx.font = "600 8px var(--font-geist-mono), monospace";
+          ctx.fillStyle = isDark ? "#a3a3a3" : "#555555";
+          ctx.fillText("CSE · VIT-AP", 0, y + 166);
 
-          // Focus fields
-          ctx.font = "400 7px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#777777" : "#888888";
-          ctx.fillText("DSA (C++) · WEB · IOT", 0, y + 172);
+          // Student ID
+          ctx.font = "500 7.5px var(--font-geist-mono), monospace";
+          ctx.fillStyle = isDark ? "#888888" : "#777777";
+          ctx.fillText("ID 25BCE7526", 0, y + 179);
 
-          // Barcode Graphic at bottom
-          const barcodeY = y + 188;
+          // Barcode Lines
+          const barcodeY = y + 196;
           ctx.fillStyle = isDark ? "#e0e0e0" : "#222222";
           const barWidths = [2, 1, 3, 1, 4, 2, 1, 3, 2, 1, 4, 1, 2, 3, 1, 2, 4, 1, 3, 2];
-          let barX = -cardWidth / 2 + 22;
+          let barX = -cardWidth / 2 + 25;
           for (let b = 0; b < barWidths.length; b++) {
             const bw = barWidths[b];
             ctx.fillRect(barX, barcodeY, bw, 20);
             barX += bw + 3.5;
           }
 
-          // ID string below barcode
           ctx.font = "500 6.5px var(--font-geist-mono), monospace";
           ctx.fillStyle = isDark ? "#666666" : "#999999";
-          ctx.fillText("ID: 25BCE-VITAP // VERIFIED", 0, y + 219);
+          ctx.fillText("25BCE7526 // VERIFIED", 0, y + 226);
 
-          // Subtle hint to flip
+          // Hint to flip
           ctx.font = "italics 6.5px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#555555" : "#aaaaaa";
-          ctx.fillText("● click / tap to flip ●", 0, y + 236);
+          ctx.fillStyle = isDark ? "#555555" : "#999999";
+          ctx.fillText("psst, flip me ↓", 0, y + 246);
         } else {
           // ================= BACK SIDE =================
-          // Top magnetic strip
+          // Magnetic Strip
           ctx.fillStyle = isDark ? "#222222" : "#1a1a1a";
           ctx.fillRect(x + 1, y + 18, cardWidth - 2, 24);
 
-          // QR Code Graphic in center
-          const qrY = y + 54;
-          const qrSize = 72;
-          ctx.fillStyle = isDark ? "#181818" : "#f4f4f4";
+          // Grayscale / Halftone Portrait Box
+          const bwY = y + 54;
+          const bwW = 66;
+          const bwH = 74;
+
+          ctx.save();
           ctx.beginPath();
-          ctx.roundRect(-qrSize / 2, qrY, qrSize, qrSize, 6);
-          ctx.fill();
-          ctx.strokeStyle = isDark ? "#333333" : "#dddddd";
-          ctx.stroke();
+          ctx.roundRect(-bwW / 2, bwY, bwW, bwH, 6);
+          ctx.clip();
 
-          // Draw QR pattern modules (monochrome pixel grid)
-          ctx.fillStyle = isDark ? "#e5e5e5" : "#171717";
-          const gridSize = 7;
-          const cellSize = qrSize / gridSize;
-          const qrMatrix = [
-            [1, 1, 1, 0, 1, 1, 1],
-            [1, 0, 1, 0, 1, 0, 1],
-            [1, 1, 1, 1, 1, 1, 1],
-            [0, 1, 0, 1, 0, 1, 0],
-            [1, 1, 1, 0, 1, 0, 1],
-            [1, 0, 0, 1, 0, 1, 1],
-            [1, 1, 1, 0, 1, 1, 1],
-          ];
-          for (let r = 0; r < gridSize; r++) {
-            for (let c = 0; c < gridSize; c++) {
-              if (qrMatrix[r][c] === 1) {
-                ctx.fillRect(
-                  -qrSize / 2 + c * cellSize + 1.5,
-                  qrY + r * cellSize + 1.5,
-                  cellSize - 3,
-                  cellSize - 3
-                );
-              }
-            }
+          if (bwImgRef.current && bwImgRef.current.complete) {
+            ctx.drawImage(bwImgRef.current, -bwW / 2, bwY, bwW, bwH);
+          } else {
+            ctx.fillStyle = isDark ? "#181818" : "#f0f0f0";
+            ctx.fillRect(-bwW / 2, bwY, bwW, bwH);
           }
+          ctx.restore();
 
-          // Handles metadata
-          ctx.font = "600 8px var(--font-geist-mono), monospace";
+          // Border around BW photo
+          ctx.strokeStyle = isDark ? "#333333" : "#dddddd";
+          ctx.strokeRect(-bwW / 2, bwY, bwW, bwH);
+
+          // GitHub Handle
+          ctx.font = "700 9px var(--font-geist-mono), monospace";
           ctx.fillStyle = isDark ? "#ededed" : "#0a0a0a";
           ctx.textAlign = "center";
-          ctx.fillText("github.com/Pradhan-07", 0, y + 144);
+          ctx.fillText("@Pradhan-07", 0, y + 148);
 
+          // Email
           ctx.font = "500 7px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#888888" : "#666666";
-          ctx.fillText("leetcode.com/u/pradhan_07", 0, y + 158);
-          ctx.fillText("linkedin / in / karan-kumar-pradhan", 0, y + 170);
+          ctx.fillStyle = isDark ? "#a3a3a3" : "#555555";
+          ctx.fillText("pradhankaran058@gmail.com", 0, y + 162);
 
-          // Verification Stamp
-          ctx.fillStyle = isDark ? "#161616" : "#f0f0f0";
+          // Verified Badge Box
+          ctx.fillStyle = isDark ? "#181818" : "#f4f4f4";
           ctx.beginPath();
-          ctx.roundRect(-55, y + 184, 110, 22, 4);
+          ctx.roundRect(-65, y + 178, 130, 26, 4);
           ctx.fill();
-          ctx.strokeStyle = isDark ? "#282828" : "#e0e0e0";
+          ctx.strokeStyle = isDark ? "#2a2a2a" : "#e0e0e0";
           ctx.stroke();
 
-          ctx.font = "600 7px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#aaaaaa" : "#444444";
-          ctx.fillText("AUTHENTIC BADGE · VIT-AP", 0, y + 198);
+          ctx.font = "600 7.5px var(--font-geist-mono), monospace";
+          ctx.fillStyle = isDark ? "#cccccc" : "#333333";
+          ctx.fillText("STUDENT IDENTITY // CSE", 0, y + 190);
+          ctx.font = "500 6.5px var(--font-geist-mono), monospace";
+          ctx.fillStyle = isDark ? "#888888" : "#666666";
+          ctx.fillText("ID: 25BCE7526 · VIT-AP", 0, y + 200);
 
-          // Hint to flip back
+          // Barcode mini
+          ctx.fillStyle = isDark ? "#999999" : "#444444";
+          ctx.fillRect(-45, y + 214, 90, 8);
+
           ctx.font = "italics 6.5px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#555555" : "#aaaaaa";
-          ctx.fillText("● click to flip back ●", 0, y + 234);
+          ctx.fillStyle = isDark ? "#555555" : "#999999";
+          ctx.fillText("● click to flip front ●", 0, y + 246);
         }
 
-        ctx.restore(); // restore badge translate & rotate
+        ctx.restore();
       }
 
-      ctx.restore(); // restore dpr scale
-
+      ctx.restore();
       animationFrameId = requestAnimationFrame(render);
     };
 
-    render();
+    animationFrameId = requestAnimationFrame(render);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationFrameId);
+      resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [initPhysics, isFlipped]);
+  }, [initPhysics, isFlipped, theme]);
 
-  // Pointer & Touch Events for Dragging and Clicking
-  const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
+  // Pointer & Drag Coordinates
+  const getCoordinates = (e: React.PointerEvent) => {
     if (!canvasRef.current) return { x: 0, y: 0 };
     const rect = canvasRef.current.getBoundingClientRect();
-    if ("touches" in e && e.touches.length > 0) {
-      return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top,
-      };
-    } else if ("clientX" in e) {
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
-    }
-    return { x: 0, y: 0 };
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
   };
 
-  const startDragTimeRef = useRef(0);
-  const startDragPosRef = useRef({ x: 0, y: 0 });
-
-  const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
     const coords = getCoordinates(e);
     mouseRef.current = coords;
     startDragPosRef.current = coords;
@@ -491,24 +513,26 @@ export function VerletLanyard() {
     const points = pointsRef.current;
     if (points.length === 0) return;
 
-    // Last point holds the ID badge card
     const badgePoint = points[points.length - 1];
-    // Check if pointer is near badge (radius of 140px)
-    const distToBadge = Math.hypot(coords.x - badgePoint.x, coords.y - (badgePoint.y + 110));
+    const dist = Math.hypot(coords.x - badgePoint.x, coords.y - (badgePoint.y + 110));
 
-    if (distToBadge < 130) {
+    if (dist < 140) {
       isDraggingRef.current = true;
       dragPointIndexRef.current = points.length - 1;
+      // Set touch-action none ONLY while dragging so page scrolling works on mobile
+      if (canvasRef.current) {
+        canvasRef.current.style.touchAction = "none";
+      }
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
     }
   };
 
-  const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDraggingRef.current) return;
-    const coords = getCoordinates(e);
-    mouseRef.current = coords;
+    mouseRef.current = getCoordinates(e);
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent) => {
     if (isDraggingRef.current) {
       const elapsed = Date.now() - startDragTimeRef.current;
       const movedDist = Math.hypot(
@@ -516,37 +540,41 @@ export function VerletLanyard() {
         mouseRef.current.y - startDragPosRef.current.y
       );
 
-      // If released quickly without moving much, treat as a flip click!
+      // Short tap/click flips the badge
       if (elapsed < 280 && movedDist < 12) {
         setIsFlipped((prev) => !prev);
       }
     }
     isDraggingRef.current = false;
     dragPointIndexRef.current = null;
+    if (canvasRef.current) {
+      canvasRef.current.style.touchAction = "auto";
+    }
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignore if pointer capture was already released
+    }
   };
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-[380px] sm:h-[440px] md:h-[480px] flex items-center justify-center select-none"
+      className="relative w-full h-[400px] sm:h-[460px] md:h-[500px] flex items-center justify-center select-none"
     >
       <canvas
         ref={canvasRef}
-        onMouseDown={handlePointerDown}
-        onMouseMove={handlePointerMove}
-        onMouseUp={handlePointerUp}
-        onMouseLeave={handlePointerUp}
-        onTouchStart={handlePointerDown}
-        onTouchMove={handlePointerMove}
-        onTouchEnd={handlePointerUp}
-        className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        className="w-full h-full cursor-grab active:cursor-grabbing"
         title="Interactive ID badge with Verlet rope physics. Click to flip, drag to swing!"
       />
 
-      {/* Floating subtle guide badge for the user */}
-      <div className="absolute top-2 right-4 pointer-events-none hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 border border-neutral-300 dark:border-neutral-700/60 backdrop-blur-sm text-[10px] font-mono text-neutral-600 dark:text-neutral-400">
+      <div className="absolute top-2 right-4 pointer-events-none hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full liquid-glass text-[10px] font-mono text-neutral-600 dark:text-neutral-400">
         <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 animate-pulse" />
-        <span>verlet rope · drag & flip</span>
+        <span>verlet rope · drag &amp; flip</span>
       </div>
     </div>
   );

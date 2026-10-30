@@ -16,13 +16,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Karan Kumar Pradhan — BTech CSE @ VIT-AP",
+  title: "Karan Kumar Pradhan — CSE @ VIT-AP",
   description:
-    "Personal portfolio of Karan Kumar Pradhan: 2nd-year BTech CSE student at VIT-AP University. Grinding C++ DSA, web development, IoT and computer vision.",
+    "Personal portfolio of Karan Kumar Pradhan: 2nd-year CSE student at VIT-AP University. Grinding C++ DSA, web engineering, IoT and building in public.",
   keywords: [
     "Karan Kumar Pradhan",
     "VIT-AP",
-    "BTech CSE",
+    "CSE",
+    "25BCE7526",
     "Portfolio",
     "C++ DSA",
     "Web Developer",
@@ -34,20 +35,20 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://karan-pradhan.vercel.app",
-    title: "Karan Kumar Pradhan — BTech CSE @ VIT-AP",
+    title: "Karan Kumar Pradhan — CSE @ VIT-AP",
     description:
       "Learning to build things that work. C++ DSA, full-stack web development, and IoT telemetry.",
     siteName: "Karan Kumar Pradhan Portfolio",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Karan Kumar Pradhan — BTech CSE @ VIT-AP",
+    title: "Karan Kumar Pradhan — CSE @ VIT-AP",
     description:
       "Learning to build things that work. C++ DSA, full-stack web development, and IoT telemetry.",
     creator: "@pradhankar65796",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon.svg",
   },
 };
 
@@ -63,23 +64,35 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Anti-flash script ensuring dark theme default without hydration flicker */}
+        {/* Blocking inline script to eliminate flash of wrong theme */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              try {
-                const theme = localStorage.getItem('kp_theme') || 'dark';
-                if (theme === 'dark') {
+              (function() {
+                try {
+                  var stored = localStorage.getItem('kp-theme');
+                  var theme = stored;
+                  if (!theme || theme === 'system') {
+                    // Dark is default, but respect explicit system preference
+                    var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+                    theme = prefersLight ? 'light' : 'dark';
+                  }
+                  if (theme === 'light') {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.classList.add('light');
+                  } else {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.classList.remove('light');
+                  }
+                } catch (e) {
                   document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
                 }
-              } catch (_) {}
+              })();
             `,
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[#fcfcfc] dark:bg-[#0a0a0a] text-neutral-900 dark:text-[#ededed] transition-colors duration-200">
+      <body className="min-h-[100dvh] flex flex-col bg-[var(--background)] text-[var(--foreground)] transition-colors duration-200">
         <ThemeProvider>
           <Navbar />
           <main id="main-content" className="flex-1">

@@ -21,7 +21,7 @@ export default function HomePage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* 2. THINGS I'VE BUILT SECTION */}
-        <section className="w-full my-16 sm:my-24">
+        <section id="work" className="w-full my-16 sm:my-24">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 pb-4 border-b border-neutral-200 dark:border-neutral-800">
             <div>
               <span className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
@@ -60,7 +60,7 @@ export default function HomePage() {
         </section>
 
         {/* 3. WRITING SECTION */}
-        <section className="w-full my-16 sm:my-24">
+        <section id="writing" className="w-full my-16 sm:my-24">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 pb-4 border-b border-neutral-200 dark:border-neutral-800">
             <div>
               <span className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
