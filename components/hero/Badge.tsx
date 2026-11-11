@@ -145,13 +145,6 @@ export function Badge({
   // Flip transition end callback
   const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
     if (e.target === flipElRef.current && e.propertyName === "transform") {
-      if (process.env.NODE_ENV !== "production") {
-        try {
-          console.timeEnd("badge-flip");
-        } catch {
-          // ignore
-        }
-      }
       setIsFlipping(false);
       if (isFlipped) {
         setShowBackAnimation(true);
@@ -200,6 +193,7 @@ export function Badge({
         {/* DEDICATED FLIP LAYER (Animates only rotateY from 0 to 180deg) */}
         <div
           ref={flipElRef}
+          data-badge-card="true"
           role="button"
           tabIndex={0}
           aria-label="Interactive ID badge, click or press Enter to flip"

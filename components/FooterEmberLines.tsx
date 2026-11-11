@@ -31,11 +31,11 @@ export const FOOTER_EMBER_CONFIG: EmberConfig = {
   // Standard robust font stack so Canvas 2D can measure and rasterize immediately without CSS variable syntax errors
   fontFamily: "Montserrat, 'Inter Black', 'Arial Black', Impact, sans-serif",
   fontWeight: "900",
-  pitchDivisor: 250,
-  lineWidthRatio: 0.45,
-  colorTop: "rgba(120, 24, 16, 0.22)",
-  colorBottom: "#ff4a2a",
-  heatRadius: 120,
+  pitchDivisor: 240,
+  lineWidthRatio: 0.48,
+  colorTop: "rgba(180, 28, 16, 0.42)",
+  colorBottom: "#ff4d28",
+  heatRadius: 130,
   heatDecayMs: 600,
   ambientEmberCount: 160,
   maxSpawnPerFrame: 6,
@@ -222,7 +222,7 @@ export function FooterEmberLines({
 
       width = rect.width;
       height = rect.height;
-      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      dpr = Math.min(window.devicePixelRatio || 1, 3);
 
       activeCanvas.width = Math.floor(width * dpr);
       activeCanvas.height = Math.floor(height * dpr);
@@ -239,8 +239,8 @@ export function FooterEmberLines({
       const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
       if (!maskCtx) return;
 
-      // Span about 80% of width (max 1100px)
-      const targetWidth = Math.min(activeCanvas.width * 0.80, 1100 * dpr);
+      // Span about 82% of width (max 1100px)
+      const targetWidth = Math.min(activeCanvas.width * 0.82, 1100 * dpr);
       const testSize = 100 * dpr;
       maskCtx.font = `${config.fontWeight} ${testSize}px ${config.fontFamily}`;
       const measured = maskCtx.measureText(config.word).width;
@@ -263,11 +263,10 @@ export function FooterEmberLines({
         activeCanvas.height
       ).data;
 
-      const pitch = Math.max(
-        3,
-        Math.round(activeCanvas.width / config.pitchDivisor)
-      );
-      lineWidth = Math.max(1.2 * dpr, pitch * config.lineWidthRatio);
+      // Ensure pitch is always at least 3.5 CSS pixels (scaled to device pixels) so lines remain distinct vertical strokes at all sizes
+      const basePitchCss = Math.max(3.5, width / config.pitchDivisor);
+      const pitch = Math.max(Math.round(3 * dpr), Math.round(basePitchCss * dpr));
+      lineWidth = Math.max(1, Math.round(pitch * 0.44));
 
       lineRuns = [];
       totalLineLength = 0;
@@ -315,7 +314,7 @@ export function FooterEmberLines({
         maxY = activeCanvas.height * 0.85;
       }
 
-      // 3. Pre-render static vertical lines to staticCanvas
+      // 3. Pre-render static vertical lines with crisp subpixel alignment
       if (staticCtx) {
         staticCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
         const grad = staticCtx.createLinearGradient(0, minY, 0, maxY);
@@ -326,16 +325,19 @@ export function FooterEmberLines({
         staticCtx.lineWidth = lineWidth;
         staticCtx.lineCap = "butt";
 
+        const strokeOffset = lineWidth % 2 === 1 ? 0.5 : 0.0;
         for (let i = 0; i < lineRuns.length; i++) {
           const run = lineRuns[i];
+          const drawX = Math.floor(run.x) + strokeOffset;
           staticCtx.beginPath();
-          staticCtx.moveTo(run.x, run.startY);
-          staticCtx.lineTo(run.x, run.endY);
+          staticCtx.moveTo(drawX, run.startY);
+          staticCtx.lineTo(drawX, run.endY);
           staticCtx.stroke();
         }
       }
 
-      // Draw immediately so there is never a blank frame
+      // Draw immediately with crisp pixel preservation
+      activeCtx.imageSmoothingEnabled = false;
       activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
       activeCtx.drawImage(staticCanvas, 0, 0);
     }
@@ -344,59 +346,73 @@ export function FooterEmberLines({
 
     if (prefersReducedMotion) return;
 
-    // Pointer event listeners
+    // Pointer event listeners on container (zero global listener overhead)
     const handlePointerMove = (e: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
+      const rect = container.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top;
 
-      if (
-        currentX >= 0 &&
-        currentX <= rect.width &&
-        currentY >= 0 &&
-        currentY <= rect.height
-      ) {
-        pointer.x = currentX;
-        pointer.y = currentY;
-        pointer.isOver = true;
-        pointer.isTouch = e.pointerType === "touch";
+      pointer.x = currentX;
+      pointer.y = currentY;
+      pointer.isOver = true;
+      pointer.isTouch = e.pointerType === "touch";
 
-        // Spawn friction embers along pointer path inside letters
-        if (lineRuns.length > 0 && Math.random() < 0.6) {
-          const px = currentX * dpr;
-          const py = currentY * dpr;
-          for (let s = 0; s < 2; s++) {
-            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.4;
-            const spd = (10 + Math.random() * 25) * dpr;
-            spawnEmber(
-              px + (Math.random() - 0.5) * 16 * dpr,
-              py + (Math.random() - 0.5) * 16 * dpr,
-              Math.cos(angle) * spd,
-              Math.sin(angle) * spd
-            );
-          }
+      // Spawn friction embers along pointer path inside letters
+      if (lineRuns.length > 0 && Math.random() < 0.6) {
+        const px = currentX * dpr;
+        const py = currentY * dpr;
+        for (let s = 0; s < 2; s++) {
+          const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.4;
+          const spd = (10 + Math.random() * 25) * dpr;
+          spawnEmber(
+            px + (Math.random() - 0.5) * 16 * dpr,
+            py + (Math.random() - 0.5) * 16 * dpr,
+            Math.cos(angle) * spd,
+            Math.sin(angle) * spd
+          );
         }
-      } else if (pointer.isOver) {
-        pointer.isOver = false;
-        pointer.leaveTime = performance.now();
       }
     };
 
     const handlePointerLeave = () => {
-      if (pointer.isOver) {
-        pointer.isOver = false;
-        pointer.leaveTime = performance.now();
-      }
+      pointer.isOver = false;
+      pointer.leaveTime = performance.now();
     };
 
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
-    document.addEventListener("pointerleave", handlePointerLeave, { passive: true });
+    container.addEventListener("pointermove", handlePointerMove, { passive: true });
+    container.addEventListener("pointerleave", handlePointerLeave, { passive: true });
 
-    // IntersectionObserver: pause RAF when offscreen
+    let burstEndTime = 0;
+    const handleFooterEmberBurst = () => {
+      burstEndTime = performance.now() + 1500;
+      if (lineRuns.length > 0) {
+        for (let s = 0; s < 30; s++) {
+          const run = lineRuns[Math.floor(Math.random() * lineRuns.length)];
+          const py = run.startY + Math.random() * (run.endY - run.startY);
+          const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.5;
+          const spd = (18 + Math.random() * 30) * dpr;
+          spawnEmber(
+            run.x,
+            py,
+            Math.cos(angle) * spd,
+            Math.sin(angle) * spd
+          );
+        }
+      }
+    };
+    window.addEventListener("footer-ember-burst", handleFooterEmberBurst);
+
+    // IntersectionObserver: pause RAF when offscreen & trigger entrance burst
+    let hasBurstOnEnter = false;
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         isVisible = entry.isIntersecting;
+        if (entry.isIntersecting && !hasBurstOnEnter) {
+          hasBurstOnEnter = true;
+          handleFooterEmberBurst();
+          window.dispatchEvent(new CustomEvent("footer-ember-burst"));
+        }
       },
       { threshold: 0.05 }
     );
@@ -498,9 +514,11 @@ export function FooterEmberLines({
           if (embers[i].active) activeCount++;
         }
 
-        const targetEmbers = pointer.isOver
-          ? config.ambientEmberCount + 30
-          : config.ambientEmberCount;
+        const isBursting = currentTime < burstEndTime;
+        const targetEmbers =
+          (pointer.isOver
+            ? config.ambientEmberCount + 30
+            : config.ambientEmberCount) + (isBursting ? 50 : 0);
 
         if (activeCount < targetEmbers) {
           const toSpawn = Math.min(
@@ -565,9 +583,10 @@ export function FooterEmberLines({
 
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener("pointermove", handlePointerMove);
-      document.removeEventListener("pointerleave", handlePointerLeave);
+      container.removeEventListener("pointermove", handlePointerMove);
+      container.removeEventListener("pointerleave", handlePointerLeave);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("footer-ember-burst", handleFooterEmberBurst);
       observer.disconnect();
       resizeObserver.disconnect();
       clearTimeout(resizeTimer);

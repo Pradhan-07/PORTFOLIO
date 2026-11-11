@@ -11,7 +11,9 @@ export function HomeStatsTiles() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
       {/* 1. Academics */}
-      <div className="p-4 rounded-xl border border-[var(--border)] bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors">
+      <div
+        className="p-4 rounded-xl border border-[var(--border)] bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors"
+      >
         <span className="font-mono text-[10px] uppercase text-neutral-400 block mb-1">
           ACADEMICS // CGPA
         </span>

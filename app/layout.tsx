@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -6,6 +6,7 @@ import { LiveStatsProvider } from "@/context/LiveStatsContext";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { CustomCursor } from "@/components/CustomCursor";
+import { GlobalBaseBackground } from "@/components/backgrounds/GlobalBaseBackground";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,6 +27,13 @@ const montserrat = Montserrat({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f2ec" },
+  ],
+};
+
 export const metadata: Metadata = {
   title: "Karan Kumar Pradhan — CSE @ VIT-AP",
   description:
@@ -45,7 +53,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://karan-pradhan.vercel.app",
+    url: "https://pradhan.runs-on.dev",
     title: "Karan Kumar Pradhan — CSE @ VIT-AP",
     description:
       "Learning to build things that work. C++ DSA, full-stack web development, and IoT telemetry.",
@@ -75,8 +83,6 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
-        <meta name="theme-color" content="#f4f2ec" media="(prefers-color-scheme: light)" />
         {/* Blocking inline script to eliminate flash of wrong theme */}
         <script
           dangerouslySetInnerHTML={{
@@ -107,9 +113,13 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-[100dvh] flex flex-col bg-[var(--background)] text-[var(--foreground)] transition-colors duration-200">
+      <body
+        suppressHydrationWarning
+        className="min-h-[100dvh] flex flex-col bg-[var(--background)] text-[var(--foreground)] transition-colors duration-200"
+      >
         <LiveStatsProvider>
           <ThemeProvider>
+            <GlobalBaseBackground />
             <CustomCursor />
             <Navbar />
             <main id="main-content" className="flex-1">

@@ -22,6 +22,7 @@ import {
   Printer,
   AlertCircle,
 } from "lucide-react";
+import { ResumeProgressRail } from "@/components/backgrounds/ResumeProgressRail";
 
 const sections = [
   { id: "summary", name: "Summary" },
@@ -93,7 +94,12 @@ export function ResumeClient() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-24 resume-page-root">
+    <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-24 resume-page-root">
+      <ResumeProgressRail
+        sections={sections}
+        activeSection={activeSection}
+        onSectionClick={scrollToSection}
+      />
       {/* 1. Header & Actions (hidden in print) */}
       <div className="mb-10 sm:mb-12 pb-8 border-b border-[var(--border)] print:hidden">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -216,7 +222,7 @@ export function ResumeClient() {
               B.Tech Computer Science Engineering · VIT-AP University · {resumeData.email}
             </p>
             <p className="text-xs font-mono text-neutral-700">
-              GitHub: github.com/Pradhan-07 · LinkedIn · LeetCode · Portfolio: karan-pradhan.vercel.app
+              GitHub: github.com/Pradhan-07 · LinkedIn · LeetCode · Portfolio: pradhan.runs-on.dev
             </p>
           </div>
 

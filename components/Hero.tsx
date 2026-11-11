@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { VerletRope, DEFAULT_PHYSICS_CONFIG } from "@/lib/verlet";
 import { Lanyard, LanyardHandle } from "./hero/Lanyard";
 import { Badge } from "./hero/Badge";
+import { BadgeDebugOverlay } from "./hero/BadgeDebugOverlay";
 import { useTheme } from "../components/ThemeProvider";
 import { ChevronDown } from "lucide-react";
 
@@ -34,33 +35,45 @@ export function Hero() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isFlipping, setIsFlipping] = useState(false);
 
-  // Toggle flip with dev-only timer
+  // Toggle flip with state-safe dispatch
   const toggleFlip = useCallback((targetState?: boolean) => {
+    setIsFlipping(true);
     setIsFlipped((prev) => {
       const next = typeof targetState === "boolean" ? targetState : !prev;
-      if (next === prev) return prev;
-      if (process.env.NODE_ENV !== "production") {
-        try {
-          console.time("badge-flip");
-        } catch {
-          // ignore
-        }
-      }
-      setIsFlipping(true);
       return next;
     });
   }, []);
 
+  // Compute anchor directly from the notch navbar center-bottom relative to container
+  const getNotchAnchor = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return { x: 0, y: 44 };
+
+    const containerRect = container.getBoundingClientRect();
+    const notchEl =
+      document.getElementById("notch-navbar")?.querySelector("nav") ||
+      document.getElementById("notch-navbar");
+
+    if (notchEl) {
+      const notchRect = notchEl.getBoundingClientRect();
+      const x = notchRect.left + notchRect.width / 2 - containerRect.left;
+      const y = notchRect.bottom - containerRect.top;
+      return { x, y: Math.max(30, y) };
+    }
+    return { x: containerRect.width / 2, y: 44 };
+  }, []);
+
   // Initialize and handle resize (guarded against micro-resizes)
   const setupRope = useCallback((width: number, isInitial: boolean = false) => {
-    const anchorX = width / 2;
-    const anchorY = 44; // Bottom of the top tab notch
+    const { x: anchorX, y: anchorY } = getNotchAnchor();
     anchorRef.current = { x: anchorX, y: anchorY };
 
     if (isInitial || Math.abs(width - lastWidthRef.current) > 3) {
       lastWidthRef.current = width;
       // Start rope slightly offset on initial mount so it settles smoothly
-      ropeRef.current.init(anchorX, anchorY, isInitial ? 80 : 0);
+      ropeRef.current.init(anchorX, anchorY, isInitial ? 40 : 0);
+    } else {
+      ropeRef.current.setAnchor(anchorX, anchorY);
     }
 
     const transform = ropeRef.current.getBadgeTransform();
@@ -72,10 +85,11 @@ export function Hero() {
         ropeRef.current.points,
         anchorX,
         anchorY,
-        transform.stretchRatio
+        transform.stretchRatio,
+        transform.angleDeg
       );
     }
-  }, []);
+  }, [getNotchAnchor]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -85,9 +99,31 @@ export function Hero() {
     let animationId: number;
     let isVisible = true;
 
+    if (typeof window !== "undefined") {
+      (window as unknown as { __LANYARD_ROPE__?: VerletRope }).__LANYARD_ROPE__ = ropeRef.current;
+    }
+
     const rect = container.getBoundingClientRect();
     if (rect.width > 0) {
       setupRope(rect.width, true);
+    }
+
+    // Recompute anchor whenever viewport, scroll, zoom, or fonts change
+    const recomputeAnchor = () => {
+      if (!isMounted || !containerRef.current) return;
+      const { x, y } = getNotchAnchor();
+      anchorRef.current = { x, y };
+      ropeRef.current.setAnchor(x, y);
+    };
+
+    window.addEventListener("resize", recomputeAnchor, { passive: true });
+    window.addEventListener("scroll", recomputeAnchor, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", recomputeAnchor);
+      window.visualViewport.addEventListener("scroll", recomputeAnchor);
+    }
+    if (document.fonts) {
+      document.fonts.ready.then(recomputeAnchor);
     }
 
     // ResizeObserver cleanly updates anchor on actual viewport changes
@@ -95,8 +131,10 @@ export function Hero() {
       if (!isMounted) return;
       for (const entry of entries) {
         const w = entry.contentRect.width;
-        if (w > 0 && Math.abs(w - lastWidthRef.current) > 4) {
+        if (w > 0 && Math.abs(w - lastWidthRef.current) > 3) {
           setupRope(w, false);
+        } else {
+          recomputeAnchor();
         }
       }
     });
@@ -152,7 +190,8 @@ export function Hero() {
           points,
           anchorRef.current.x,
           anchorRef.current.y,
-          transform.stretchRatio
+          transform.stretchRatio,
+          transform.angleDeg
         );
       }
 
@@ -167,8 +206,14 @@ export function Hero() {
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("resize", recomputeAnchor);
+      window.removeEventListener("scroll", recomputeAnchor);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", recomputeAnchor);
+        window.visualViewport.removeEventListener("scroll", recomputeAnchor);
+      }
     };
-  }, [setupRope]);
+  }, [setupRope, getNotchAnchor]);
 
   // Pointer event handlers with 3px deadzone and soft spring grab
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -254,36 +299,28 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative w-full min-h-[92dvh] sm:min-h-[96dvh] pt-12 pb-16 flex flex-col justify-between overflow-x-hidden select-none"
+      className="relative w-full min-h-[96dvh] sm:min-h-[100dvh] pt-12 pb-8 flex flex-col justify-between overflow-x-hidden select-none"
     >
-      {/* Background Speckles / Subtle Grain */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-70"
-        style={{
-          backgroundImage: isDark
-            ? `radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)`
-            : `radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px)`,
-          backgroundSize: "24px 24px",
-        }}
-      />
 
-      {/* Faint radial spotlight behind badge for crisp edge contrast in dark and light themes */}
+      {/* 1. Hero Breathing Radial Glow (Violet to Pink, ~10% opacity, 14s breathe) */}
       <div
-        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] sm:w-[920px] h-[480px] sm:h-[600px] rounded-full -z-10 blur-3xl pointer-events-none"
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-[46%] w-[680px] sm:w-[840px] h-[440px] sm:h-[540px] rounded-full -z-10 blur-3xl animate-hero-glow"
         style={{
           background: isDark
-            ? "radial-gradient(ellipse at center, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.015) 50%, transparent 75%)"
-            : "radial-gradient(ellipse at center, rgba(0, 0, 0, 0.03) 0%, transparent 65%)",
+            ? "radial-gradient(ellipse at center, rgba(168, 85, 247, 0.7) 0%, rgba(236, 72, 153, 0.45) 45%, transparent 72%)"
+            : "radial-gradient(ellipse at center, rgba(168, 85, 247, 0.45) 0%, rgba(236, 72, 153, 0.3) 45%, transparent 72%)",
         }}
-        aria-hidden="true"
       />
 
-      {/* Physics Canvas & Lanyard Container with PERSPECTIVE on the parent wrapper */}
+      {/* Physics Canvas & Lanyard Container */}
       <div
         ref={containerRef}
-        style={{ perspective: "1200px" }}
-        className="relative w-full min-h-[620px] sm:min-h-[660px] md:min-h-[700px] h-[620px] sm:h-[660px] md:h-[700px] flex items-center justify-center overflow-visible pointer-events-none"
+        className="relative w-full min-h-[660px] sm:min-h-[740px] md:min-h-[800px] lg:min-h-[820px] h-[660px] sm:h-[740px] md:h-[800px] lg:h-[820px] flex items-center justify-center overflow-visible pointer-events-none"
       >
+        {/* Dev Telemetry & Physics Debug Overlay (Toggle with 'D' key) */}
+        <BadgeDebugOverlay ropeRef={ropeRef} anchorRef={anchorRef} />
+
         {/* Lanyard Fabric Strap with repeated text & silver clasp */}
         <Lanyard ref={lanyardRef} isDark={isDark} />
 
@@ -315,10 +352,15 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Hero Bottom Hint */}
-      <div className="w-full text-center pt-4 pb-2 text-xs font-mono text-neutral-500 dark:text-neutral-400 flex items-center justify-center gap-1.5 pointer-events-none">
-        <span>scroll. the badge will survive.</span>
-        <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
+      {/* Hero Bottom Hint - Positioned safely below the resting badge card */}
+      <div className="relative z-20 w-full text-center mt-6 sm:mt-10 pb-6 text-xs font-mono text-neutral-500 dark:text-neutral-400 flex items-center justify-center">
+        <a
+          href="#resume"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:text-neutral-900 dark:hover:text-neutral-200 transition-colors pointer-events-auto cursor-pointer"
+        >
+          <span>scroll. the badge will survive.</span>
+          <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
+        </a>
       </div>
     </section>
   );

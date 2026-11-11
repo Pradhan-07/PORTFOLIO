@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { ArrowUpRight, Mail } from "lucide-react";
 import { TypewriterText } from "./TypewriterText";
+import { LetsTalkMesh } from "./backgrounds/LetsTalkMesh";
 
 const contactLinks = [
   { name: "GitHub", href: "https://github.com/Pradhan-07" },
@@ -39,9 +40,10 @@ export function LetsTalk({ sectionLabel = "[ 02 // LET'S TALK ]" }: LetsTalkProp
   return (
     <section
       id="contact"
-      className="w-full my-16 sm:my-24 p-8 sm:p-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xs scroll-mt-24 sm:scroll-mt-28"
+      className="relative w-full my-16 sm:my-24 p-8 sm:p-12 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xs scroll-mt-24 sm:scroll-mt-28 overflow-hidden"
     >
-      <div className="max-w-2xl">
+      <LetsTalkMesh />
+      <div className="max-w-2xl relative z-10">
         {/* Consecutive Mono Section Label with Typewriter Reveal */}
         <div className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-4">
           <TypewriterText text={sectionLabel} duration={400} />

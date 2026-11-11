@@ -46,7 +46,8 @@ export function Navbar() {
   // Track window scroll for notch morphing animation
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 40);
+      const scrolled = window.scrollY > 40;
+      setIsScrolled((prev) => (prev === scrolled ? prev : scrolled));
     };
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -68,7 +69,8 @@ export function Navbar() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const id = entry.target.id;
-            setHomeSection(id === "hero" ? "index" : id);
+            const target = id === "hero" ? "index" : id;
+            setHomeSection((prev) => (prev === target ? prev : target));
           }
         });
       },
@@ -228,29 +230,35 @@ export function Navbar() {
             data-cursor="nav"
             className="p-1 rounded-full text-neutral-400 hover:text-white transition-colors relative cursor-pointer"
           >
-            <AnimatePresence mode="wait" initial={false}>
-              {!isDarkMode ? (
-                <motion.div
-                  key="moon"
-                  initial={{ rotate: -90, scale: 0.7, opacity: 0 }}
-                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
-                  exit={{ rotate: 90, scale: 0.7, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <Moon className="w-3.5 h-3.5" />
-                </motion.div>
+            <span className="w-3.5 h-3.5 block">
+              {mounted ? (
+                <AnimatePresence mode="wait" initial={false}>
+                  {!isDarkMode ? (
+                    <motion.div
+                      key="moon"
+                      initial={{ rotate: -90, scale: 0.7, opacity: 0 }}
+                      animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                      exit={{ rotate: 90, scale: 0.7, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <Moon className="w-3.5 h-3.5" />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="sun"
+                      initial={{ rotate: 90, scale: 0.7, opacity: 0 }}
+                      animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                      exit={{ rotate: -90, scale: 0.7, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <Sun className="w-3.5 h-3.5" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               ) : (
-                <motion.div
-                  key="sun"
-                  initial={{ rotate: 90, scale: 0.7, opacity: 0 }}
-                  animate={{ rotate: 0, scale: 1, opacity: 1 }}
-                  exit={{ rotate: -90, scale: 0.7, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <Sun className="w-3.5 h-3.5" />
-                </motion.div>
+                <Sun className="w-3.5 h-3.5" />
               )}
-            </AnimatePresence>
+            </span>
           </button>
         </motion.nav>
       </header>

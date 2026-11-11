@@ -64,7 +64,7 @@ export const rawProjects: Project[] = [
       "Personal site with Verlet physics lanyard badge, Canvas 2D stipple particles, live GitHub streak and a strict monochrome dark/light design system.",
     tags: ["Next.js", "TypeScript", "Tailwind CSS", "Canvas 2D", "Framer Motion"],
     codeUrl: "https://github.com/Pradhan-07/PORT",
-    liveUrl: "https://karan-pradhan.vercel.app",
+    liveUrl: "https://pradhan.runs-on.dev",
     expanded: {
       overview:
         "Designed with a brutalist yet polished monochrome aesthetic inspired by beebombshell.com. Features zero heavy 3D libraries: the lanyard rope physics runs on 2D Verlet integration, and the particle field runs on optimized Canvas 2D.",

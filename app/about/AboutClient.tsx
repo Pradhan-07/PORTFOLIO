@@ -6,6 +6,7 @@ import { Timeline } from "@/components/Timeline";
 import { OpenToWorkCTA } from "@/components/OpenToWorkCTA";
 import { GraduationCap, MapPin, Terminal, Award } from "lucide-react";
 import { TypewriterText } from "@/components/TypewriterText";
+import { AboutLightBeam } from "@/components/backgrounds/AboutLightBeam";
 
 interface Skill {
   name: string;
@@ -25,7 +26,8 @@ export function AboutClient({ skills }: AboutClientProps) {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-20">
+    <div className="relative max-w-4xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-20">
+      <AboutLightBeam />
       {/* Header */}
       <div className="mb-12 pb-8 border-b border-neutral-200 dark:border-neutral-800">
         <span className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500">

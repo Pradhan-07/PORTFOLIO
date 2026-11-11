@@ -69,8 +69,8 @@ const defaultGitHub: LiveGitHubData = {
 
 const defaultLeetCode: LiveLeetCodeData = {
   username: "pradhan_07",
-  totalSolved: stats.leetcodeSolved || 39,
-  easySolved: stats.leetcodeBreakdown.easy || 20,
+  totalSolved: stats.leetcodeSolved || 41,
+  easySolved: stats.leetcodeBreakdown.easy || 22,
   mediumSolved: stats.leetcodeBreakdown.medium || 17,
   hardSolved: stats.leetcodeBreakdown.hard || 2,
   ranking: 3307013,

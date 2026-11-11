@@ -21,6 +21,8 @@ export function TypewriterText({
     const el = ref.current;
     if (!el) return;
 
+    let interval: NodeJS.Timeout | null = null;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !hasAnimated.current) {
@@ -36,11 +38,11 @@ export function TypewriterText({
           const stepTime = Math.max(10, Math.floor(duration / len));
           let index = 0;
 
-          const interval = setInterval(() => {
+          interval = setInterval(() => {
             index++;
             setDisplayed(text.slice(0, index));
             if (index >= len) {
-              clearInterval(interval);
+              if (interval) clearInterval(interval);
             }
           }, stepTime);
 
@@ -51,7 +53,10 @@ export function TypewriterText({
     );
 
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (interval) clearInterval(interval);
+    };
   }, [text, duration]);
 
   return (

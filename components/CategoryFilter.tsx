@@ -18,6 +18,7 @@ export function CategoryFilter({
   return (
     <div
       role="tablist"
+      data-category-filter
       aria-label="Filter projects by category"
       className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2"
     >

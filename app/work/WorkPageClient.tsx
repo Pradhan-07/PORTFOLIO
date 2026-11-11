@@ -15,6 +15,7 @@ import { Timeline } from "@/components/Timeline";
 import { StackStrip } from "@/components/StackStrip";
 import { OpenToWorkCTA } from "@/components/OpenToWorkCTA";
 import { TypewriterText } from "@/components/TypewriterText";
+import { WorkContourLines } from "@/components/backgrounds/WorkContourLines";
 
 // Map URL slugs to FilterCategory
 function categoryToSlug(cat: FilterCategory): string {
@@ -63,7 +64,8 @@ export function WorkPageClient() {
   }, [activeCategory]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-20">
+    <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-28 sm:pt-36 pb-20">
+      <WorkContourLines />
       {/* 1. Header Section */}
       <div className="mb-10 sm:mb-12">
         <span className="font-mono text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
