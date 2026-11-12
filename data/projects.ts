@@ -63,7 +63,7 @@ export const rawProjects: Project[] = [
     shortDescription:
       "Personal site with Verlet physics lanyard badge, Canvas 2D stipple particles, live GitHub streak and a strict monochrome dark/light design system.",
     tags: ["Next.js", "TypeScript", "Tailwind CSS", "Canvas 2D", "Framer Motion"],
-    codeUrl: "https://github.com/Pradhan-07/PORT",
+    codeUrl: "https://github.com/Pradhan-07/PORTFOLIO",
     liveUrl: "https://pradhan.runs-on.dev",
     expanded: {
       overview:
