@@ -370,7 +370,7 @@ test.describe("Comprehensive Visual Audit & Physics Verification", () => {
     }
   });
 
-  test("6. /resume Scroll Thread: multi-viewport, multi-zoom, node alignment, 60 FPS, footer handoff & screenshots", async ({
+  test("6. /resume multi-viewport, multi-zoom, 60 FPS, footer visibility & screenshots", async ({
     browser,
   }) => {
     test.setTimeout(90000);
@@ -472,26 +472,19 @@ test.describe("Comprehensive Visual Audit & Physics Verification", () => {
           await page.screenshot({ path: "test-results/scroll-thread-mobile.png" });
         }
 
-        // 3. Footer Handoff test: scroll into footer and assert event firing
+        // 3. Footer visibility test: scroll into footer and assert canvas is rendered cleanly
         if (cfg.name === "desktop-1470-dark") {
-          const eventReceived = await page.evaluate(async () => {
-            return new Promise<boolean>((resolve) => {
-              let triggered = false;
-              window.addEventListener("footer-ember-burst", () => {
-                triggered = true;
-                resolve(true);
-              }, { once: true });
-
-              const footer = document.querySelector("footer");
-              if (footer) {
-                footer.scrollIntoView({ behavior: "smooth" });
-              }
-
-              setTimeout(() => resolve(triggered), 2500);
-            });
+          const footerCanvasVisible = await page.evaluate(async () => {
+            const footer = document.querySelector("footer");
+            if (footer) {
+              footer.scrollIntoView({ behavior: "smooth" });
+            }
+            await new Promise((r) => setTimeout(r, 600));
+            const canvas = document.querySelector("footer canvas");
+            return canvas instanceof HTMLCanvasElement && canvas.width > 0;
           });
 
-          expect(eventReceived, "footer-ember-burst was triggered upon reaching footer").toBe(true);
+          expect(footerCanvasVisible, "Footer PRADHAN canvas rendered upon reaching footer").toBe(true);
         }
       } finally {
         await context.close();

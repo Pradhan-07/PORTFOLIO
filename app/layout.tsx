@@ -42,7 +42,6 @@ export const metadata: Metadata = {
     "Karan Kumar Pradhan",
     "VIT-AP",
     "CSE",
-    "25BCE7526",
     "Portfolio",
     "C++ DSA",
     "Web Developer",

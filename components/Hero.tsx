@@ -318,8 +318,10 @@ export function Hero() {
         ref={containerRef}
         className="relative w-full min-h-[660px] sm:min-h-[740px] md:min-h-[800px] lg:min-h-[820px] h-[660px] sm:h-[740px] md:h-[800px] lg:h-[820px] flex items-center justify-center overflow-visible pointer-events-none"
       >
-        {/* Dev Telemetry & Physics Debug Overlay (Toggle with 'D' key) */}
-        <BadgeDebugOverlay ropeRef={ropeRef} anchorRef={anchorRef} />
+        {/* Dev Telemetry & Physics Debug Overlay (Dev only, toggle with 'D' key) */}
+        {process.env.NODE_ENV !== "production" && (
+          <BadgeDebugOverlay ropeRef={ropeRef} anchorRef={anchorRef} />
+        )}
 
         {/* Lanyard Fabric Strap with repeated text & silver clasp */}
         <Lanyard ref={lanyardRef} isDark={isDark} />

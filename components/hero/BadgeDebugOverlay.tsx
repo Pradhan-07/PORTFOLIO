@@ -13,8 +13,11 @@ export function BadgeDebugOverlay({ ropeRef, anchorRef }: BadgeDebugOverlayProps
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  const isProd = process.env.NODE_ENV === "production";
+
   // Listen for 'D' key to toggle debug overlay (ignoring inputs/textareas)
   useEffect(() => {
+    if (isProd) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLInputElement ||
@@ -30,11 +33,11 @@ export function BadgeDebugOverlay({ ropeRef, anchorRef }: BadgeDebugOverlayProps
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [isProd]);
 
   // Render loop when open
   useEffect(() => {
-    if (!isOpen) return;
+    if (isProd || !isOpen) return;
 
     let animId: number;
     const canvas = canvasRef.current;
@@ -146,22 +149,10 @@ export function BadgeDebugOverlay({ ropeRef, anchorRef }: BadgeDebugOverlayProps
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [isOpen, ropeRef, anchorRef]);
+  }, [isProd, isOpen, ropeRef, anchorRef]);
 
-  if (!isOpen) {
-    return (
-      <div
-        className="absolute top-2 left-2 z-50 pointer-events-auto opacity-40 hover:opacity-100 transition-opacity"
-        title="Press 'D' key to toggle physics debug overlay"
-      >
-        <button
-          onClick={() => setIsOpen(true)}
-          className="px-2 py-0.5 rounded text-[9px] font-mono bg-neutral-900/80 text-neutral-400 border border-neutral-700 hover:text-white"
-        >
-          [D] DEBUG
-        </button>
-      </div>
-    );
+  if (isProd || !isOpen) {
+    return null;
   }
 
   return (

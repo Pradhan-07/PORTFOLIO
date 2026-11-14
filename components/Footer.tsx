@@ -77,7 +77,7 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Center: Giant PRADHAN word made of vertical gradient lines with drifting embers */}
+        {/* Center: Giant PRADHAN word made of crisp vertical gradient lines */}
         <div className="w-full my-auto py-2 sm:py-4">
           <FooterEmberLines />
         </div>

@@ -17,7 +17,11 @@ export function CountUp({
   suffix = "",
   className = "",
 }: CountUpProps) {
-  const [value, setValue] = useState(0);
+  const formattedFinal =
+    decimals > 0 ? end.toFixed(decimals) : Math.round(end).toString();
+
+  // SSR and initial client HTML render the real final value immediately
+  const [value, setValue] = useState(end);
   const ref = useRef<HTMLSpanElement | null>(null);
   const hasAnimatedRef = useRef(false);
 
@@ -66,6 +70,8 @@ export function CountUp({
             }
           };
 
+          // Start the count-up enhancement from 0
+          setValue(0);
           frameId = requestAnimationFrame(frame);
         }
       },
@@ -86,7 +92,11 @@ export function CountUp({
     decimals > 0 ? value.toFixed(decimals) : Math.round(value).toString();
 
   return (
-    <span ref={ref} className={className}>
+    <span
+      ref={ref}
+      className={className}
+      aria-label={`${formattedFinal}${suffix}`}
+    >
       {formatted}
       {suffix}
     </span>

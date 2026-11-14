@@ -38,10 +38,10 @@ Designed for zero visual clutter and maximum performance (zero per-frame JS back
 - **/resume Progress Rail**: 2px left margin rail with spring fill gradient and interactive section markers.
 - **/about Diagonal Light Beam**: Soft diagonal ambient gradient beam swaying slowly (±2° over 20s).
 
-### 3. Giant "PRADHAN" Ember-Lines Footer
-- Monogram rasterization with horizontal slice lines and upward drifting ember particles.
-- Automatic viewport entry burst via `IntersectionObserver`.
-- Scoped hover heat diffusion with decay easing.
+### 3. Giant "PRADHAN" Vertical Gradient Lines Footer
+- Crisp vertical line rasterization (pitch ~width/240) in a strict black, red, and orange palette.
+- Staggered bottom-up line entrance animation over 1.2s when scrolled into view.
+- Subtle interactive brightness boost on pointer hover (`lineHeat`) with smooth quadratic decay and zero runtime overhead when idle.
 
 ### 4. Real-Time Developer Telemetry
 - **Live GitHub Sync**: Automatic server-side fetching of contribution heatmaps, total commits, and streak counts.
