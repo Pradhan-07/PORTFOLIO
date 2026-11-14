@@ -38,7 +38,7 @@ export const stats: StatsData = {
   asOf: "Nov 2026",
   githubUsername: "Pradhan-07",
   leetcodeUsername: "pradhan_07",
-  studentId: "25BCE7526",
+  studentId: "",
   email: "pradhankaran058@gmail.com",
   cgpa: "8.10",
   cgpaScale: "10",

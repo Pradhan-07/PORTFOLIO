@@ -386,14 +386,9 @@ export function VerletLanyard() {
           ctx.fillText("KARAN KUMAR PRADHAN", 0, y + 152);
 
           // Program Subtitle
-          ctx.font = "600 8px var(--font-geist-mono), monospace";
+          ctx.font = "600 8.5px var(--font-geist-mono), monospace";
           ctx.fillStyle = isDark ? "#a3a3a3" : "#555555";
-          ctx.fillText("CSE · VIT-AP", 0, y + 166);
-
-          // Student ID
-          ctx.font = "500 7.5px var(--font-geist-mono), monospace";
-          ctx.fillStyle = isDark ? "#888888" : "#777777";
-          ctx.fillText("ID 25BCE7526", 0, y + 179);
+          ctx.fillText("CSE · VIT-AP", 0, y + 170);
 
           // Barcode Lines
           const barcodeY = y + 196;
@@ -408,7 +403,7 @@ export function VerletLanyard() {
 
           ctx.font = "500 6.5px var(--font-geist-mono), monospace";
           ctx.fillStyle = isDark ? "#666666" : "#999999";
-          ctx.fillText("25BCE7526 // VERIFIED", 0, y + 226);
+          ctx.fillText("STUDENT // VERIFIED", 0, y + 226);
 
           // Hint to flip
           ctx.font = "italics 6.5px var(--font-geist-mono), monospace";
@@ -466,7 +461,7 @@ export function VerletLanyard() {
           ctx.fillText("STUDENT IDENTITY // CSE", 0, y + 190);
           ctx.font = "500 6.5px var(--font-geist-mono), monospace";
           ctx.fillStyle = isDark ? "#888888" : "#666666";
-          ctx.fillText("ID: 25BCE7526 · VIT-AP", 0, y + 200);
+          ctx.fillText("B.TECH CSE · VIT-AP", 0, y + 200);
 
           // Barcode mini
           ctx.fillStyle = isDark ? "#999999" : "#444444";

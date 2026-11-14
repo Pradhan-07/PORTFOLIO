@@ -26,8 +26,8 @@ export const siteConfig: SiteConfig = {
   role: "CSE Student · DSA + Web Developer",
   university: "VIT-AP University",
   degree: "B.Tech Computer Science Engineering (2025–29)",
-  studentId: "25BCE7526",
-  showStudentIdChip: true, // Configurable toggle for badge chip
+  studentId: "",
+  showStudentIdChip: false, // Configurable toggle for badge chip
   email: "pradhankaran058@gmail.com",
   socials: {
     github: {
