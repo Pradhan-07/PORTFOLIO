@@ -44,6 +44,7 @@ export interface PhysicsConfig {
   restSegmentLength: number;
   maxStretchRatio: number;
   minStrapLength: number;
+  scrollSway: boolean;
 }
 
 export const DEFAULT_PHYSICS_CONFIG: PhysicsConfig = {
@@ -55,6 +56,7 @@ export const DEFAULT_PHYSICS_CONFIG: PhysicsConfig = {
   restSegmentLength: 16,
   maxStretchRatio: 2.2,
   minStrapLength: 60, // Minimum distance below notch (desktop)
+  scrollSway: true, // Clamped subtle pendulum impulse proportional to scroll velocity
 };
 
 export class VerletRope {
@@ -181,6 +183,18 @@ export class VerletRope {
   wakeUp() {
     this.isSleeping = false;
     this.sleepFrames = 0;
+  }
+
+  /**
+   * Applies a subtle, clamped angular impulse proportional to scroll velocity (max +-2 deg)
+   * so the badge feels gently alive while scrolling, with no drag force or positional offset.
+   */
+  applyScrollSway(velocity: number) {
+    if (!this.config.scrollSway) return;
+    // velocity in px/ms; clamp impulse strictly to max 2.0 degrees
+    const impulse = Math.max(-2.0, Math.min(2.0, velocity * 0.75));
+    this.badgeAngularVel += impulse;
+    this.wakeUp();
   }
 
   /**

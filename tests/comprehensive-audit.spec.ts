@@ -273,13 +273,8 @@ test.describe("Comprehensive Visual Audit & Physics Verification", () => {
         const alignment = await page.evaluate(() => {
           const container = document.getElementById("hero");
           if (!container) return null;
-          const cRect = container.getBoundingClientRect();
-          const notch =
-            document.getElementById("notch-navbar")?.querySelector("nav") ||
-            document.getElementById("notch-navbar");
-          if (!notch) return null;
-          const nRect = notch.getBoundingClientRect();
-          const notchCenterRelX = nRect.left + nRect.width / 2 - cRect.left;
+          // Anchor is container-local top center point
+          const containerCenterRelX = container.clientWidth / 2;
 
           const telemetry = (window as unknown as WindowWithLanyard).__LANYARD_TELEMETRY__;
           const rope = (window as unknown as { __LANYARD_ROPE__?: VerletRope }).__LANYARD_ROPE__;
@@ -287,7 +282,7 @@ test.describe("Comprehensive Visual Audit & Physics Verification", () => {
 
           const badgeTransform = rope.getBadgeTransform();
           return {
-            notchCenterRelX,
+            containerCenterRelX,
             strapTopX: telemetry.strapTopX,
             strapBottomX: telemetry.strapBottomX,
             strapBottomY: telemetry.strapBottomY,
@@ -299,10 +294,10 @@ test.describe("Comprehensive Visual Audit & Physics Verification", () => {
         });
 
         expect(alignment).not.toBeNull();
-        const diffTop = Math.abs(alignment!.strapTopX - alignment!.notchCenterRelX);
+        const diffTop = Math.abs(alignment!.strapTopX - alignment!.containerCenterRelX);
         expect(
           diffTop,
-          `Strap top X (${alignment!.strapTopX}) deviated from notch center X (${alignment!.notchCenterRelX}) by ${diffTop}px on DPR ${tc.dpr}, ${tc.width}px, zoom ${tc.zoom}`
+          `Strap top X (${alignment!.strapTopX}) deviated from container center X (${alignment!.containerCenterRelX}) by ${diffTop}px on DPR ${tc.dpr}, ${tc.width}px, zoom ${tc.zoom}`
         ).toBeLessThanOrEqual(1.0);
 
         // 2. Assert: Strap bottom within 1px of badge clip position

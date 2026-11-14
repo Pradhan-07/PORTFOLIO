@@ -145,10 +145,14 @@ export function Navbar() {
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+          }}
           className={`pointer-events-auto flex items-center transition-all duration-300 ${
             isScrolled
-              ? "mt-2.5 px-3.5 sm:px-5 py-1.5 gap-2 sm:gap-3 rounded-full backdrop-blur-xl bg-black/90 text-[#ededed] dark:bg-[#161616]/90 dark:text-[#ededed] border border-neutral-800 shadow-2xl"
-              : "mt-0 px-4 sm:px-6 py-2.5 gap-2.5 sm:gap-4 rounded-b-2xl rounded-t-none bg-black text-[#ededed] dark:bg-[#161616] dark:text-[#ededed] border-x border-b border-transparent dark:border-neutral-800 shadow-xl"
+              ? "mt-2.5 px-3.5 sm:px-5 py-1.5 gap-2 sm:gap-3 rounded-full bg-neutral-950/90 text-[#ededed] dark:bg-[#141416]/90 dark:text-[#ededed] border border-neutral-800 shadow-2xl"
+              : "mt-0 px-4 sm:px-6 py-2.5 gap-2.5 sm:gap-4 rounded-b-2xl rounded-t-none bg-neutral-950/90 text-[#ededed] dark:bg-[#141416]/90 dark:text-[#ededed] border-x border-b border-neutral-800 shadow-xl"
           }`}
           aria-label="Notch Navigation"
           data-cursor="nav"

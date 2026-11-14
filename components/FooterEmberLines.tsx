@@ -30,7 +30,7 @@ export const FOOTER_LINES_CONFIG: FooterLinesConfig = {
   heatRadius: 120,
   heatDecayMs: 600,
   lineHeat: true,
-  entranceDuration: 1200,
+  entranceDuration: 600, // 600ms simple fade (0 to 1) + 12px rise
 };
 
 // Backwards-compatible alias for any external references
@@ -303,47 +303,19 @@ export function FooterEmberLines({
       // Clear active canvas
       activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
 
-      if (isEntranceDone) {
-        // Draw pre-rendered static vertical lines
+      if (isEntranceDone || prefersReducedMotion) {
+        // Draw pre-rendered static vertical lines (letters always complete)
         activeCtx.drawImage(staticCanvas, 0, 0);
       } else {
-        // Render staggered bottom-up entrance
-        const grad = activeCtx.createLinearGradient(0, minY, 0, maxY);
-        grad.addColorStop(0, config.colorTop);
-        grad.addColorStop(1, config.colorBottom);
+        // Simple fade (opacity 0 to 1) + 12px rise of the whole word over ~600ms (letters always complete)
+        const p = 1 - Math.pow(1 - entranceProgress, 3);
+        const alpha = Math.max(0, Math.min(1, p));
+        const riseY = (1 - p) * 12 * dpr;
 
-        activeCtx.strokeStyle = grad;
-        activeCtx.lineWidth = lineWidth;
-        activeCtx.lineCap = "butt";
-
-        const strokeOffset = lineWidth % 2 === 1 ? 0.5 : 0.0;
-        const totalDuration = config.entranceDuration;
-        const staggerWindow = totalDuration * 0.5; // Stagger across first 600ms
-        const lineDuration = totalDuration * 0.5; // Each line takes 600ms to grow
-        const elapsed = currentTime - entranceStartTime;
-        const spanX = Math.max(1, maxX - minX);
-
-        for (let i = 0; i < lineRuns.length; i++) {
-          const run = lineRuns[i];
-          const normX = Math.max(0, Math.min(1, (run.x - minX) / spanX));
-          const lineDelay = normX * staggerWindow;
-          const lineElapsed = elapsed - lineDelay;
-
-          if (lineElapsed <= 0) continue; // not yet started
-
-          const rawProgress = Math.min(1.0, lineElapsed / lineDuration);
-          // Ease-out cubic: 1 - (1 - t)^3
-          const p = 1 - Math.pow(1 - rawProgress, 3);
-
-          // Grow from the bottom up
-          const currentStartY = run.endY - run.length * p;
-          const drawX = Math.floor(run.x) + strokeOffset;
-
-          activeCtx.beginPath();
-          activeCtx.moveTo(drawX, currentStartY);
-          activeCtx.lineTo(drawX, run.endY);
-          activeCtx.stroke();
-        }
+        activeCtx.save();
+        activeCtx.globalAlpha = alpha;
+        activeCtx.drawImage(staticCanvas, 0, riseY);
+        activeCtx.restore();
       }
 
       // Apply subtle line heat boost within 120px of pointer
@@ -424,12 +396,36 @@ export function FooterEmberLines({
     container.addEventListener("pointermove", handlePointerMove, { passive: true });
     container.addEventListener("pointerleave", handlePointerLeave, { passive: true });
 
-    // IntersectionObserver: trigger entrance when scrolled into view & pause when off-screen
+    // Track scroll velocity so fast flicks show the final state immediately without animation
+    let lastScrollY = typeof window !== "undefined" ? window.scrollY : 0;
+    let lastScrollTime = performance.now();
+    let recentScrollVelocity = 0;
+
+    const handleScroll = () => {
+      const now = performance.now();
+      const dt = Math.max(1, now - lastScrollTime);
+      const currentY = window.scrollY;
+      recentScrollVelocity = Math.abs(currentY - lastScrollY) / dt; // px/ms
+      lastScrollY = currentY;
+      lastScrollTime = now;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    let hasTriggeredEntrance = false;
+
+    // IntersectionObserver: trigger entrance only once when at least 30% of footer is visible
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         isVisible = entry.isIntersecting;
         if (entry.isIntersecting) {
+          if (!hasTriggeredEntrance) {
+            hasTriggeredEntrance = true;
+            // If scrolling fast (flick > 0.8 px/ms), show final state immediately without animation
+            if (recentScrollVelocity > 0.8) {
+              isEntranceDone = true;
+            }
+          }
           wakeLoop();
         } else {
           if (animationId !== null) {
@@ -439,7 +435,7 @@ export function FooterEmberLines({
           isLoopRunning = false;
         }
       },
-      { threshold: 0.05 }
+      { threshold: 0.3 }
     );
     observer.observe(container);
 
@@ -478,6 +474,7 @@ export function FooterEmberLines({
       }
       container.removeEventListener("pointermove", handlePointerMove);
       container.removeEventListener("pointerleave", handlePointerLeave);
+      window.removeEventListener("scroll", handleScroll);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       observer.disconnect();
       resizeObserver.disconnect();

@@ -233,7 +233,7 @@ export function ResumeClient() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4 }}
-            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0"
+            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0 scroll-mt-24 sm:scroll-mt-28"
           >
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--border)] print:border-black">
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 print:text-black">
@@ -253,7 +253,7 @@ export function ResumeClient() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: 0.08 }}
-            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0"
+            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0 scroll-mt-24 sm:scroll-mt-28"
           >
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--border)] print:border-black">
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 print:text-black">
@@ -299,7 +299,7 @@ export function ResumeClient() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: 0.16 }}
-            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0"
+            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0 scroll-mt-24 sm:scroll-mt-28"
           >
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-[var(--border)] print:border-black">
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 print:text-black">
@@ -410,7 +410,7 @@ export function ResumeClient() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: 0.24 }}
-            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0"
+            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0 scroll-mt-24 sm:scroll-mt-28"
           >
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--border)] print:border-black">
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 print:text-black">
@@ -455,7 +455,7 @@ export function ResumeClient() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: 0.32 }}
-            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0"
+            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0 scroll-mt-24 sm:scroll-mt-28"
           >
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-[var(--border)] print:border-black">
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 print:text-black">
@@ -492,7 +492,7 @@ export function ResumeClient() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: 0.4 }}
-            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0"
+            className="p-5 sm:p-6 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs print:border-none print:p-0 scroll-mt-24 sm:scroll-mt-28"
           >
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--border)] print:border-black">
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 print:text-black">

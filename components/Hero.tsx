@@ -44,34 +44,30 @@ export function Hero() {
     });
   }, []);
 
-  // Compute anchor directly from the notch navbar center-bottom relative to container
-  const getNotchAnchor = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return { x: 0, y: 44 };
-
-    const containerRect = container.getBoundingClientRect();
-    const notchEl =
-      document.getElementById("notch-navbar")?.querySelector("nav") ||
-      document.getElementById("notch-navbar");
-
-    if (notchEl) {
-      const notchRect = notchEl.getBoundingClientRect();
-      const x = notchRect.left + notchRect.width / 2 - containerRect.left;
-      const y = notchRect.bottom - containerRect.top;
-      return { x, y: Math.max(30, y) };
-    }
-    return { x: containerRect.width / 2, y: 44 };
+  // Anchor is strictly container-local: top-center of the container, behind the fixed notch overlay
+  const getContainerAnchor = useCallback((width: number) => {
+    return {
+      x: width / 2,
+      y: 10, // Sits under the 40px notch navbar overlay
+    };
   }, []);
+
+  const hasInitializedRef = useRef(false);
+  const isVisibleRef = useRef(true);
 
   // Initialize and handle resize (guarded against micro-resizes)
   const setupRope = useCallback((width: number, isInitial: boolean = false) => {
-    const { x: anchorX, y: anchorY } = getNotchAnchor();
+    const { x: anchorX, y: anchorY } = getContainerAnchor(width);
     anchorRef.current = { x: anchorX, y: anchorY };
 
-    if (isInitial || Math.abs(width - lastWidthRef.current) > 3) {
+    if (isInitial || !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
       lastWidthRef.current = width;
       // Start rope slightly offset on initial mount so it settles smoothly
       ropeRef.current.init(anchorX, anchorY, isInitial ? 40 : 0);
+    } else if (Math.abs(width - lastWidthRef.current) > 3) {
+      lastWidthRef.current = width;
+      ropeRef.current.setAnchor(anchorX, anchorY);
     } else {
       ropeRef.current.setAnchor(anchorX, anchorY);
     }
@@ -89,15 +85,14 @@ export function Hero() {
         transform.angleDeg
       );
     }
-  }, [getNotchAnchor]);
+  }, [getContainerAnchor]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     let isMounted = true;
-    let animationId: number;
-    let isVisible = true;
+    let animationId = 0;
 
     if (typeof window !== "undefined") {
       (window as unknown as { __LANYARD_ROPE__?: VerletRope }).__LANYARD_ROPE__ = ropeRef.current;
@@ -108,74 +103,8 @@ export function Hero() {
       setupRope(rect.width, true);
     }
 
-    // Recompute anchor whenever viewport, scroll, zoom, or fonts change
-    const recomputeAnchor = () => {
-      if (!isMounted || !containerRef.current) return;
-      const { x, y } = getNotchAnchor();
-      anchorRef.current = { x, y };
-      ropeRef.current.setAnchor(x, y);
-    };
-
-    window.addEventListener("resize", recomputeAnchor, { passive: true });
-    window.addEventListener("scroll", recomputeAnchor, { passive: true });
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", recomputeAnchor);
-      window.visualViewport.addEventListener("scroll", recomputeAnchor);
-    }
-    if (document.fonts) {
-      document.fonts.ready.then(recomputeAnchor);
-    }
-
-    // ResizeObserver cleanly updates anchor on actual viewport changes
-    const resizeObserver = new ResizeObserver((entries) => {
-      if (!isMounted) return;
-      for (const entry of entries) {
-        const w = entry.contentRect.width;
-        if (w > 0 && Math.abs(w - lastWidthRef.current) > 3) {
-          setupRope(w, false);
-        } else {
-          recomputeAnchor();
-        }
-      }
-    });
-    resizeObserver.observe(container);
-
-    // Pause physics loop when offscreen or tab hidden (saves CPU & removes jank)
-    const intersectionObserver = new IntersectionObserver(
-      (entries) => {
-        isVisible = entries[0].isIntersecting;
-        if (isVisible) {
-          ropeRef.current.wakeUp();
-        }
-      },
-      { threshold: 0.05 }
-    );
-    intersectionObserver.observe(container);
-
-    const handleVisibility = () => {
-      isVisible = !document.hidden;
-      if (isVisible) {
-        ropeRef.current.wakeUp();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    // Main 60fps/120fps direct compositor render loop
-    const render = (time: number) => {
-      if (!isMounted) return;
-
-      if (!isVisible) {
-        animationId = requestAnimationFrame(render);
-        return;
-      }
-
-      // Update Verlet physics with soft spring grab and fixed 1/60s accumulator
-      ropeRef.current.update(
-        time,
-        isDraggingRef.current,
-        dragTargetRef.current
-      );
-
+    // Direct synchronous draw of one frame (used for initial pose & re-entry)
+    const drawFrame = () => {
       const points = ropeRef.current.points;
       const transform = ropeRef.current.getBadgeTransform();
 
@@ -194,26 +123,114 @@ export function Hero() {
           transform.angleDeg
         );
       }
+    };
+
+    // ResizeObserver cleanly updates anchor on actual container width changes
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!isMounted) return;
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        if (w > 0 && Math.abs(w - lastWidthRef.current) > 3) {
+          setupRope(w, false);
+        }
+      }
+    });
+    resizeObserver.observe(container);
+
+    // Main 60fps/120fps direct compositor render loop
+    const render = (time: number) => {
+      if (!isMounted || !isVisibleRef.current) return;
+
+      // Update Verlet physics with soft spring grab and fixed 1/60s accumulator
+      ropeRef.current.update(
+        time,
+        isDraggingRef.current,
+        dragTargetRef.current
+      );
+
+      drawFrame();
 
       animationId = requestAnimationFrame(render);
     };
 
-    animationId = requestAnimationFrame(render);
+    const startLoop = () => {
+      if (!animationId && isVisibleRef.current && isMounted) {
+        animationId = requestAnimationFrame(render);
+      }
+    };
+
+    const stopLoop = () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = 0;
+      }
+    };
+
+    // Pause physics loop when offscreen with generous 300px rootMargin (saves CPU & battery).
+    // KEEPS physics state; when re-entering, draws one frame immediately BEFORE becoming visible.
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        const isIntersecting = entries[0].isIntersecting;
+        if (isIntersecting && !isVisibleRef.current) {
+          isVisibleRef.current = true;
+          // Synchronize lastTime and draw immediately to guarantee zero ghosting or pop-in
+          ropeRef.current.lastTime = performance.now();
+          ropeRef.current.wakeUp();
+          drawFrame();
+          startLoop();
+        } else if (!isIntersecting && isVisibleRef.current) {
+          isVisibleRef.current = false;
+          stopLoop();
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    intersectionObserver.observe(container);
+
+    // Passive scroll listener: tracking scroll velocity for subtle clamped sway impulse (no DOM reads)
+    let lastScrollY = typeof window !== "undefined" ? window.scrollY : 0;
+    let lastScrollTime = performance.now();
+
+    const handleScroll = () => {
+      const now = performance.now();
+      const dt = Math.max(1, now - lastScrollTime);
+      const currentY = window.scrollY;
+      const dy = currentY - lastScrollY;
+      const velocity = dy / dt; // px/ms
+      lastScrollY = currentY;
+      lastScrollTime = now;
+
+      if (isVisibleRef.current && Math.abs(velocity) > 0.08) {
+        ropeRef.current.applyScrollSway(velocity);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    const handleVisibility = () => {
+      isVisibleRef.current = !document.hidden;
+      if (isVisibleRef.current) {
+        ropeRef.current.lastTime = performance.now();
+        ropeRef.current.wakeUp();
+        drawFrame();
+        startLoop();
+      } else {
+        stopLoop();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    startLoop();
 
     return () => {
       isMounted = false;
-      cancelAnimationFrame(animationId);
+      stopLoop();
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
       document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("resize", recomputeAnchor);
-      window.removeEventListener("scroll", recomputeAnchor);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", recomputeAnchor);
-        window.visualViewport.removeEventListener("scroll", recomputeAnchor);
-      }
+      window.removeEventListener("scroll", handleScroll);
     };
-  }, [setupRope, getNotchAnchor]);
+  }, [setupRope]);
 
   // Pointer event handlers with 3px deadzone and soft spring grab
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -299,7 +316,7 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative w-full min-h-[96dvh] sm:min-h-[100dvh] pt-12 pb-8 flex flex-col justify-between overflow-x-hidden select-none"
+      className="relative w-full min-h-[96dvh] sm:min-h-[100dvh] pt-0 pb-8 flex flex-col justify-between overflow-x-hidden select-none scroll-mt-24"
     >
 
       {/* 1. Hero Breathing Radial Glow (Violet to Pink, ~10% opacity, 14s breathe) */}
@@ -313,9 +330,10 @@ export function Hero() {
         }}
       />
 
-      {/* Physics Canvas & Lanyard Container */}
+      {/* Physics Canvas & Lanyard Container: Single relative container in document flow holding strap & badge */}
       <div
         ref={containerRef}
+        data-hero-lanyard="true"
         className="relative w-full min-h-[660px] sm:min-h-[740px] md:min-h-[800px] lg:min-h-[820px] h-[660px] sm:h-[740px] md:h-[800px] lg:h-[820px] flex items-center justify-center overflow-visible pointer-events-none"
       >
         {/* Dev Telemetry & Physics Debug Overlay (Dev only, toggle with 'D' key) */}

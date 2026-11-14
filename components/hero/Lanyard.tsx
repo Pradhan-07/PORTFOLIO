@@ -370,14 +370,14 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
   return (
     <svg
       data-lanyard-svg="true"
-      className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible"
+      className="absolute inset-0 w-full pointer-events-none z-20 overflow-visible"
       aria-hidden="true"
       style={{
         position: "absolute",
         top: 0,
         left: 0,
         width: "100%",
-        height: "100%",
+        height: "calc(100% + 400px)",
       }}
     >
       <defs>
