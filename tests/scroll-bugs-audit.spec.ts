@@ -152,7 +152,7 @@ test.describe("Scroll Bugs & Physics Coordinate Alignment Audit", () => {
         // Programmatic assertions at each scroll step
         const check = await page.evaluate(() => {
           const container = document.querySelector('[data-hero-lanyard="true"]') as HTMLElement | null;
-          const svg = document.querySelector('[data-lanyard-svg="true"]') as SVGElement | null;
+          const svg = document.querySelector('[data-lanyard-canvas="true"]') as HTMLElement | null;
           const badgeCard = document.querySelector('[data-badge-card="true"]') as HTMLElement | null;
 
           if (!container || !svg || !badgeCard) {

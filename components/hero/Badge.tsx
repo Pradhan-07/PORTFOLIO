@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { siteConfig } from "@/data/site";
@@ -22,7 +22,8 @@ interface BadgeProps {
   isDark: boolean;
   isDragging: boolean;
   isFlipping: boolean;
-  setIsFlipping: (flipping: boolean) => void;
+  /** Hero drives the flip layer's rotateY every frame (synced with strap twist). */
+  flipRef: React.RefObject<HTMLDivElement | null>;
   onPointerDown: (e: React.PointerEvent) => void;
   onPointerMove: (e: React.PointerEvent) => void;
   onPointerUp: (e: React.PointerEvent) => void;
@@ -75,14 +76,13 @@ export function Badge({
   isDark,
   isDragging,
   isFlipping,
-  setIsFlipping,
+  flipRef,
   onPointerDown,
   onPointerMove,
   onPointerUp,
   onPointerCancel,
 }: BadgeProps) {
   const badgeCardRef = useRef<HTMLDivElement | null>(null);
-  const flipElRef = useRef<HTMLDivElement | null>(null);
 
   // Hover and fine pointer detection
   const [isHovered, setIsHovered] = useState(false);
@@ -142,17 +142,14 @@ export function Badge({
     setIsHovered(false);
   };
 
-  // Flip transition end callback
-  const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
-    if (e.target === flipElRef.current && e.propertyName === "transform") {
-      setIsFlipping(false);
-      if (isFlipped) {
-        setShowBackAnimation(true);
-      } else {
-        setShowBackAnimation(false);
-      }
+  // The flip is driven frame-by-frame by Hero (rotateY + strap twist).
+  // When Hero reports the flip has settled, start/stop the back-face
+  // LED wave animation accordingly.
+  useEffect(() => {
+    if (!isFlipping) {
+      setShowBackAnimation(isFlipped);
     }
-  };
+  }, [isFlipping, isFlipped]);
 
   const isBackAnimationActive = isFlipped && showBackAnimation;
   const visibleWeeks = githubData?.weeks?.slice(-26) || fallbackWeeks;
@@ -160,29 +157,27 @@ export function Badge({
 
   return (
     // CENTERING & SCALE LAYER (Order: Physics -> Centering/Scale -> Flip -> Faces)
+    // The physics layer positions this wrapper by the badge CENTRE
+    // (midpoint of rope points 9 and 10), hence translate(-50%, -50%).
     <div
       style={{
-        transform: "translate(-50%, 0)",
-        transformOrigin: "50% 0%",
+        transform: "translate(-50%, -50%)",
       }}
       className="relative select-none"
     >
-      {/* SCALE LAYER (Hover: 1.03, Grab: 1.04, Flip: pulse 1 -> 1.08 -> 1) */}
+      {/* Metal ring the strap threads through (static while the card flips) */}
+      <div
+        aria-hidden="true"
+        className="absolute left-1/2 -translate-x-1/2 -top-[17px] w-[13px] h-[21px] rounded-[8px] border-[2.5px] border-[#c4c4cb] z-40 pointer-events-none"
+      />
+      {/* SCALE LAYER (Hover: 1.03, Grab: 1.04) */}
       <div
         style={{
-          transformOrigin: "50% 0%",
-          transform: !isFlipping
-            ? `scale(${isDragging ? 1.04 : isHovered ? 1.03 : 1})`
-            : undefined,
+          transformOrigin: "50% 50%",
+          transform: `scale(${isDragging ? 1.04 : isHovered ? 1.03 : 1})`,
           willChange: "transform",
         }}
         className={`transition-transform duration-200 ease-out rounded-[18px] ${
-          isFlipping
-            ? isHovered
-              ? "animate-flip-pulse-hover"
-              : "animate-flip-pulse"
-            : ""
-        } ${
           isDragging
             ? "shadow-[0_24px_50px_rgba(0,0,0,0.45)]"
             : "shadow-2xl shadow-black/35"
@@ -190,9 +185,10 @@ export function Badge({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={handleCardMouseLeave}
       >
-        {/* DEDICATED FLIP LAYER (Animates only rotateY from 0 to 180deg) */}
+        {/* DEDICATED FLIP LAYER (rotateY driven per-frame by Hero via flipRef,
+            eased in JS so the strap twist stays in sync with the card) */}
         <div
-          ref={flipElRef}
+          ref={flipRef}
           data-badge-card="true"
           role="button"
           tabIndex={0}
@@ -205,11 +201,8 @@ export function Badge({
           }}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
-          onTransitionEnd={handleTransitionEnd}
           style={{
             transformStyle: "preserve-3d",
-            transform: `rotateY(${isFlipped ? 180 : 0}deg)`,
-            transition: "transform 550ms cubic-bezier(0.4, 0, 0.2, 1)",
             willChange: "transform",
           }}
           className="relative w-[92vw] sm:w-[84vw] md:w-[70vw] lg:w-[clamp(560px,52vw,840px)] aspect-[1.47/1] min-h-[380px] sm:min-h-[440px] md:min-h-[460px] lg:min-h-[480px] rounded-[18px] outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-500"

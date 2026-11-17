@@ -66,21 +66,25 @@ export function BadgeDebugOverlay({ ropeRef, anchorRef }: BadgeDebugOverlayProps
       const segLengths = rope.getSegmentLengths();
       const isAsleep = rope.isSleeping;
 
-      // 1. Draw sticks between points
+      // 1. Draw the actual sticks (V-strap topology, not index order)
       ctx.strokeStyle = "rgba(0, 240, 255, 0.65)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      for (let i = 0; i < points.length; i++) {
-        if (i === 0) ctx.moveTo(points[i].x, points[i].y);
-        else ctx.lineTo(points[i].x, points[i].y);
+      for (const stick of rope.sticks) {
+        const a = points[stick.p0Index];
+        const b = points[stick.p1Index];
+        if (!a || !b) continue;
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
       }
       ctx.stroke();
 
       // 2. Draw rope points
       for (let i = 0; i < points.length; i++) {
-        ctx.fillStyle = i === 0 ? "#ff3366" : i === points.length - 1 ? "#33ff66" : "#00f0ff";
+        ctx.fillStyle =
+          points[i].isPinned ? "#ff3366" : i === points.length - 1 ? "#33ff66" : "#00f0ff";
         ctx.beginPath();
-        ctx.arc(points[i].x, points[i].y, i === 0 || i === points.length - 1 ? 5 : 3.5, 0, Math.PI * 2);
+        ctx.arc(points[i].x, points[i].y, points[i].isPinned || i === points.length - 1 ? 5 : 3.5, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -121,7 +125,7 @@ export function BadgeDebugOverlay({ ropeRef, anchorRef }: BadgeDebugOverlayProps
 
       ctx.fillText(`FPS: ${rope.fps.toFixed(1)} (target 60)`, hudX + 12, hudY + 38);
       ctx.fillText(
-        `Angle: ${transform.angleDeg.toFixed(2)}° (limit ±16°)`,
+        `Angle: ${transform.angleDeg.toFixed(2)}° (rope segment 9-10)`,
         hudX + 12,
         hudY + 54
       );
@@ -136,13 +140,13 @@ export function BadgeDebugOverlay({ ropeRef, anchorRef }: BadgeDebugOverlayProps
 
       const minSeg = segLengths.length ? Math.min(...segLengths).toFixed(1) : "0";
       const maxSeg = segLengths.length ? Math.max(...segLengths).toFixed(1) : "0";
-      ctx.fillText(`Segments: ${points.length - 1} | Len: ${minSeg}-${maxSeg}px`, hudX + 12, hudY + 102);
+      ctx.fillText(`Sticks: ${segLengths.length} | Len: ${minSeg}-${maxSeg}px`, hudX + 12, hudY + 102);
 
       ctx.fillStyle = isAsleep ? "#22c55e" : "#eab308";
       ctx.fillText(`Solver State: ${isAsleep ? "ASLEEP (0% CPU)" : "ACTIVE / SOLVING"}`, hudX + 12, hudY + 120);
 
       ctx.fillStyle = "#6b7280";
-      ctx.fillText(`Clip-Badge Gap: 0.00px (rigid)`, hudX + 12, hudY + 138);
+      ctx.fillText(`Badge pose: midpoint of points 9-10`, hudX + 12, hudY + 138);
 
       animId = requestAnimationFrame(render);
     };
