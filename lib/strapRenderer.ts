@@ -197,7 +197,9 @@ export function drawRibbon(
 
     const glyphs: { char: string; start: number; end: number }[] = [];
     let charIdx = 0;
-    for (let sPos = (opts.printPhase ?? 0) % charStep; sPos < total; sPos += charStep, charIdx++) {
+    // Print starts `printPhase` px down the strap, with the text's first
+    // character — so the name reads from a chosen point on the strap.
+    for (let sPos = opts.printPhase ?? 0; sPos < total; sPos += charStep, charIdx++) {
       // locate sample at arc length sPos
       let lo = 0;
       let hi = samples.length - 1;

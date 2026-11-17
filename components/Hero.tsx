@@ -8,15 +8,17 @@ import { BadgeDebugOverlay } from "./hero/BadgeDebugOverlay";
 import { useTheme } from "../components/ThemeProvider";
 import { ChevronDown } from "lucide-react";
 
-/** Straps pin at (centre ± 30, TOP_Y) — just under the navbar notch. */
-const TOP_Y = 4;
+/** Straps pin at (centre ± 30, TOP_Y). TOP_Y sits just below the navbar
+ *  so the full strap — including the printed name — is visible instead
+ *  of disappearing behind the nav pill. */
+const TOP_Y = 64;
 
 /** Badge-stick length by container width (the badge hangs on this long,
  *  mostly hidden stick — that is what makes pulls feel elastic). */
 function badgeStickForWidth(w: number): number {
-  if (w < 640) return 330;
-  if (w < 1024) return 390;
-  return 450;
+  if (w < 640) return 290;
+  if (w < 1024) return 350;
+  return 400;
 }
 
 const clamp = (v: number, min: number, max: number) =>

@@ -68,9 +68,37 @@ test.describe("Lanyard Badge Physics and Stability (beebombshell-style V-strap)"
     await page.mouse.down();
     await page.waitForTimeout(60);
 
-    // Drag in progressive steps
-    await page.mouse.move(startX + 90, startY + 110, { steps: 12 });
+    // Sample the peak stick stretch on every frame during the drag.
+    // The badge stick itself stays ~1x (point 9 follows the pinned
+    // badge point); the elongation shows in the strap + connector
+    // sticks above it — exactly like the reference site.
+    await page.evaluate(() => {
+      const w = window as unknown as { __MAX_STRETCH__?: number };
+      w.__MAX_STRETCH__ = 1;
+      const tick = () => {
+        const rope = (window as unknown as WindowWithRope).__LANYARD_ROPE__;
+        if (rope) {
+          const lens = rope.getSegmentLengths();
+          for (let i = 0; i < lens.length; i++) {
+            const ratio = lens[i] / rope.sticks[i].restLength;
+            if (ratio > (w.__MAX_STRETCH__ ?? 1)) w.__MAX_STRETCH__ = ratio;
+          }
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+
+    // Drag far down — past the chain's natural reach, so the strap
+    // sticks must genuinely stretch, bee-style.
+    await page.mouse.move(startX + 60, startY + 300, { steps: 8 });
     await page.waitForTimeout(100);
+
+    const maxStretch = await page.evaluate(
+      () => (window as unknown as { __MAX_STRETCH__?: number }).__MAX_STRETCH__ ?? 1
+    );
+    expect(maxStretch).toBeGreaterThan(1.15);
+    expect(maxStretch).toBeLessThanOrEqual(2.6);
 
     // During the drag the badge stick may stretch, but stays sane;
     // every other stick stays within generous per-stick bounds.
@@ -84,7 +112,6 @@ test.describe("Lanyard Badge Physics and Stability (beebombshell-style V-strap)"
       };
     });
 
-    expect(duringDrag.stretchRatio).toBeGreaterThan(1.0);
     expect(duringDrag.stretchRatio).toBeLessThanOrEqual(2.6);
     for (let i = 0; i < duringDrag.segmentLengths.length; i++) {
       expect(duringDrag.segmentLengths[i]).toBeGreaterThanOrEqual(duringDrag.restLengths[i] * 0.6);
