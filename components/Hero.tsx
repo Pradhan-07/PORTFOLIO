@@ -63,8 +63,9 @@ export function Hero() {
     if (isInitial || !hasInitializedRef.current) {
       hasInitializedRef.current = true;
       lastWidthRef.current = width;
-      // Start rope slightly offset on initial mount so it settles smoothly
-      ropeRef.current.init(anchorX, anchorY, isInitial ? 40 : 0);
+      // Start the rope exactly at rest on mount — no drop/swing on page open,
+      // so the first impression is perfectly stable.
+      ropeRef.current.init(anchorX, anchorY, 0);
     } else if (Math.abs(width - lastWidthRef.current) > 3) {
       lastWidthRef.current = width;
       ropeRef.current.setAnchor(anchorX, anchorY);
@@ -316,14 +317,17 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative w-full min-h-[96dvh] sm:min-h-[100dvh] pt-0 pb-8 flex flex-col justify-between overflow-x-hidden select-none scroll-mt-24"
+      className="relative w-full pt-0 pb-4 flex flex-col justify-start overflow-x-hidden select-none scroll-mt-24"
     >
 
-      {/* 1. Hero Breathing Radial Glow (Violet to Pink, ~10% opacity, 14s breathe) */}
+      {/* 1. Hero Radial Glow (Violet to Pink) — static on purpose: a breathing
+             background made the whole hero feel unstable/glitchy on open. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[46%] w-[680px] sm:w-[840px] h-[440px] sm:h-[540px] rounded-full -z-10 blur-3xl animate-hero-glow"
+        className="pointer-events-none absolute left-1/2 top-[46%] w-[680px] sm:w-[840px] h-[440px] sm:h-[540px] rounded-full -z-10 blur-3xl"
         style={{
+          transform: "translate(-50%, -50%)",
+          opacity: 0.1,
           background: isDark
             ? "radial-gradient(ellipse at center, rgba(168, 85, 247, 0.7) 0%, rgba(236, 72, 153, 0.45) 45%, transparent 72%)"
             : "radial-gradient(ellipse at center, rgba(168, 85, 247, 0.45) 0%, rgba(236, 72, 153, 0.3) 45%, transparent 72%)",
@@ -334,7 +338,7 @@ export function Hero() {
       <div
         ref={containerRef}
         data-hero-lanyard="true"
-        className="relative w-full min-h-[660px] sm:min-h-[740px] md:min-h-[800px] lg:min-h-[820px] h-[660px] sm:h-[740px] md:h-[800px] lg:h-[820px] flex items-center justify-center overflow-visible pointer-events-none"
+        className="relative w-full min-h-[580px] sm:min-h-[650px] md:min-h-[690px] lg:min-h-[740px] h-[580px] sm:h-[650px] md:h-[690px] lg:h-[740px] flex items-center justify-center overflow-visible pointer-events-none"
       >
         {/* Dev Telemetry & Physics Debug Overlay (Dev only, toggle with 'D' key) */}
         {process.env.NODE_ENV !== "production" && (
@@ -354,7 +358,7 @@ export function Hero() {
             transformOrigin: "50% 0%",
             willChange: "transform",
           }}
-          className="z-30 pointer-events-auto"
+          className="badge-initial-pose z-30 pointer-events-auto"
         >
           {/* The Landscape ID Badge with scale & flip layers */}
           <Badge
@@ -373,7 +377,7 @@ export function Hero() {
       </div>
 
       {/* Hero Bottom Hint - Positioned safely below the resting badge card */}
-      <div className="relative z-20 w-full text-center mt-6 sm:mt-10 pb-6 text-xs font-mono text-neutral-500 dark:text-neutral-400 flex items-center justify-center">
+      <div className="relative z-20 w-full text-center mt-2 sm:mt-3 pb-2 text-xs font-mono text-neutral-500 dark:text-neutral-400 flex items-center justify-center">
         <a
           href="#resume"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:text-neutral-900 dark:hover:text-neutral-200 transition-colors pointer-events-auto cursor-pointer"

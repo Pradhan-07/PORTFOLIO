@@ -56,7 +56,7 @@ export const DEFAULT_PHYSICS_CONFIG: PhysicsConfig = {
   restSegmentLength: 16,
   maxStretchRatio: 2.2,
   minStrapLength: 60, // Minimum distance below notch (desktop)
-  scrollSway: true, // Clamped subtle pendulum impulse proportional to scroll velocity
+  scrollSway: false, // Disabled: scroll impulses kept the badge swinging while scrolling, which felt unstable. Drag/flip physics are unaffected.
 };
 
 export class VerletRope {
