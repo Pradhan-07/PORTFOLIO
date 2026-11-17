@@ -289,7 +289,7 @@ test.describe("Comprehensive Visual Audit & Physics Verification", () => {
             badgeX: badgeTransform.x,
             badgeY: badgeTransform.y,
             segmentLengths: rope.getSegmentLengths(),
-            restLengths: rope.sticks.map((s) => s.restLength),
+            restLength: rope.config.restSegmentLength,
           };
         });
 
@@ -300,15 +300,15 @@ test.describe("Comprehensive Visual Audit & Physics Verification", () => {
           `Strap top X (${alignment!.strapTopX}) deviated from container center X (${alignment!.containerCenterRelX}) by ${diffTop}px on DPR ${tc.dpr}, ${tc.width}px, zoom ${tc.zoom}`
         ).toBeLessThanOrEqual(1.0);
 
-        // 2. Assert: strap end (rope point 9) sits on the badge's vertical
-        // axis and above the badge centre — it tucks behind the badge,
-        // which hangs centred on the midpoint of points 9 and 10.
-        const axisDiff = Math.abs(alignment!.strapBottomX - alignment!.badgeX);
+        // 2. Assert: Strap bottom within 1px of badge clip position
+        const diffBottom = Math.hypot(
+          alignment!.strapBottomX - alignment!.badgeX,
+          alignment!.strapBottomY - alignment!.badgeY
+        );
         expect(
-          axisDiff,
-          `Strap end X (${alignment!.strapBottomX}) deviated from badge centre X (${alignment!.badgeX}) by ${axisDiff}px on DPR ${tc.dpr}, ${tc.width}px, zoom ${tc.zoom}`
-        ).toBeLessThanOrEqual(2.0);
-        expect(alignment!.strapBottomY).toBeLessThan(alignment!.badgeY);
+          diffBottom,
+          `Strap bottom deviated from clip pivot by ${diffBottom}px on DPR ${tc.dpr}, ${tc.width}px, zoom ${tc.zoom}`
+        ).toBeLessThanOrEqual(1.0);
 
         // 3. Drag badge down, release, assert segment lengths within [0.9x, 2.3x], no NaN, settles within 2.5s
         const badge = page.locator("[data-badge-card]");
@@ -328,7 +328,7 @@ test.describe("Comprehensive Visual Audit & Physics Verification", () => {
           if (!rope) return null;
           return {
             lengths: rope.getSegmentLengths(),
-            restLengths: rope.sticks.map((s) => s.restLength),
+            rest: rope.config.restSegmentLength,
             transform: rope.getBadgeTransform(),
           };
         });
@@ -336,24 +336,14 @@ test.describe("Comprehensive Visual Audit & Physics Verification", () => {
         expect(Number.isNaN(duringDrag!.transform.x)).toBe(false);
         expect(Number.isNaN(duringDrag!.transform.y)).toBe(false);
         expect(Number.isNaN(duringDrag!.transform.angleDeg)).toBe(false);
-        for (let i = 0; i < duringDrag!.lengths.length; i++) {
-          expect(duringDrag!.lengths[i]).toBeGreaterThanOrEqual(duringDrag!.restLengths[i] * 0.6);
-          expect(duringDrag!.lengths[i]).toBeLessThanOrEqual(duringDrag!.restLengths[i] * 2.6);
+        for (const l of duringDrag!.lengths) {
+          expect(l).toBeGreaterThanOrEqual(duringDrag!.rest * 0.9);
+          expect(l).toBeLessThanOrEqual(duringDrag!.rest * 2.35);
         }
 
-        // Release and settle (reference damping swings gracefully —
-        // poll for rest rather than a fixed 2.5s)
+        // Release and settle
         await page.mouse.up();
-        await page.waitForFunction(
-          () => {
-            const rope = (window as unknown as { __LANYARD_ROPE__?: VerletRope }).__LANYARD_ROPE__;
-            if (!rope) return false;
-            const t = rope.getBadgeTransform();
-            return Math.abs(t.angleDeg) < 1.5 && Math.abs(t.stretchRatio - 1) < 0.05;
-          },
-          undefined,
-          { timeout: 15000 }
-        );
+        await page.waitForTimeout(2500);
 
         const settled = await page.evaluate(() => {
           const rope = (window as unknown as { __LANYARD_ROPE__?: VerletRope }).__LANYARD_ROPE__;

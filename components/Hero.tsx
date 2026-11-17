@@ -1,58 +1,27 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { VerletRope } from "@/lib/verlet";
+import { VerletRope, DEFAULT_PHYSICS_CONFIG } from "@/lib/verlet";
 import { Lanyard, LanyardHandle } from "./hero/Lanyard";
 import { Badge } from "./hero/Badge";
 import { BadgeDebugOverlay } from "./hero/BadgeDebugOverlay";
 import { useTheme } from "../components/ThemeProvider";
 import { ChevronDown } from "lucide-react";
 
-/** Straps pin at (centre ± 30, TOP_Y) — just under the navbar notch. */
-const TOP_Y = 4;
-
-/** Badge-stick length by container width (the badge hangs on this long,
- *  mostly hidden stick — that is what makes pulls feel elastic). */
-function badgeStickForWidth(w: number): number {
-  if (w < 640) return 330;
-  if (w < 1024) return 390;
-  return 450;
-}
-
-const clamp = (v: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, v));
-
 export function Hero() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lanyardRef = useRef<LanyardHandle | null>(null);
   const badgePhysicsRef = useRef<HTMLDivElement | null>(null);
-  const badgeFlipRef = useRef<HTMLDivElement | null>(null);
 
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const isDarkRef = useRef(isDark);
-  isDarkRef.current = isDark;
 
-  // Physics rope (beebombshell-style double-strap verlet model)
-  const ropeRef = useRef<VerletRope>(new VerletRope());
-  const anchorRef = useRef({ x: 0, y: TOP_Y });
+  // Physics Rope Instance
+  const ropeRef = useRef<VerletRope>(new VerletRope(DEFAULT_PHYSICS_CONFIG));
+
+  // Anchor point in refs to avoid state re-renders
+  const anchorRef = useRef({ x: 0, y: 44 });
   const lastWidthRef = useRef(0);
-  const lastHeightRef = useRef(0);
-  const hasInitializedRef = useRef(false);
-  const isVisibleRef = useRef(true);
-  const reducedMotionRef = useRef(false);
-
-  // Smoothed badge pose (reference-site factors: position 0.85 / 0.65
-  // while dragging, angle 0.75 / 0.45, tilt from x-velocity)
-  const poseRef = useRef({
-    x: 0,
-    y: 0,
-    angleRad: 0,
-    prevX: 0,
-    tiltVel: 0,
-    tiltDeg: 0,
-    initialized: false,
-  });
 
   // Drag interaction state
   const isDraggingRef = useRef(false);
@@ -62,105 +31,62 @@ export function Hero() {
   const pointerDownTime = useRef(0);
   const hasMovedPastThreshold = useRef(false);
 
-  // Flip state: target lives in state (for Badge faces), the animated
-  // angle lives in refs and is eased in the render loop (0.12/frame,
-  // reference-site factor) so the strap twist stays in sync.
+  // 3D Flip state
   const [isFlipped, setIsFlipped] = useState(false);
   const [isFlipping, setIsFlipping] = useState(false);
-  const flipCurRef = useRef(0);
-  const flipTargetRef = useRef(0);
-  const isFlippingRef = useRef(false);
 
+  // Toggle flip with state-safe dispatch
   const toggleFlip = useCallback((targetState?: boolean) => {
-    const next =
-      typeof targetState === "boolean" ? targetState : flipTargetRef.current === 0;
-    flipTargetRef.current = next ? 180 : 0;
-    if (reducedMotionRef.current) {
-      flipCurRef.current = flipTargetRef.current;
-    } else {
-      isFlippingRef.current = true;
-      setIsFlipping(true);
-    }
-    setIsFlipped(next);
-    ropeRef.current.wakeUp();
+    setIsFlipping(true);
+    setIsFlipped((prev) => {
+      const next = typeof targetState === "boolean" ? targetState : !prev;
+      return next;
+    });
   }, []);
 
-  const setupLayout = useCallback((width: number, height: number) => {
-    const cx = width / 2;
-    anchorRef.current = { x: cx, y: TOP_Y };
-    const heightChanged =
-      hasInitializedRef.current && Math.abs(height - lastHeightRef.current) > 4;
+  // Anchor is strictly container-local: top-center of the container, behind the fixed notch overlay
+  const getContainerAnchor = useCallback((width: number) => {
+    return {
+      x: width / 2,
+      y: 10, // Sits under the 40px notch navbar overlay
+    };
+  }, []);
 
-    if (!hasInitializedRef.current || heightChanged) {
+  const hasInitializedRef = useRef(false);
+  const isVisibleRef = useRef(true);
+
+  // Initialize and handle resize (guarded against micro-resizes)
+  const setupRope = useCallback((width: number, isInitial: boolean = false) => {
+    const { x: anchorX, y: anchorY } = getContainerAnchor(width);
+    anchorRef.current = { x: anchorX, y: anchorY };
+
+    if (isInitial || !hasInitializedRef.current) {
       hasInitializedRef.current = true;
-      ropeRef.current.init(cx, TOP_Y, badgeStickForWidth(width));
-      poseRef.current.initialized = false;
+      lastWidthRef.current = width;
+      // Start the rope exactly at rest on mount — no drop/swing on page open,
+      // so the first impression is perfectly stable.
+      ropeRef.current.init(anchorX, anchorY, 0);
     } else if (Math.abs(width - lastWidthRef.current) > 3) {
-      ropeRef.current.setAnchor(cx, TOP_Y);
-    }
-    lastWidthRef.current = width;
-    lastHeightRef.current = height;
-  }, []);
-
-  // One full pose + draw computation (shared by the RAF loop and by
-  // one-shot draws for reduced motion / re-entry).
-  const drawFrame = useCallback((time: number) => {
-    const rope = ropeRef.current;
-    const t = rope.getBadgeTransform();
-    const pose = poseRef.current;
-    const dragging = isDraggingRef.current;
-
-    if (!pose.initialized) {
-      pose.x = t.x;
-      pose.y = t.y;
-      pose.angleRad = t.angleRad;
-      pose.prevX = t.x;
-      pose.initialized = true;
+      lastWidthRef.current = width;
+      ropeRef.current.setAnchor(anchorX, anchorY);
+    } else {
+      ropeRef.current.setAnchor(anchorX, anchorY);
     }
 
-    const kp = dragging ? 0.65 : 0.85;
-    pose.x += (t.x - pose.x) * kp;
-    pose.y += (t.y - pose.y) * kp;
-
-    const rawAngle = clamp(t.angleRad, -0.42, 0.42);
-    const ka = dragging ? 0.45 : 0.75;
-    pose.angleRad += (rawAngle - pose.angleRad) * ka;
-
-    const vx = pose.x - pose.prevX;
-    pose.prevX = pose.x;
-    pose.tiltVel += (vx - pose.tiltVel) * 0.15;
-    pose.tiltDeg = clamp(1.8 * pose.tiltVel, -14, 14);
-
-    // Flip easing + settle detection
-    if (isFlippingRef.current) {
-      flipCurRef.current += (flipTargetRef.current - flipCurRef.current) * 0.12;
-      if (Math.abs(flipTargetRef.current - flipCurRef.current) < 0.4) {
-        flipCurRef.current = flipTargetRef.current;
-        isFlippingRef.current = false;
-        setIsFlipping(false);
-      }
-    }
-
+    const transform = ropeRef.current.getBadgeTransform();
     if (badgePhysicsRef.current) {
-      badgePhysicsRef.current.style.transform = `translate3d(${pose.x}px, ${pose.y}px, 0) rotate(${(
-        (pose.angleRad * 180) /
-        Math.PI
-      ).toFixed(3)}deg)`;
-    }
-    if (badgeFlipRef.current) {
-      badgeFlipRef.current.style.transform = `rotateY(${(
-        flipCurRef.current + pose.tiltDeg
-      ).toFixed(3)}deg)`;
+      badgePhysicsRef.current.style.transform = `translate3d(${transform.x}px, ${transform.y}px, 0) rotate(${transform.angleDeg}deg)`;
     }
     if (lanyardRef.current) {
-      lanyardRef.current.update(rope.points, {
-        flipRad: (flipCurRef.current * Math.PI) / 180,
-        baseTwist: 2.2 * pose.angleRad + 0.1 * pose.tiltVel,
-        isDark: isDarkRef.current,
-        time,
-      });
+      lanyardRef.current.update(
+        ropeRef.current.points,
+        anchorX,
+        anchorY,
+        transform.stretchRatio,
+        transform.angleDeg
+      );
     }
-  }, []);
+  }, [getContainerAnchor]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -169,47 +95,67 @@ export function Hero() {
     let isMounted = true;
     let animationId = 0;
 
-    reducedMotionRef.current =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     if (typeof window !== "undefined") {
-      (window as unknown as { __LANYARD_ROPE__?: VerletRope }).__LANYARD_ROPE__ =
-        ropeRef.current;
+      (window as unknown as { __LANYARD_ROPE__?: VerletRope }).__LANYARD_ROPE__ = ropeRef.current;
     }
 
     const rect = container.getBoundingClientRect();
     if (rect.width > 0) {
-      setupLayout(rect.width, rect.height);
-      drawFrame(performance.now());
+      setupRope(rect.width, true);
     }
 
+    // Direct synchronous draw of one frame (used for initial pose & re-entry)
+    const drawFrame = () => {
+      const points = ropeRef.current.points;
+      const transform = ropeRef.current.getBadgeTransform();
+
+      // 1. Direct transform write to the physics container
+      if (badgePhysicsRef.current) {
+        badgePhysicsRef.current.style.transform = `translate3d(${transform.x}px, ${transform.y}px, 0) rotate(${transform.angleDeg}deg)`;
+      }
+
+      // 2. Direct SVG attribute write to lanyard straps & clasp
+      if (lanyardRef.current) {
+        lanyardRef.current.update(
+          points,
+          anchorRef.current.x,
+          anchorRef.current.y,
+          transform.stretchRatio,
+          transform.angleDeg
+        );
+      }
+    };
+
+    // ResizeObserver cleanly updates anchor on actual container width changes
     const resizeObserver = new ResizeObserver((entries) => {
       if (!isMounted) return;
       for (const entry of entries) {
         const w = entry.contentRect.width;
-        const h = entry.contentRect.height;
         if (w > 0 && Math.abs(w - lastWidthRef.current) > 3) {
-          setupLayout(w, h);
-          drawFrame(performance.now());
+          setupRope(w, false);
         }
       }
     });
     resizeObserver.observe(container);
 
+    // Main 60fps/120fps direct compositor render loop
     const render = (time: number) => {
       if (!isMounted || !isVisibleRef.current) return;
+
+      // Update Verlet physics with soft spring grab and fixed 1/60s accumulator
       ropeRef.current.update(
         time,
         isDraggingRef.current,
         dragTargetRef.current
       );
-      drawFrame(time);
+
+      drawFrame();
+
       animationId = requestAnimationFrame(render);
     };
 
     const startLoop = () => {
-      if (!animationId && isVisibleRef.current && isMounted && !reducedMotionRef.current) {
+      if (!animationId && isVisibleRef.current && isMounted) {
         animationId = requestAnimationFrame(render);
       }
     };
@@ -221,15 +167,17 @@ export function Hero() {
       }
     };
 
-    // Pause the physics loop when the hero is offscreen (300px margin).
+    // Pause physics loop when offscreen with generous 300px rootMargin (saves CPU & battery).
+    // KEEPS physics state; when re-entering, draws one frame immediately BEFORE becoming visible.
     const intersectionObserver = new IntersectionObserver(
       (entries) => {
         const isIntersecting = entries[0].isIntersecting;
         if (isIntersecting && !isVisibleRef.current) {
           isVisibleRef.current = true;
+          // Synchronize lastTime and draw immediately to guarantee zero ghosting or pop-in
           ropeRef.current.lastTime = performance.now();
           ropeRef.current.wakeUp();
-          drawFrame(performance.now());
+          drawFrame();
           startLoop();
         } else if (!isIntersecting && isVisibleRef.current) {
           isVisibleRef.current = false;
@@ -240,11 +188,32 @@ export function Hero() {
     );
     intersectionObserver.observe(container);
 
+    // Passive scroll listener: tracking scroll velocity for subtle clamped sway impulse (no DOM reads)
+    let lastScrollY = typeof window !== "undefined" ? window.scrollY : 0;
+    let lastScrollTime = performance.now();
+
+    const handleScroll = () => {
+      const now = performance.now();
+      const dt = Math.max(1, now - lastScrollTime);
+      const currentY = window.scrollY;
+      const dy = currentY - lastScrollY;
+      const velocity = dy / dt; // px/ms
+      lastScrollY = currentY;
+      lastScrollTime = now;
+
+      if (isVisibleRef.current && Math.abs(velocity) > 0.08) {
+        ropeRef.current.applyScrollSway(velocity);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
     const handleVisibility = () => {
-      if (!document.hidden) {
+      isVisibleRef.current = !document.hidden;
+      if (isVisibleRef.current) {
         ropeRef.current.lastTime = performance.now();
         ropeRef.current.wakeUp();
-        drawFrame(performance.now());
+        drawFrame();
         startLoop();
       } else {
         stopLoop();
@@ -260,17 +229,15 @@ export function Hero() {
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("scroll", handleScroll);
     };
-  }, [setupLayout, drawFrame]);
+  }, [setupRope]);
 
-  // Pointer handlers: < 6px of movement on release = flip click
-  // (reference-site threshold); beyond that it is a drag, and the
-  // badge point is pinned to the pointer by the solver.
+  // Pointer event handlers with 3px deadzone and soft spring grab
   const handlePointerDown = (e: React.PointerEvent) => {
     pointerDownPos.current = { x: e.clientX, y: e.clientY };
     pointerDownTime.current = performance.now();
     hasMovedPastThreshold.current = false;
-    ropeRef.current.wakeUp();
 
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -288,7 +255,11 @@ export function Hero() {
     const dy = e.clientY - pointerDownPos.current.y;
     const dist = Math.hypot(dx, dy);
 
-    if (!hasMovedPastThreshold.current && dist >= 6) {
+    // Deadzone: ignore pointer movements under 3px at press time
+    if (dist < 3) return;
+
+    // Engage drag mode only once movement exceeds 5px threshold
+    if (!hasMovedPastThreshold.current && dist >= 5) {
       hasMovedPastThreshold.current = true;
       isDraggingRef.current = true;
       setIsDragging(true);
@@ -296,6 +267,7 @@ export function Hero() {
       if (containerRef.current) {
         containerRef.current.style.touchAction = "none";
       }
+
       try {
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       } catch {
@@ -306,18 +278,20 @@ export function Hero() {
     if (hasMovedPastThreshold.current && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       dragTargetRef.current = {
-        x: clamp(e.clientX - rect.left, -80, rect.width + 80),
-        y: clamp(e.clientY - rect.top, TOP_Y + 60, rect.height + 260),
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
       };
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    const elapsed = performance.now() - pointerDownTime.current;
     const dx = e.clientX - pointerDownPos.current.x;
     const dy = e.clientY - pointerDownPos.current.y;
     const dist = Math.hypot(dx, dy);
 
-    if (!hasMovedPastThreshold.current && dist < 6) {
+    // If moved < 5px and released under 300ms: IT IS AN IMMEDIATE FLIP CLICK!
+    if (!hasMovedPastThreshold.current && dist < 5 && elapsed < 300) {
       toggleFlip();
     }
 
@@ -329,6 +303,7 @@ export function Hero() {
       if (containerRef.current) {
         containerRef.current.style.touchAction = "auto";
       }
+
       try {
         (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
       } catch {
@@ -344,7 +319,9 @@ export function Hero() {
       id="hero"
       className="relative w-full pt-0 pb-4 flex flex-col justify-start overflow-x-hidden select-none scroll-mt-24"
     >
-      {/* Hero Radial Glow (static — a breathing background felt unstable) */}
+
+      {/* 1. Hero Radial Glow (Violet to Pink) — static on purpose: a breathing
+             background made the whole hero feel unstable/glitchy on open. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-[46%] w-[680px] sm:w-[840px] h-[440px] sm:h-[540px] rounded-full -z-10 blur-3xl"
@@ -357,7 +334,7 @@ export function Hero() {
         }}
       />
 
-      {/* Physics stage: canvas straps + badge, one relative container */}
+      {/* Physics Canvas & Lanyard Container: Single relative container in document flow holding strap & badge */}
       <div
         ref={containerRef}
         data-hero-lanyard="true"
@@ -368,29 +345,29 @@ export function Hero() {
           <BadgeDebugOverlay ropeRef={ropeRef} anchorRef={anchorRef} />
         )}
 
-        {/* Canvas lanyard: twin straps, clasp, ring (twisting ribbons) */}
+        {/* Lanyard Fabric Strap with repeated text & silver clasp */}
         <Lanyard ref={lanyardRef} isDark={isDark} />
 
-        {/* Badge pose layer: translated to the badge centre and rotated
-            about it (transform-origin 0 0 = the translated point). */}
+        {/* Outer Physics & Sway Layer (Direct compositor transform from RAF) */}
         <div
           ref={badgePhysicsRef}
           style={{
             position: "absolute",
             left: 0,
             top: 0,
-            transformOrigin: "0 0",
+            transformOrigin: "50% 0%",
             willChange: "transform",
           }}
           className="badge-initial-pose z-30 pointer-events-auto"
         >
+          {/* The Landscape ID Badge with scale & flip layers */}
           <Badge
             isFlipped={isFlipped}
             onToggleFlip={toggleFlip}
             isDark={isDark}
             isDragging={isDragging}
             isFlipping={isFlipping}
-            flipRef={badgeFlipRef}
+            setIsFlipping={setIsFlipping}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -399,7 +376,7 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Hero Bottom Hint */}
+      {/* Hero Bottom Hint - Positioned safely below the resting badge card */}
       <div className="relative z-20 w-full text-center mt-2 sm:mt-3 pb-2 text-xs font-mono text-neutral-500 dark:text-neutral-400 flex items-center justify-center">
         <a
           href="#resume"

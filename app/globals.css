@@ -77,19 +77,12 @@ body {
   transition: background-color 200ms ease, color 200ms ease;
 }
 
-/* Badge pre-hydration pose ≈ physics rest position. The badge centre rests
-   at (50vw, top anchors + 168px of strap + half the badge stick): ~337px on
-   small screens, ~397px on desktop. Keeps the ID badge in place from the
-   very first paint instead of snapping in from the top-left corner when JS
-   starts; the physics loop's inline transform overrides this on frame one. */
+/* Badge pre-hydration pose ≈ physics rest position (anchor = top-center of the
+   hero container, strap rest length = 170px). Keeps the ID badge in place from
+   the very first paint instead of snapping in from the top-left corner when JS
+   starts; the physics loop's inline transform overrides this on its first frame. */
 .badge-initial-pose {
-  transform: translate3d(50vw, 337px, 0);
-}
-
-@media (min-width: 1024px) {
-  .badge-initial-pose {
-    transform: translate3d(50vw, 397px, 0);
-  }
+  transform: translate3d(50vw, 170px, 0);
 }
 
 /* Hero Breathing Radial Glow (Violet to Pink, ~10% opacity, 14s breathe) */

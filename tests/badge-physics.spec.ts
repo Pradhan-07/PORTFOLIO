@@ -5,7 +5,7 @@ interface WindowWithRope extends Window {
   __LANYARD_ROPE__?: VerletRope;
 }
 
-test.describe("Lanyard Badge Physics and Stability (beebombshell-style V-strap)", () => {
+test.describe("Lanyard Badge Physics and Stability", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector("#hero");
@@ -13,7 +13,7 @@ test.describe("Lanyard Badge Physics and Stability (beebombshell-style V-strap)"
     await page.waitForFunction(() => !!(window as unknown as WindowWithRope).__LANYARD_ROPE__);
   });
 
-  test("1. Initial rest state: no NaNs, each stick near its own rest length, badge centre = midpoint of points 9-10", async ({
+  test("1. Initial rest state: no NaNs, segment lengths within [0.9x, 2.3x], clip-to-badge gap < 1px", async ({
     page,
   }) => {
     const badgePhysics = page.locator("#hero div[style*='translate3d']").first();
@@ -26,34 +26,34 @@ test.describe("Lanyard Badge Physics and Stability (beebombshell-style V-strap)"
       if (!rope) return null;
       return {
         segmentLengths: rope.getSegmentLengths(),
-        restLengths: rope.sticks.map((s) => s.restLength),
+        restLength: rope.config.restSegmentLength,
         transform: rope.getBadgeTransform(),
         points: rope.points,
       };
     });
 
     expect(telemetry).not.toBeNull();
-    const { segmentLengths, restLengths, transform, points } = telemetry!;
+    const { segmentLengths, restLength, transform, points } = telemetry!;
 
     expect(Number.isNaN(transform.x)).toBe(false);
     expect(Number.isNaN(transform.y)).toBe(false);
     expect(Number.isNaN(transform.angleDeg)).toBe(false);
 
-    // At rest every stick sits close to its own rest length
-    expect(segmentLengths.length).toBe(restLengths.length);
-    for (let i = 0; i < segmentLengths.length; i++) {
-      expect(segmentLengths[i]).toBeGreaterThanOrEqual(restLengths[i] * 0.85);
-      expect(segmentLengths[i]).toBeLessThanOrEqual(restLengths[i] * 1.3);
+    // Assert segment lengths within [0.9x, 2.3x]
+    for (const len of segmentLengths) {
+      expect(len).toBeGreaterThanOrEqual(restLength * 0.9);
+      expect(len).toBeLessThanOrEqual(restLength * 2.3);
     }
 
-    // Badge transform is the midpoint of rope points 9 and 10
-    const midX = (points[9].x + points[10].x) / 2;
-    const midY = (points[9].y + points[10].y) / 2;
-    const gap = Math.hypot(transform.x - midX, transform.y - midY);
+    // Clip pivot is points[last], badge is at transform.x, transform.y
+    const lastPoint = points[points.length - 1];
+    const clipX = lastPoint.x;
+    const clipY = lastPoint.y;
+    const gap = Math.hypot(transform.x - clipX, transform.y - clipY);
     expect(gap).toBeLessThan(1.0);
   });
 
-  test("2. Drag stretches the badge stick elastically, release: angle <= +-20deg after 0.5s, settles within 2.5s", async ({
+  test("2. Drag, stretch up to 2.2x, release: angle <= +-20deg after 0.5s, settles within 2.5s", async ({
     page,
   }) => {
     const badgeCard = page.locator("[data-badge-card]");
@@ -72,23 +72,21 @@ test.describe("Lanyard Badge Physics and Stability (beebombshell-style V-strap)"
     await page.mouse.move(startX + 90, startY + 110, { steps: 12 });
     await page.waitForTimeout(100);
 
-    // During the drag the badge stick may stretch, but stays sane;
-    // every other stick stays within generous per-stick bounds.
+    // Verify stretch ratio capped <= 2.2x and segment lengths stay <= 2.3x
     const duringDrag = await page.evaluate(() => {
       const rope = (window as unknown as WindowWithRope).__LANYARD_ROPE__;
-      if (!rope) return { segmentLengths: [], restLengths: [], stretchRatio: 1 };
+      if (!rope) return { segmentLengths: [], restLength: 16, stretchRatio: 1 };
       return {
         segmentLengths: rope.getSegmentLengths(),
-        restLengths: rope.sticks.map((s) => s.restLength),
+        restLength: rope.config.restSegmentLength,
         stretchRatio: rope.getBadgeTransform().stretchRatio,
       };
     });
 
-    expect(duringDrag.stretchRatio).toBeGreaterThan(1.0);
-    expect(duringDrag.stretchRatio).toBeLessThanOrEqual(2.6);
-    for (let i = 0; i < duringDrag.segmentLengths.length; i++) {
-      expect(duringDrag.segmentLengths[i]).toBeGreaterThanOrEqual(duringDrag.restLengths[i] * 0.6);
-      expect(duringDrag.segmentLengths[i]).toBeLessThanOrEqual(duringDrag.restLengths[i] * 2.6);
+    expect(duringDrag.stretchRatio).toBeLessThanOrEqual(2.25);
+    for (const len of duringDrag.segmentLengths) {
+      expect(len).toBeGreaterThanOrEqual(duringDrag.restLength * 0.9);
+      expect(len).toBeLessThanOrEqual(duringDrag.restLength * 2.3);
     }
 
     // Release pointer
@@ -100,11 +98,18 @@ test.describe("Lanyard Badge Physics and Stability (beebombshell-style V-strap)"
     const afterHalfSec = await page.evaluate(() => {
       const rope = (window as unknown as WindowWithRope).__LANYARD_ROPE__;
       if (!rope) {
-        return { angleDeg: 0, hasNaN: false };
+        return {
+          angleDeg: 0,
+          segmentLengths: [],
+          restLength: 16,
+          hasNaN: false,
+        };
       }
       const t = rope.getBadgeTransform();
       return {
         angleDeg: t.angleDeg,
+        segmentLengths: rope.getSegmentLengths(),
+        restLength: rope.config.restSegmentLength,
         hasNaN: Number.isNaN(t.x) || Number.isNaN(t.y) || Number.isNaN(t.angleDeg),
       };
     });
@@ -112,26 +117,22 @@ test.describe("Lanyard Badge Physics and Stability (beebombshell-style V-strap)"
     expect(afterHalfSec.hasNaN).toBe(false);
     expect(Math.abs(afterHalfSec.angleDeg)).toBeLessThanOrEqual(20);
 
-    // Settles to rest: the reference physics (damping 0.992) swings
-    // gracefully for a few seconds after a fling, so poll for rest
-    // instead of assuming the old engine's fast decay.
-    await page.waitForFunction(
-      () => {
-        const rope = (window as unknown as WindowWithRope).__LANYARD_ROPE__;
-        if (!rope) return false;
-        const t = rope.getBadgeTransform();
-        return Math.abs(t.angleDeg) < 1.5 && Math.abs(t.stretchRatio - 1) < 0.05;
-      },
-      undefined,
-      { timeout: 15000 }
-    );
+    // Segment lengths must remain strictly within [0.9x, 2.3x]
+    for (const len of afterHalfSec.segmentLengths) {
+      expect(len).toBeGreaterThanOrEqual(afterHalfSec.restLength * 0.9);
+      expect(len).toBeLessThanOrEqual(afterHalfSec.restLength * 2.3);
+    }
+
+    // Settle to rest within 2.5s (2.0s additional wait)
+    await page.waitForTimeout(2000);
 
     const settled = await page.evaluate(() => {
       const rope = (window as unknown as WindowWithRope).__LANYARD_ROPE__;
-      if (!rope) return { angleDeg: 0, stretchRatio: 1 };
+      if (!rope) return { angleDeg: 0, isSleeping: true, stretchRatio: 1 };
       const t = rope.getBadgeTransform();
       return {
         angleDeg: t.angleDeg,
+        isSleeping: rope.isSleeping,
         stretchRatio: t.stretchRatio,
       };
     });
@@ -153,18 +154,17 @@ test.describe("Lanyard Badge Physics and Stability (beebombshell-style V-strap)"
 
       const status = await page.evaluate(() => {
         const rope = (window as unknown as WindowWithRope).__LANYARD_ROPE__;
-        if (!rope) return { hasNaN: false, y: 500, centered: true };
+        if (!rope) return { hasNaN: false, y: 100, minLenConstraint: true };
         const t = rope.getBadgeTransform();
         return {
           hasNaN: Number.isNaN(t.x) || Number.isNaN(t.y) || Number.isNaN(t.angleDeg),
           y: t.y,
-          centered: Math.abs(t.x - rope.anchorX) < 60,
+          minLenConstraint: t.y >= rope.anchorY + 60,
         };
       });
 
       expect(status.hasNaN).toBe(false);
-      expect(status.y).toBeGreaterThanOrEqual(100);
-      expect(status.centered).toBe(true);
+      expect(status.minLenConstraint).toBe(true);
     }
   });
 
