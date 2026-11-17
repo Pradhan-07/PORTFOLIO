@@ -27,7 +27,7 @@ export default function HomePage() {
         {/* =============================================================== */}
         <section
           id="resume"
-          className="relative w-full mt-2 sm:mt-4 mb-16 sm:mb-20 p-6 sm:p-8 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xs scroll-mt-24 sm:scroll-mt-28 overflow-hidden"
+          className="relative w-full mt-6 sm:mt-10 mb-16 sm:mb-20 p-6 sm:p-8 rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-xs scroll-mt-24 sm:scroll-mt-28 overflow-hidden"
         >
           {/* Hairline 64px Grid Background */}
           <ResumeTeaserGrid />
