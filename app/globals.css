@@ -78,17 +78,17 @@ body {
 }
 
 /* Badge pre-hydration pose ≈ physics rest position. The badge centre rests
-   at (50vw, anchors at 64px + 168px of strap + half the badge stick):
-   ~377px on small screens, ~432px on desktop. Keeps the ID badge in place
-   from the very first paint instead of snapping in from the top-left corner
-   when JS starts; the physics loop's inline transform overrides frame one. */
+   at (50vw, top anchors + 168px of strap + half the badge stick): ~337px on
+   small screens, ~397px on desktop. Keeps the ID badge in place from the
+   very first paint instead of snapping in from the top-left corner when JS
+   starts; the physics loop's inline transform overrides this on frame one. */
 .badge-initial-pose {
-  transform: translate3d(50vw, 377px, 0);
+  transform: translate3d(50vw, 337px, 0);
 }
 
 @media (min-width: 1024px) {
   .badge-initial-pose {
-    transform: translate3d(50vw, 432px, 0);
+    transform: translate3d(50vw, 397px, 0);
   }
 }
 

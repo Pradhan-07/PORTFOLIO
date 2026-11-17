@@ -85,7 +85,7 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         width: 20,
         palette,
         printText: PRINT_TEXT,
-        printPhase: 10,
+        printPhase: 40,
         onPrintGlyphs: (intervals) => {
           if (typeof window !== "undefined") {
             window.__LANYARD_GLYPH_INTERVALS__ = intervals;
@@ -98,7 +98,7 @@ export const Lanyard = forwardRef<LanyardHandle, LanyardProps>(function Lanyard(
         width: 20,
         palette,
         printText: PRINT_TEXT,
-        printPhase: 10,
+        printPhase: 92,
         twistAt: (u) =>
           (opts.baseTwist + 0.5 * opts.flipRad) * u +
           0.3 * Math.sin(t / 900 + 4 * u + 2),
